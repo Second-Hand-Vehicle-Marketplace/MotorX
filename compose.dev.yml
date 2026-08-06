@@ -1,0 +1,29 @@
+services:
+  backend:
+    command: npm run dev --workspace @motorx/backend
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: debug
+    volumes:
+      - ./apps/backend/src:/app/apps/backend/src
+      - ./packages/shared-contracts/src:/app/packages/shared-contracts/src
+
+  worker:
+    command: npm run dev --workspace @motorx/worker
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: debug
+      WORKER_CONCURRENCY: 2
+    volumes:
+      - ./apps/worker/src:/app/apps/worker/src
+      - ./packages/shared-contracts/src:/app/packages/shared-contracts/src
+
+  frontend:
+    command: npm run dev --workspace @motorx/frontend -- --host 0.0.0.0
+    environment:
+      NODE_ENV: development
+      VITE_API_BASE_URL: http://localhost:3000/api/v1
+    volumes:
+      - ./apps/frontend/src:/app/apps/frontend/src
+      - ./apps/frontend/public:/app/apps/frontend/public
+      - ./packages/shared-contracts/src:/app/packages/shared-contracts/src

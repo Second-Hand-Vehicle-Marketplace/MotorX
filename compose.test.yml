@@ -1,0 +1,66 @@
+services:
+  mongodb:
+    environment:
+      MONGO_INITDB_DATABASE: motorx_test
+
+    tmpfs:
+      - /data/db
+
+    volumes: []
+
+
+  redis:
+    command:
+      - redis-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+
+    tmpfs:
+      - /data
+
+    volumes: []
+
+
+  minio:
+    tmpfs:
+      - /data
+
+    volumes: []
+
+
+  minio-init:
+    environment:
+      S3_BUCKET: motorx-test
+
+
+  backend:
+    environment:
+      NODE_ENV: test
+
+      MONGODB_URI: mongodb://mongodb:27017/motorx_test
+      REDIS_URL: redis://redis:6379
+
+      S3_BUCKET: motorx-test
+      LOG_LEVEL: error
+
+    command: npm run test --workspace @motorx/backend
+
+
+  worker:
+    environment:
+      NODE_ENV: test
+
+      MONGODB_URI: mongodb://mongodb:27017/motorx_test
+      REDIS_URL: redis://redis:6379
+
+      S3_BUCKET: motorx-test
+      LOG_LEVEL: error
+
+    command: npm run test --workspace @motorx/worker
+
+
+  frontend:
+    profiles:
+      - frontend-tests
