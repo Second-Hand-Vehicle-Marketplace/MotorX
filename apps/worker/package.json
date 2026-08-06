@@ -1,0 +1,28 @@
+{
+  "name": "@motorx/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@motorx/shared-contracts": "*",
+    "mongoose": "^8.9.0",
+    "ioredis": "^5.4.0",
+    "bullmq": "^5.30.0",
+    "@aws-sdk/client-s3": "^3.699.0",
+    "csv-parse": "^5.6.0",
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "tsx": "^4.19.0",
+    "@types/node": "^22.10.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/worker.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/worker.js",
+    "test": "echo \"No worker tests yet\""
+  }
+}

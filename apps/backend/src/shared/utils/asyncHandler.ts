@@ -1,0 +1,1 @@
+export const asyncHandler = () => undefined;
