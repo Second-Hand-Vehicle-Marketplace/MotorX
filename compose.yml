@@ -1,0 +1,268 @@
+name: motorx
+
+services:
+  # =========================================================
+  # MongoDB
+  # =========================================================
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+
+    ports:
+      - "27017:27017"
+
+    volumes:
+      - mongodb_data:/data/db
+
+    healthcheck:
+      test: [ "CMD-SHELL", "echo 'db.runCommand({ ping: 1 }).ok' | mongosh --quiet" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    networks:
+      - motorx-network
+
+  # =========================================================
+  # Redis
+  # Used by BullMQ for asynchronous job processing
+  # =========================================================
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+
+    ports:
+      - "6379:6379"
+
+    volumes:
+      - redis_data:/data
+
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+    networks:
+      - motorx-network
+
+  # =========================================================
+  # MinIO
+  # Local S3-compatible object storage
+  # =========================================================
+  minio:
+    image: ${MINIO_IMAGE:-minio/minio:latest}
+    restart: unless-stopped
+
+    command: server /data --console-address ":9001"
+
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?S3_ACCESS_KEY is required}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?S3_SECRET_KEY is required}
+
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+    volumes:
+      - minio_data:/data
+
+    networks:
+      - motorx-network
+
+  # =========================================================
+  # MinIO initialization
+  # Waits for MinIO and creates the required bucket
+  # =========================================================
+  minio-init:
+    image: ${MINIO_MC_IMAGE:-minio/mc:latest}
+    restart: "no"
+
+    depends_on:
+      minio:
+        condition: service_started
+
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY is required}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY is required}
+      S3_BUCKET: ${S3_BUCKET:-motorx}
+
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        echo "Waiting for MinIO..."
+
+        until mc alias set motorx-local \
+          http://minio:9000 \
+          "$${S3_ACCESS_KEY}" \
+          "$${S3_SECRET_KEY}"
+        do
+          echo "MinIO is not ready. Retrying..."
+          sleep 2
+        done
+
+        echo "Creating bucket: $${S3_BUCKET}"
+
+        mc mb \
+          --ignore-existing \
+          "motorx-local/$${S3_BUCKET}"
+
+        echo "MinIO bucket is ready."
+
+    networks:
+      - motorx-network
+
+  # =========================================================
+  # Backend API
+  # =========================================================
+  backend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/backend.Dockerfile
+
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3000
+
+      # Internal Docker addresses
+      MONGODB_URI: mongodb://mongodb:27017/motorx
+      REDIS_URL: redis://redis:6379
+
+      # Local S3-compatible storage
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-motorx}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_FORCE_PATH_STYLE: "true"
+
+      # Frontend origin
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
+      minio-init:
+        condition: service_completed_successfully
+
+    ports:
+      - "3000:3000"
+
+    healthcheck:
+      test: [ "CMD", "node", "-e", "fetch('http://localhost:3000/health/live').then(response => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+    networks:
+      - motorx-network
+
+  # =========================================================
+  # ETL Worker
+  # =========================================================
+  worker:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/worker.Dockerfile
+
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+
+      MONGODB_URI: mongodb://mongodb:27017/motorx
+      REDIS_URL: redis://redis:6379
+
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-motorx}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_FORCE_PATH_STYLE: "true"
+
+      INVENTORY_QUEUE_NAME: ${INVENTORY_QUEUE_NAME:-inventory-processing}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
+
+      HF_API_KEY: ${HF_API_KEY}
+      HF_EMBEDDING_MODEL: ${HF_EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
+      minio-init:
+        condition: service_completed_successfully
+
+    networks:
+      - motorx-network
+
+  # =========================================================
+  # Frontend
+  # =========================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/frontend.Dockerfile
+
+    restart: unless-stopped
+
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3000/api/v1}
+
+      VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY}
+      VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN}
+      VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID}
+      VITE_FIREBASE_STORAGE_BUCKET: ${VITE_FIREBASE_STORAGE_BUCKET}
+      VITE_FIREBASE_MESSAGING_SENDER_ID: ${VITE_FIREBASE_MESSAGING_SENDER_ID}
+      VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID}
+
+    ports:
+      - "5173:5173"
+
+    depends_on:
+      backend:
+        condition: service_healthy
+
+    networks:
+      - motorx-network
+
+# =========================================================
+# Networks
+# =========================================================
+networks:
+  motorx-network:
+    driver: bridge
+
+# =========================================================
+# Persistent volumes
+# =========================================================
+volumes:
+  mongodb_data:
+  redis_data:
+  minio_data:
