@@ -1,0 +1,15 @@
+{
+  "name": "@motorx/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "zod": "^3.24.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/worker.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/worker.js",
+    "test": "echo \"No worker tests yet\""
+  }
+}

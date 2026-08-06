@@ -1,0 +1,1 @@
+export const apiError = {} as const;
