@@ -1,1 +1,16 @@
-export const apiError = {} as const;
+export interface ApiErrorResponse {
+  statusCode: number;
+  message: string;
+  errors?: Record<string, string[]>;
+}
+
+export class ApiError extends Error {
+  constructor(
+    public statusCode: number,
+    message: string,
+    public errors?: Record<string, string[]>
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
