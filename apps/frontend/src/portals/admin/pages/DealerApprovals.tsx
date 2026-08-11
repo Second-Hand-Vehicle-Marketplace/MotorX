@@ -1,46 +1,22 @@
 import React, { useState } from 'react';
-
-interface PendingDealer {
-  id: string;
-  businessName: string;
-  applicantName: string;
-  email: string;
-  phone: string;
-  address: string;
-  businessLicense: string;
-  appliedDate: string;
-}
+import type { DealerApplication } from '@/features/auth/types/auth.types';
+import {
+  approveDealerApplication,
+  listDealerApplications,
+  rejectDealerApplication,
+} from '@/features/auth/services/dealerApplications';
 
 export const DealerApprovals: React.FC = () => {
-  const [dealers, setDealers] = useState<PendingDealer[]>([
-    {
-      id: 'del_001',
-      businessName: 'Apex Motor Group',
-      applicantName: 'Robert Vance',
-      email: 'robert@apexmotors.com',
-      phone: '+1 (555) 234-5678',
-      address: '1420 Auto Mall Pkwy, San Jose, CA',
-      businessLicense: 'BL-98234-CA',
-      appliedDate: '2026-08-08T10:00:00Z',
-    },
-    {
-      id: 'del_002',
-      businessName: 'Metro Select Cars',
-      applicantName: 'Elena Rostova',
-      email: 'elena@metroselect.com',
-      phone: '+1 (555) 876-5432',
-      address: '88 Commerce St, Austin, TX',
-      businessLicense: 'BL-44129-TX',
-      appliedDate: '2026-08-09T14:30:00Z',
-    },
-  ]);
+  const [dealers, setDealers] = useState<DealerApplication[]>(() => listDealerApplications());
 
   const handleApprove = (id: string) => {
-    setDealers(prev => prev.filter(d => d.id !== id));
+    approveDealerApplication(id);
+    setDealers(listDealerApplications());
   };
 
   const handleReject = (id: string) => {
-    setDealers(prev => prev.filter(d => d.id !== id));
+    rejectDealerApplication(id);
+    setDealers(listDealerApplications());
   };
 
   return (

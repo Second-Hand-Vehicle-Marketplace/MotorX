@@ -4,6 +4,8 @@ import { AppProviders } from './providers';
 
 // Auth
 import { LoginPage } from '../features/auth/pages/LoginPage';
+import { RegisterPage } from '../features/auth/pages/RegisterPage';
+import { DealerPendingPage } from '../features/auth/pages/DealerPendingPage';
 import { RoleGuard } from '../features/auth/components/RoleGuard';
 
 // Portals
@@ -36,6 +38,8 @@ export function App() {
         <Routes>
           {/* Auth Route */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/dealer/register" element={<RegisterPage />} />
+          <Route path="/dealer/pending" element={<DealerPendingPage />} />
 
           {/* Public Buyer Routes (with Buyer Header/Footer Layout) */}
           <Route element={<BuyerLayout />}>

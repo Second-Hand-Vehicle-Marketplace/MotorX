@@ -10,6 +10,7 @@
   --color-bg-tertiary: #1A1A25;
   --color-bg-elevated: #22222F;
   --color-bg-hover: #2A2A38;
+  --color-navbar-bg: rgba(10, 10, 15, 0.85);
 
   /* Glass */
   --color-glass: rgba(255, 255, 255, 0.03);
@@ -135,6 +136,28 @@ body {
   background: var(--color-bg-primary);
   min-height: 100vh;
   overflow-x: hidden;
+}
+
+:root[data-theme='light'], body[data-theme='light'] {
+  --color-bg-primary: #F8FAFC;
+  --color-bg-secondary: #FFFFFF;
+  --color-bg-tertiary: #EEF2F7;
+  --color-bg-elevated: #E2E8F0;
+  --color-bg-hover: #CBD5E1;
+
+  --color-glass: rgba(255, 255, 255, 0.72);
+  --color-glass-border: rgba(148, 163, 184, 0.20);
+  --color-glass-hover: rgba(148, 163, 184, 0.10);
+
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #334155;
+  --color-text-tertiary: #64748B;
+  --color-text-muted: #94A3B8;
+
+  --color-accent-glow: rgba(59, 130, 246, 0.15);
+  --color-accent-subtle: rgba(59, 130, 246, 0.08);
+  --color-amber-glow: rgba(245, 158, 11, 0.12);
+  --color-navbar-bg: rgba(255, 255, 255, 0.82);
 }
 
 a {
@@ -645,10 +668,18 @@ ul, ol {
   justify-content: space-between;
   height: var(--navbar-height);
   padding: 0 var(--space-8);
-  background: rgba(10, 10, 15, 0.85);
+  background: var(--color-navbar-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--color-glass-border);
+}
+
+.theme-toggle-button {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1000;
+  box-shadow: var(--shadow-lg);
 }
 
 .buyer-navbar .nav-logo {

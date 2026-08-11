@@ -19,7 +19,7 @@ export const AdminLayout: React.FC = () => {
   return (
     <div className="portal-layout">
       {/* Sidebar */}
-      <aside className="portal-sidebar" style={{ background: '#0F0F17' }}>
+      <aside className="portal-sidebar" style={{ background: 'var(--color-bg-secondary)' }}>
         <div className="sidebar-logo">
           <div style={{
             width: 32,

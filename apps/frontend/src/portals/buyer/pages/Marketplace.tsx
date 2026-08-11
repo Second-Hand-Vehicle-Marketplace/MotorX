@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useListings } from '@/features/listings/hooks/useListings';
 import { ListingCard } from '@/features/listings/components/ListingCard';
 import { availableMakes, bodyTypes, fuelTypes } from '@/shared/mockData';
@@ -9,6 +10,17 @@ export const Marketplace: React.FC = () => {
 
   return (
     <div style={{ maxWidth: 1440, margin: '0 auto', padding: '2rem 1.5rem' }}>
+      <div className="glass-card" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center' }}>
+        <div>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem' }}>Are you a dealer?</h3>
+          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>Register to upload inventory. Buyers can browse the marketplace without signing in.</p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <Link to="/dealer/register" className="btn btn-primary btn-sm">Register as a Dealer</Link>
+          <Link to="/login" className="btn btn-secondary btn-sm">Dealer Sign In</Link>
+        </div>
+      </div>
+
       {/* Page Header */}
       <div className="page-header">
         <div>

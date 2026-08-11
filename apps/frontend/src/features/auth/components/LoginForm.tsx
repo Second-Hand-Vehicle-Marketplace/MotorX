@@ -8,12 +8,20 @@ export const LoginForm: React.FC = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
-    await login(email, password);
-    navigate('/marketplace');
+    setError('');
+
+    try {
+      await login(email, password);
+      navigate('/marketplace');
+    } catch (submitError) {
+      const message = submitError instanceof Error ? submitError.message : 'Unable to sign in right now.';
+      setError(message);
+    }
   };
 
   const handleQuickDemoRole = (role: UserRole) => {
@@ -28,9 +36,15 @@ export const LoginForm: React.FC = () => {
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
         <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.5rem' }}>Welcome to MotorX</h2>
         <p style={{ color: 'var(--color-text-tertiary)', fontSize: '0.875rem' }}>
-          Sign in to access buyer, dealer, or admin features
+          Buyers can browse without signing in. Dealers must register and wait for approval.
         </p>
       </div>
+
+      {error && (
+        <div className="glass-card" style={{ padding: '0.75rem 1rem', marginBottom: '1rem', borderColor: 'var(--color-error)' }}>
+          <p style={{ color: 'var(--color-error)', fontSize: '0.875rem', textAlign: 'left' }}>{error}</p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         <div className="form-group">
@@ -98,6 +112,15 @@ export const LoginForm: React.FC = () => {
         >
           <span style={{ fontWeight: 600, color: 'var(--color-amber)' }}>Admin</span>
           <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-tertiary)' }}>System control</span>
+        </button>
+      </div>
+
+      <div style={{ marginTop: '1.5rem', padding: '1rem', borderRadius: 'var(--radius-lg)', background: 'var(--color-accent-subtle)', border: '1px solid var(--color-glass-border)' }}>
+        <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem' }}>
+          Want to upload inventory? Register as a Dealer.
+        </p>
+        <button type="button" onClick={() => navigate('/dealer/register')} className="btn btn-secondary btn-sm" style={{ width: '100%' }}>
+          Go to Dealer Sign-Up
         </button>
       </div>
     </div>
