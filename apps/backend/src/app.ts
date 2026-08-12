@@ -1,6 +1,8 @@
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import { authUserRouter } from './modules/auth-users/authUser.routes.js';
+import { errorHandler } from './shared/middleware/errorHandler.js';
 
 export const app = express();
 
@@ -11,6 +13,7 @@ app.use(
   }),
 );
 app.use(express.json());
+app.disable('x-powered-by');
 
 app.get('/health/live', (_request, response) => {
   response.status(200).json({
@@ -29,3 +32,6 @@ app.get('/health/ready', (_request, response) => {
     meta: null,
   });
 });
+
+app.use('/api/v1/auth', authUserRouter);
+app.use(errorHandler);
