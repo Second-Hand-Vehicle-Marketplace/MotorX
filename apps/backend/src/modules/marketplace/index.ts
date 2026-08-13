@@ -1,1 +1,1 @@
-export const marketplaceModule = 'marketplace';
+export { listingRouter } from './listing.routes.js';

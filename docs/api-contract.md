@@ -24,6 +24,22 @@ All endpoints should use a consistent success and error envelope.
 - The backend validates MIME type, extension, size, and ownership before writing to S3-compatible storage.
 - The stored listing document keeps image metadata, not arbitrary frontend-provided public URLs.
 
+## Vehicle Listings
+
+- `GET /api/v1/listings?page=1&limit=20` lists active vehicles with pagination metadata.
+- `GET /api/v1/listings/:listingId` returns one active vehicle or `404`.
+- `POST /api/v1/listings` creates a draft or active listing and requires a Firebase bearer token for an active user with the `dealer` role.
+- The frontend integration functions are `getListings`, `getListing`, and `createListing` in `features/listings/services/listingApi.ts`.
+
+## Dealer Onboarding
+
+- `POST /api/v1/dealers/applications` lets an authenticated buyer submit one application.
+- `GET /api/v1/dealers/me` returns the authenticated user's application.
+- `GET /api/v1/admin/dealer-applications` lists pending applications for admins.
+- `PATCH /api/v1/admin/dealer-applications/:dealerId/approve` approves an application and promotes its user to `dealer` atomically.
+- `PATCH /api/v1/admin/dealer-applications/:dealerId/reject` rejects an application and requires `{ "reason": "..." }`.
+- Frontend integration functions live in `features/dealers/services/dealerApi.ts`.
+
 ## Notifications
 
 - The ETL worker creates the inventory notification document.

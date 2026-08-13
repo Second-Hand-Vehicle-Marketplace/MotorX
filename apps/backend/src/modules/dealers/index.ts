@@ -1,1 +1,1 @@
-export const dealersModule = 'dealers';
+export { adminDealerRouter, dealerRouter } from './dealer.routes.js';

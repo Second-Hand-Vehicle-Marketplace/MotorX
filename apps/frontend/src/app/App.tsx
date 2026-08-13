@@ -1,13 +1,14 @@
 import { BrowserRouter, Outlet, Route, Routes } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import { LoginPage } from '../features/auth/pages/LoginPage';
 import { PortalRedirect } from '../features/auth/components/PortalRedirect';
 import { ProtectedRoute } from '../features/auth/components/ProtectedRoute';
 import { RoleGuard } from '../features/auth/components/RoleGuard';
 import { useAuth } from '../features/auth/hooks/useAuth';
 
-function Portal({ title }: { title: string }) {
+function Portal({ title, children }: { title: string; children?: ReactNode }) {
   const { localUser, logout } = useAuth();
-  return <main><h1>{title}</h1><p>Signed in as {localUser?.email}</p><button onClick={() => void logout()}>Sign out</button><Outlet /></main>;
+  return <main><h1>{title}</h1><p>Signed in as {localUser?.email}</p><button onClick={() => void logout()}>Sign out</button>{children ?? <Outlet />}</main>;
 }
 
 export function App() {
