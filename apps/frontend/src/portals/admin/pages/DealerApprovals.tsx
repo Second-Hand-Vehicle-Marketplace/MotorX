@@ -1,22 +1,39 @@
-import React, { useState } from 'react';
-import type { DealerApplication } from '@/features/auth/types/auth.types';
+import React, { useEffect, useState } from 'react';
+import type { DealerApplication } from '@/features/dealers/types/dealer.types';
 import {
   approveDealerApplication,
-  listDealerApplications,
+  getPendingDealerApplications,
   rejectDealerApplication,
-} from '@/features/auth/services/dealerApplications';
+} from '@/features/dealers/services/dealerApi';
 
 export const DealerApprovals: React.FC = () => {
-  const [dealers, setDealers] = useState<DealerApplication[]>(() => listDealerApplications());
+  const [dealers, setDealers] = useState<DealerApplication[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const handleApprove = (id: string) => {
-    approveDealerApplication(id);
-    setDealers(listDealerApplications());
+  const loadApplications = async () => {
+    try {
+      setError('');
+      setDealers(await getPendingDealerApplications());
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Could not load dealer applications.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleReject = (id: string) => {
-    rejectDealerApplication(id);
-    setDealers(listDealerApplications());
+  useEffect(() => { void loadApplications(); }, []);
+
+  const handleApprove = async (id: string) => {
+    await approveDealerApplication(id);
+    await loadApplications();
+  };
+
+  const handleReject = async (id: string) => {
+    const reason = window.prompt('Enter a rejection reason:')?.trim();
+    if (!reason) return;
+    await rejectDealerApplication(id, reason);
+    await loadApplications();
   };
 
   return (
@@ -28,7 +45,10 @@ export const DealerApprovals: React.FC = () => {
         </div>
       </div>
 
-      {dealers.length > 0 ? (
+      {error && <div className="glass-card" style={{ padding: '1rem', color: 'var(--color-error)', marginBottom: '1rem' }}>{error}</div>}
+      {isLoading && <div className="loading-spinner" style={{ margin: '3rem auto', display: 'block' }} />}
+
+      {!isLoading && dealers.length > 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {dealers.map(dealer => (
             <div key={dealer.id} className="glass-card" style={{ padding: '1.75rem' }}>
@@ -37,7 +57,7 @@ export const DealerApprovals: React.FC = () => {
                   <span className="badge badge-warning" style={{ marginBottom: '0.5rem' }}>Pending Approval</span>
                   <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{dealer.businessName}</h3>
                   <p style={{ fontSize: '0.875rem', color: 'var(--color-text-tertiary)', marginTop: '0.25rem' }}>
-                    Applicant: {dealer.applicantName} ({dealer.email})
+                    User ID: {dealer.userId}
                   </p>
                 </div>
 
@@ -58,7 +78,7 @@ export const DealerApprovals: React.FC = () => {
                 </div>
                 <div>
                   <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>Business License #</span>
-                  <p style={{ fontSize: '0.875rem', fontWeight: 600, fontFamily: 'monospace' }}>{dealer.businessLicense}</p>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 600, fontFamily: 'monospace' }}>{dealer.registrationNumber}</p>
                 </div>
                 <div>
                   <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>Address</span>
@@ -68,7 +88,7 @@ export const DealerApprovals: React.FC = () => {
             </div>
           ))}
         </div>
-      ) : (
+      ) : !isLoading ? (
         <div className="glass-card empty-state">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -76,7 +96,7 @@ export const DealerApprovals: React.FC = () => {
           <h3>All Caught Up</h3>
           <p>There are no pending dealership applications awaiting review.</p>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

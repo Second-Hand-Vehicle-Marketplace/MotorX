@@ -63,23 +63,9 @@ export const VehicleDetails: React.FC = () => {
                 <p style={{ fontSize: '1rem', fontWeight: 600, textTransform: 'capitalize' }}>{listing.transmission}</p>
               </div>
               <div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>Body Type</span>
-                <p style={{ fontSize: '1rem', fontWeight: 600, textTransform: 'capitalize' }}>{listing.bodyType}</p>
+                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>Location</span>
+                <p style={{ fontSize: '1rem', fontWeight: 600 }}>{listing.location}</p>
               </div>
-              <div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>Color</span>
-                <p style={{ fontSize: '1rem', fontWeight: 600 }}>{listing.color}</p>
-              </div>
-              <div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>Condition</span>
-                <p style={{ fontSize: '1rem', fontWeight: 600, textTransform: 'capitalize' }}>{listing.condition}</p>
-              </div>
-              {listing.vin && (
-                <div style={{ gridColumn: 'span 2' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>VIN</span>
-                  <p style={{ fontSize: '0.875rem', fontWeight: 600, fontFamily: 'monospace' }}>{listing.vin}</p>
-                </div>
-              )}
             </div>
           </div>
 
@@ -104,7 +90,7 @@ export const VehicleDetails: React.FC = () => {
               <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Sold By Dealer
               </span>
-              <h4 style={{ fontSize: '1.125rem', fontWeight: 700, marginTop: '0.25rem' }}>{listing.dealerName}</h4>
+              <h4 style={{ fontSize: '1.125rem', fontWeight: 700, marginTop: '0.25rem' }}>Verified MotorX Dealer</h4>
               <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem' }}>
                 Verified Dealership · Member since 2025
               </p>
@@ -120,8 +106,7 @@ export const VehicleDetails: React.FC = () => {
             </div>
 
             <div style={{ marginTop: '1.5rem', fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'flex', justifyContent: 'space-between' }}>
-              <span>Listed {formatDate(listing.createdAt)}</span>
-              <span>{listing.views} views</span>
+              <span>{listing.publishedAt ? `Listed ${formatDate(listing.publishedAt)}` : 'Active listing'}</span>
             </div>
           </div>
         </div>

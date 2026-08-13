@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { mockUploadJobs, formatFileSize, formatDate } from '../../../shared/mockData';
+import { DemoDataNotice } from '../../../shared/components/DemoDataNotice';
 
 export const InventoryUpload: React.FC = () => {
   const navigate = useNavigate();
@@ -32,6 +33,7 @@ export const InventoryUpload: React.FC = () => {
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <DemoDataNotice />
       <div className="page-header">
         <div>
           <h1 className="page-title">CSV Inventory Upload</h1>

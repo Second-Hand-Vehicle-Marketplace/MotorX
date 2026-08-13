@@ -1,20 +1,10 @@
 import React from 'react';
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { getInitials } from '@/shared/mockData';
-import type { UserRole } from '@/features/auth/types/auth.types';
 
 export const DealerLayout: React.FC = () => {
-  const { user, logout, loginAsRole } = useAuth();
-  const navigate = useNavigate();
-
-  const handleRoleSwitch = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const role = e.target.value as UserRole;
-    loginAsRole(role);
-    if (role === 'buyer') navigate('/marketplace');
-    else if (role === 'admin') navigate('/admin');
-    else navigate('/dealer');
-  };
+  const { user, logout } = useAuth();
 
   return (
     <div className="portal-layout">
@@ -42,20 +32,6 @@ export const DealerLayout: React.FC = () => {
               DEALER PORTAL
             </span>
           </div>
-        </div>
-
-        {/* Demo view switcher */}
-        <div style={{ margin: '0 0 1rem', padding: '0.5rem', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-glass-border)' }}>
-          <label style={{ fontSize: '0.6875rem', color: 'var(--color-text-tertiary)', display: 'block', marginBottom: '0.25rem' }}>Portal View:</label>
-          <select
-            value="dealer"
-            onChange={handleRoleSwitch}
-            style={{ width: '100%', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-accent-light)' }}
-          >
-            <option value="buyer">Switch to Buyer View</option>
-            <option value="dealer">Dealer Portal (Active)</option>
-            <option value="admin">Switch to Admin Portal</option>
-          </select>
         </div>
 
         <nav className="sidebar-nav">

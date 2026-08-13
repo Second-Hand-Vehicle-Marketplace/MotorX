@@ -60,7 +60,7 @@ export function App() {
           </Route>
 
           {/* Protected Admin Console Routes */}
-          <Route element={<RoleGuard allowedRoles={['admin', 'dealer']} />}>
+          <Route element={<RoleGuard allowedRoles={['admin']} />}>
             <Route element={<AdminLayout />}>
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/users" element={<UserManagement />} />

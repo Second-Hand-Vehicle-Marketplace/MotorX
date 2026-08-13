@@ -1,63 +1,93 @@
-import type { Listing, ListingFilters, PaginatedResponse } from '../types/listing.types';
-import { mockListings } from '../../../shared/mockData';
+import type {
+  ApiSuccessResponse,
+  CreateListingInput,
+  ListingDto,
+  ListResponseMeta,
+  UpdateListingInput,
+  UpdateListingStatusInput,
+} from '@motorx/shared-contracts';
 import { apiClient } from '../../../shared/services/apiClient';
+import type { Listing, ListingFilters, PaginatedResponse } from '../types/listing.types';
+
+function toListing(dto: ListingDto): Listing {
+  return {
+    id: dto.id,
+    dealerId: dto.dealerId,
+    title: dto.title,
+    make: dto.make,
+    model: dto.model,
+    year: dto.year,
+    price: dto.price,
+    currency: dto.currency,
+    mileage: dto.mileageKm,
+    fuelType: dto.fuelType,
+    transmission: dto.transmission,
+    location: dto.location,
+    description: dto.description ?? '',
+    images: dto.images.map((image, index) => ({
+      id: image.key,
+      url: image.url,
+      alt: image.alt ?? dto.title,
+      isPrimary: index === 0,
+    })),
+    status: dto.status,
+    publishedAt: dto.publishedAt,
+  };
+}
+
+function toPaginatedResponse(
+  response: ApiSuccessResponse<ListingDto[], ListResponseMeta>,
+): PaginatedResponse<Listing> {
+  const { pagination } = response.meta;
+  return {
+    data: response.data.map(toListing),
+    total: pagination.total,
+    page: pagination.page,
+    pageSize: pagination.limit,
+    totalPages: pagination.totalPages,
+  };
+}
 
 export const listingApi = {
-  getListings: async (filters: ListingFilters = {}): Promise<PaginatedResponse<Listing>> => {
-    try {
-      const response = await apiClient.get<PaginatedResponse<Listing>>('/api/v1/listings', {
-        params: filters,
-      });
-      return response.data;
-    } catch {
-      return {
-        data: mockListings,
-        total: mockListings.length,
-        page: 1,
-        pageSize: 10,
-        totalPages: 1,
-      };
-    }
+  async getListings(filters: ListingFilters = {}, page = 1, limit = 20): Promise<PaginatedResponse<Listing>> {
+    const response = await apiClient.get<ApiSuccessResponse<ListingDto[], ListResponseMeta>>('/listings', {
+      params: { page, limit, ...filters },
+    });
+    return toPaginatedResponse(response.data);
   },
-  getListingById: async (id: string): Promise<Listing | null> => {
-    try {
-      const response = await apiClient.get<Listing | null>(`/api/v1/listings/${id}`);
-      return response.data;
-    } catch {
-      return mockListings.find(l => l.id === id) || null;
-    }
+
+  async getListingById(id: string): Promise<Listing> {
+    const response = await apiClient.get<ApiSuccessResponse<ListingDto>>(`/listings/${id}`);
+    return toListing(response.data.data);
   },
-  createListing: async (data: Partial<Listing>): Promise<Listing> => {
-    try {
-      const response = await apiClient.post<Listing>('/api/v1/dealer/listings', data);
-      return response.data;
-    } catch {
-      const newListing: Listing = {
-        id: `lst_${Date.now()}`,
-        dealerId: 'usr_002',
-        dealerName: 'Premium Autos',
-        make: data.make || 'BMW',
-        model: data.model || '3 Series',
-        year: data.year || 2024,
-        bodyType: data.bodyType || 'sedan',
-        fuelType: data.fuelType || 'petrol',
-        transmission: data.transmission || 'automatic',
-        condition: data.condition || 'excellent',
-        mileage: data.mileage || 1000,
-        color: data.color || 'Black',
-        price: data.price || 30000,
-        currency: 'USD',
-        title: data.title || 'New Listing',
-        description: data.description || 'Description here',
-        images: data.images || [{ id: 'img_1', url: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&h=400&fit=crop', alt: 'Car', isPrimary: true }],
-        status: 'active',
-        views: 0,
-        leads: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      mockListings.unshift(newListing);
-      return newListing;
-    }
+
+  async getMyListings(page = 1, limit = 20): Promise<PaginatedResponse<Listing>> {
+    const response = await apiClient.get<ApiSuccessResponse<ListingDto[], ListResponseMeta>>('/listings/mine', {
+      params: { page, limit },
+    });
+    return toPaginatedResponse(response.data);
+  },
+
+  async createListing(input: CreateListingInput): Promise<Listing> {
+    const response = await apiClient.post<ApiSuccessResponse<ListingDto>>('/listings', input);
+    return toListing(response.data.data);
+  },
+
+  async updateListing(id: string, input: UpdateListingInput): Promise<Listing> {
+    const response = await apiClient.patch<ApiSuccessResponse<ListingDto>>(`/listings/${id}`, input);
+    return toListing(response.data.data);
+  },
+
+  async updateListingStatus(id: string, input: UpdateListingStatusInput): Promise<Listing> {
+    const response = await apiClient.patch<ApiSuccessResponse<ListingDto>>(`/listings/${id}/status`, input);
+    return toListing(response.data.data);
+  },
+
+  async uploadImage(id: string, file: File, alt?: string): Promise<Listing> {
+    const formData = new FormData();
+    formData.append('image', file);
+    if (alt) formData.append('alt', alt);
+    const response = await apiClient.post<ApiSuccessResponse<ListingDto>>(`/listings/${id}/images`, formData);
+    return toListing(response.data.data);
   },
 };

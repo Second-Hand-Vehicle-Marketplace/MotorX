@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { mockListings, formatPrice, formatDate } from '@/shared/mockData';
 import { ListingStatusBadge } from '@/features/listings/components/ListingStatusBadge';
+import { DemoDataNotice } from '@/shared/components/DemoDataNotice';
 
 export const ListingMonitoring: React.FC = () => {
   const [listings, setListings] = useState(mockListings);
@@ -13,11 +14,12 @@ export const ListingMonitoring: React.FC = () => {
   const filtered = listings.filter(l => {
     if (!search) return true;
     const q = search.toLowerCase();
-    return l.title.toLowerCase().includes(q) || l.dealerName.toLowerCase().includes(q);
+    return l.title.toLowerCase().includes(q) || (l.dealerName ?? '').toLowerCase().includes(q);
   });
 
   return (
     <div>
+      <DemoDataNotice />
       <div className="page-header">
         <div>
           <h1 className="page-title">Listings Oversight</h1>
@@ -58,7 +60,7 @@ export const ListingMonitoring: React.FC = () => {
                   <td style={{ fontWeight: 600, color: 'var(--color-accent-light)' }}>{formatPrice(listing.price)}</td>
                   <td><ListingStatusBadge status={listing.status} /></td>
                   <td>{listing.views}</td>
-                  <td>{formatDate(listing.createdAt)}</td>
+                  <td>{listing.createdAt ? formatDate(listing.createdAt) : '—'}</td>
                   <td>
                     <button onClick={() => handleRemove(listing.id)} className="btn btn-danger btn-sm">
                       Remove Listing

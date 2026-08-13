@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { mockUsers, formatDate } from '@/shared/mockData';
 import type { UserRole } from '@/features/auth/types/auth.types';
+import { DemoDataNotice } from '@/shared/components/DemoDataNotice';
 
 export const UserManagement: React.FC = () => {
   const [usersList, setUsersList] = useState(mockUsers);
@@ -22,6 +23,7 @@ export const UserManagement: React.FC = () => {
 
   return (
     <div>
+      <DemoDataNotice />
       <div className="page-header">
         <div>
           <h1 className="page-title">User Accounts</h1>

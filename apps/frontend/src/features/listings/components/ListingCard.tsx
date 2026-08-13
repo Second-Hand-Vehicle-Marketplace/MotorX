@@ -32,7 +32,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing, showStatus = 
           
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginTop: '0.75rem' }}>
             <div className="card-price">{formatPrice(listing.price, listing.currency)}</div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{listing.dealerName}</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{listing.location ?? 'Verified dealer'}</span>
           </div>
 
           <div className="card-meta">
@@ -51,7 +51,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing, showStatus = 
             </div>
 
             <div className="meta-item" style={{ marginLeft: 'auto' }}>
-              <span className="badge badge-neutral" style={{ textTransform: 'capitalize' }}>{listing.bodyType}</span>
+              {listing.location && <span className="badge badge-neutral">{listing.location}</span>}
             </div>
           </div>
         </div>

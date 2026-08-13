@@ -1,9 +1,11 @@
 import React from 'react';
 import { mockUploadJobs, formatDate } from '../../../shared/mockData';
+import { DemoDataNotice } from '../../../shared/components/DemoDataNotice';
 
 export const UploadMonitoring: React.FC = () => {
   return (
     <div>
+      <DemoDataNotice />
       <div className="page-header">
         <div>
           <h1 className="page-title">CSV Upload Monitoring</h1>

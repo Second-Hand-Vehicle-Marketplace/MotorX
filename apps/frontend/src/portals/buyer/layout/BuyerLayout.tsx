@@ -1,19 +1,9 @@
 import React from 'react';
-import { Link, Outlet, useNavigate } from 'react-router-dom';
+import { Link, Outlet } from 'react-router-dom';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import type { UserRole } from '@/features/auth/types/auth.types';
 
 export const BuyerLayout: React.FC = () => {
-  const { user, isAuthenticated, logout, loginAsRole } = useAuth();
-  const navigate = useNavigate();
-
-  const handleRoleSwitch = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const role = e.target.value as UserRole;
-    loginAsRole(role);
-    if (role === 'dealer') navigate('/dealer');
-    else if (role === 'admin') navigate('/admin');
-    else navigate('/marketplace');
-  };
+  const { user, isAuthenticated, logout } = useAuth();
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -44,20 +34,6 @@ export const BuyerLayout: React.FC = () => {
         </nav>
 
         <div className="nav-actions">
-          {/* Quick Role Switcher for previewing buyer/dealer/admin portals */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--color-bg-tertiary)', padding: '0.25rem 0.75rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-glass-border)' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 500 }}>Demo View:</span>
-            <select
-              value={user?.role || 'buyer'}
-              onChange={handleRoleSwitch}
-              style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-accent-light)', cursor: 'pointer' }}
-            >
-              <option value="buyer">Buyer View</option>
-              <option value="dealer">Dealer Portal</option>
-              <option value="admin">Admin Portal</option>
-            </select>
-          </div>
-
           {isAuthenticated ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>{user?.displayName}</span>

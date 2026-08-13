@@ -1,8 +1,10 @@
 import React from 'react';
+import { DemoDataNotice } from '../../../shared/components/DemoDataNotice';
 
 export const SystemHealth: React.FC = () => {
   return (
     <div>
+      <DemoDataNotice />
       <div className="page-header">
         <div>
           <h1 className="page-title">System Health & Infrastructure</h1>

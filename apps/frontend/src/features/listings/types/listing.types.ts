@@ -1,8 +1,8 @@
 // Listing status values from the SRS
 export type ListingStatus = 'active' | 'pending' | 'sold' | 'draft' | 'rejected' | 'archived';
 
-export type FuelType = 'petrol' | 'diesel' | 'electric' | 'hybrid' | 'plug-in-hybrid';
-export type TransmissionType = 'automatic' | 'manual' | 'cvt';
+export type FuelType = 'petrol' | 'diesel' | 'electric' | 'hybrid' | 'other' | 'plug-in-hybrid';
+export type TransmissionType = 'automatic' | 'manual' | 'other' | 'cvt';
 export type BodyType = 'sedan' | 'suv' | 'hatchback' | 'coupe' | 'truck' | 'van' | 'wagon' | 'convertible';
 export type Condition = 'excellent' | 'good' | 'fair' | 'poor';
 
@@ -16,18 +16,18 @@ export interface VehicleImage {
 export interface Listing {
   id: string;
   dealerId: string;
-  dealerName: string;
+  dealerName?: string;
 
   // Vehicle info
   make: string;
   model: string;
   year: number;
-  bodyType: BodyType;
+  bodyType?: BodyType;
   fuelType: FuelType;
   transmission: TransmissionType;
-  condition: Condition;
+  condition?: Condition;
   mileage: number;
-  color: string;
+  color?: string;
   vin?: string;
 
   // Pricing
@@ -41,10 +41,12 @@ export interface Listing {
 
   // Meta
   status: ListingStatus;
-  views: number;
-  leads: number;
-  createdAt: string;
-  updatedAt: string;
+  views?: number;
+  leads?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  location?: string;
+  publishedAt?: string | null;
   sourceUploadJobId?: string;
 }
 

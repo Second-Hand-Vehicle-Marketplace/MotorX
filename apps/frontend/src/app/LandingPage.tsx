@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { mockListings } from '../shared/mockData';
 import { ListingCard } from '../features/listings/components/ListingCard';
+import { useListings } from '../features/listings/hooks/useListings';
 
 export const LandingPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const { data, isLoading, isError } = useListings({}, 6);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,7 +17,7 @@ export const LandingPage: React.FC = () => {
     }
   };
 
-  const featuredListings = mockListings.slice(0, 6);
+  const featuredListings = data.data;
 
   return (
     <div>
@@ -74,10 +75,12 @@ export const LandingPage: React.FC = () => {
             <p style={{ color: 'var(--color-text-tertiary)', marginTop: '0.25rem' }}>Hand-picked top quality pre-owned vehicles available now</p>
           </div>
           <Link to="/marketplace" className="btn btn-secondary">
-            View All ({mockListings.length}) →
+            View All ({data.total}) →
           </Link>
         </div>
 
+        {isLoading && <div className="loading-spinner" style={{ margin: '3rem auto', display: 'block' }} />}
+        {isError && <div className="glass-card" style={{ padding: '1rem', color: 'var(--color-error)' }}>Could not load featured vehicles.</div>}
         <div className="listings-grid">
           {featuredListings.map(listing => (
             <ListingCard key={listing.id} listing={listing} />

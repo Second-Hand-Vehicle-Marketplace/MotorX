@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { mockAuditLogs, formatDateTime } from '../../../shared/mockData';
+import { DemoDataNotice } from '../../../shared/components/DemoDataNotice';
 
 export const AuditLogs: React.FC = () => {
   const [filterType, setFilterType] = useState<string>('all');
@@ -11,6 +12,7 @@ export const AuditLogs: React.FC = () => {
 
   return (
     <div>
+      <DemoDataNotice />
       <div className="page-header">
         <div>
           <h1 className="page-title">Audit Logs</h1>

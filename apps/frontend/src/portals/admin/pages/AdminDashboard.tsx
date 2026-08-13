@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { mockUsers, mockListings, mockUploadJobs, mockAuditLogs, formatDateTime } from '../../../shared/mockData';
+import { DemoDataNotice } from '../../../shared/components/DemoDataNotice';
 
 export const AdminDashboard: React.FC = () => {
   const totalUsers = mockUsers.length;
@@ -10,6 +11,7 @@ export const AdminDashboard: React.FC = () => {
 
   return (
     <div>
+      <DemoDataNotice />
       <div className="page-header">
         <div>
           <h1 className="page-title">Admin Dashboard</h1>

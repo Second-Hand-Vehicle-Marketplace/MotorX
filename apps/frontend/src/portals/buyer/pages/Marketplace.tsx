@@ -2,11 +2,11 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useListings } from '@/features/listings/hooks/useListings';
 import { ListingCard } from '@/features/listings/components/ListingCard';
-import { availableMakes, bodyTypes, fuelTypes } from '@/shared/mockData';
-import type { BodyType, FuelType } from '@/features/listings/types/listing.types';
+import { availableMakes, fuelTypes } from '@/shared/mockData';
+import type { FuelType } from '@/features/listings/types/listing.types';
 
 export const Marketplace: React.FC = () => {
-  const { data, filters, updateFilters, resetFilters, page, setPage } = useListings({}, 9);
+  const { data, filters, updateFilters, resetFilters, page, setPage, isLoading, isError } = useListings({}, 9);
 
   return (
     <div style={{ maxWidth: 1440, margin: '0 auto', padding: '2rem 1.5rem' }}>
@@ -63,21 +63,6 @@ export const Marketplace: React.FC = () => {
               <option value="">All Makes</option>
               {availableMakes.map(make => (
                 <option key={make} value={make}>{make}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Body Type */}
-          <div className="filter-section">
-            <label className="filter-title">Body Type</label>
-            <select
-              className="form-select"
-              value={filters.bodyType || ''}
-              onChange={(e) => updateFilters({ bodyType: (e.target.value as BodyType) || undefined })}
-            >
-              <option value="">All Body Types</option>
-              {bodyTypes.map(bt => (
-                <option key={bt} value={bt} style={{ textTransform: 'capitalize' }}>{bt}</option>
               ))}
             </select>
           </div>
@@ -145,7 +130,9 @@ export const Marketplace: React.FC = () => {
           </div>
 
           {/* Grid */}
-          {data.data.length > 0 ? (
+          {isLoading && <div className="loading-spinner" style={{ margin: '3rem auto', display: 'block' }} />}
+          {isError && <div className="glass-card" style={{ padding: '1rem', color: 'var(--color-error)' }}>Could not load marketplace listings.</div>}
+          {!isLoading && !isError && (data.data.length > 0 ? (
             <div className="listings-grid">
               {data.data.map((listing) => (
                 <ListingCard key={listing.id} listing={listing} />
@@ -162,7 +149,7 @@ export const Marketplace: React.FC = () => {
                 Clear Filters
               </button>
             </div>
-          )}
+          ))}
 
           {/* Pagination */}
           {data.totalPages > 1 && (

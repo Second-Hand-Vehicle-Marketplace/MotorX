@@ -1,6 +1,7 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { mockUploadJobs, mockRejectedRecords, formatDateTime, formatFileSize } from '../../../shared/mockData';
+import { DemoDataNotice } from '../../../shared/components/DemoDataNotice';
 
 export const UploadDetails: React.FC = () => {
   const { uploadId } = useParams<{ uploadId: string }>();
@@ -8,6 +9,7 @@ export const UploadDetails: React.FC = () => {
 
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+      <DemoDataNotice />
       <div className="page-header">
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8125rem', color: 'var(--color-text-tertiary)', marginBottom: '0.5rem' }}>

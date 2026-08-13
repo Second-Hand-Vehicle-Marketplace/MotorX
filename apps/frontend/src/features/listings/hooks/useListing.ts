@@ -1,27 +1,12 @@
-import { useState, useEffect } from 'react';
-import type { Listing } from '../types/listing.types';
-import { mockListings } from '../../../shared/mockData';
+import { useQuery } from '@tanstack/react-query';
+import { listingApi } from '../services/listingApi';
 
 export function useListing(id?: string) {
-  const [listing, setListing] = useState<Listing | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const query = useQuery({
+    queryKey: ['listing', id],
+    queryFn: () => listingApi.getListingById(id!),
+    enabled: Boolean(id),
+  });
 
-  useEffect(() => {
-    if (!id) {
-      setListing(null);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      const found = mockListings.find(l => l.id === id) || null;
-      setListing(found);
-      setIsLoading(false);
-    }, 200);
-
-    return () => clearTimeout(timer);
-  }, [id]);
-
-  return { listing, isLoading };
+  return { ...query, listing: query.data ?? null };
 }
