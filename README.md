@@ -1,53 +1,48 @@
 # MotorX
 
-MotorX is a second-hand vehicle marketplace with a React and TypeScript frontend, an Express modular-monolith backend, a separate ETL worker, MongoDB, Redis/BullMQ, MinIO object storage, and Firebase Authentication.
-
-## Repository Layout
-
-```text
-MotorX/
-├── apps/
-│   ├── frontend/
-│   ├── backend/
-│   └── worker/
-├── packages/
-│   └── shared-contracts/
-├── infrastructure/
-│   ├── docker/
-│   └── nginx/
-├── docs/
-├── compose.yml
-├── compose.dev.yml
-├── compose.watch.yml
-├── compose.test.yml
-├── .env.example
-├── package.json
-└── README.md
-```
+MotorX is a second-hand vehicle marketplace with a React and TypeScript frontend, an Express modular-monolith backend, a separate ETL worker, MongoDB Atlas, Redis/BullMQ, MinIO object storage, and Firebase Authentication.
 
 ## Architecture
 
 ```text
 React + TypeScript frontend
-            │
-            │ REST/JSON over HTTP(S)
-            ▼
+            |
+            | REST/JSON over HTTP(S)
+            v
 Node.js + Express modular monolith
-      │          │           │
-      ▼          ▼           ▼
- MongoDB      Redis       MinIO
-                 │
-                 ▼
-          BullMQ ETL worker
-
-Firebase Authentication provides identity. The backend verifies Firebase ID tokens and enforces MotorX roles, account status, and resource ownership.
+      |              |             |
+      v              v             v
+MongoDB Atlas   Redis/BullMQ      MinIO
+                       |
+                       v
+                 ETL worker
 ```
+
+MongoDB Atlas is the primary persistent database required by the SRS. Docker Compose runs the application, Redis, MinIO, and supporting local services. Firebase Authentication provides identity; the backend verifies Firebase ID tokens and enforces MotorX roles, account status, and resource ownership.
+
+## Prerequisites
+
+For complete clone, Atlas access, and first-run instructions, see [MotorX Developer Setup](docs/DEVELOPER_SETUP.md).
+
+Install and start Docker Desktop. You also need:
+
+- a MongoDB Atlas cluster and database user;
+- your current public IP in the Atlas **Network Access** allowlist;
+- a Firebase project with Web SDK and Admin SDK credentials.
+
+Get your current public IPv4 address in PowerShell:
+
+```powershell
+Invoke-RestMethod "https://api.ipify.org"
+```
+
+Add that address in MongoDB Atlas under **Security > Network Access**.
 
 ## Run the Complete System
 
-Run all commands from the repository root, where `compose.yml` is located.
+Run every command below from the repository root—the directory containing `compose.yml`.
 
-### 1. Create the local environment file
+### 1. Create the root environment file
 
 Windows PowerShell:
 
@@ -61,85 +56,138 @@ Linux or macOS:
 cp .env.example .env
 ```
 
-Add the required Firebase values to `.env`. Docker automatically uses the internal service addresses for MongoDB, Redis, and MinIO.
+Open the new root `.env` file and replace `MONGODB_URI` with the connection string supplied by MongoDB Atlas:
 
-### 2. Validate the Compose configuration
-
-```bash
-docker compose config
+```env
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-host>/motorx?retryWrites=true&w=majority
 ```
 
-### 3. Build and start MotorX
+Replace all placeholders, including the angle brackets. If the database password contains characters such as `@`, `:`, `/`, `?`, or `#`, URL-encode the password first.
 
-```bash
-docker compose up --build
+Also fill in the required Firebase values in the same root `.env` file:
+
+```env
+FIREBASE_PROJECT_ID=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_PRIVATE_KEY=
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
 ```
 
-This starts:
+Docker Compose reads the root `.env`. The file at `apps/backend/.env` is only for running the backend directly outside Docker.
 
-- MongoDB;
-- Redis;
-- MinIO;
-- the MinIO bucket initializer;
-- the Express backend;
-- the ETL worker;
-- the React frontend.
+### 2. Validate the configuration
 
-### 4. Start with development bind mounts
-
-```bash
-docker compose -f compose.yml -f compose.dev.yml up --build
+```powershell
+docker compose config --quiet
 ```
 
-### 5. Start with Compose Watch
+No output means that the Compose configuration is valid.
 
-```bash
-docker compose -f compose.yml -f compose.watch.yml up --build --watch
+### 3. Build and start for the first time
+
+Start the complete system in the background:
+
+```powershell
+docker compose up -d --build
 ```
 
-### 6. Run in the background
+### 4. Confirm that the services are healthy
 
-```bash
-docker compose up --build -d
-```
-
-### 7. Stop the system
-
-```bash
-docker compose down
-```
-
-### 8. Reset local data
-
-Warning: this deletes local MongoDB, Redis, and MinIO data.
-
-```bash
-docker compose down -v
-```
-
-### 9. View service status and logs
-
-```bash
+```powershell
 docker compose ps
 ```
 
-```bash
-docker compose logs -f
-```
+Watch the backend logs if it is not healthy:
 
-Backend logs:
-
-```bash
+```powershell
 docker compose logs -f backend
 ```
 
-Worker logs:
+Press `Ctrl+C` to stop following the logs. This does not stop the containers.
 
-```bash
+### 5. Open the application
+
+- Frontend: <http://localhost:8080>
+- Backend API: <http://localhost:3000>
+- Backend liveness: <http://localhost:3000/health/live>
+- Backend readiness: <http://localhost:3000/health/ready>
+- MinIO console: <http://localhost:9001>
+
+## Normal Daily Commands
+
+After reopening Docker Desktop, VS Code, or the project, start the existing containers without rebuilding:
+
+```powershell
+docker compose up -d
+```
+
+Check their status:
+
+```powershell
+docker compose ps
+```
+
+Stop and remove the containers while preserving stored Docker volume data:
+
+```powershell
+docker compose down
+```
+
+Rebuild only after changing a Dockerfile, installed dependencies, or another image build input:
+
+```powershell
+docker compose up -d --build
+```
+
+Recreate the backend and worker after changing values in the root `.env`:
+
+```powershell
+docker compose up -d --force-recreate backend worker
+```
+
+## Development Modes
+
+Start with development bind mounts:
+
+```powershell
+docker compose -f compose.yml -f compose.dev.yml up --build
+```
+
+Start with Compose Watch:
+
+```powershell
+docker compose -f compose.yml -f compose.watch.yml up --build --watch
+```
+
+## Logs and Troubleshooting
+
+Follow logs for all services:
+
+```powershell
+docker compose logs -f
+```
+
+Follow backend or worker logs:
+
+```powershell
+docker compose logs -f backend
 docker compose logs -f worker
 ```
 
-## Local Services
+If the backend reports an Atlas connection, TLS, or `ReplicaSetNoPrimary` error, verify:
+
+1. `MONGODB_URI` in the root `.env` is the exact Atlas connection string.
+2. The Atlas database username and password are correct.
+3. Special characters in the password are URL-encoded.
+4. Your current public IP is allowed by Atlas Network Access.
+5. Docker Desktop has internet and DNS access.
+
+## Local Service Addresses
 
 | Service | Address |
 |---|---|
@@ -147,22 +195,16 @@ docker compose logs -f worker
 | Backend API | `http://localhost:3000` |
 | Backend liveness | `http://localhost:3000/health/live` |
 | Backend readiness | `http://localhost:3000/health/ready` |
-| MongoDB | `mongodb://localhost:27017/motorx` |
 | Redis | `redis://localhost:6379` |
 | MinIO API | `http://localhost:9000` |
-| MinIO Console | `http://localhost:9001` |
+| MinIO console | `http://localhost:9001` |
 
-## Current Runnable Baseline
+MongoDB Atlas is remote and therefore has no localhost application address.
 
-The repository currently provides:
+## Reset Local Docker Data
 
-- a minimal React screen;
-- an Express server with liveness and readiness endpoints;
-- a long-running worker scaffold;
-- MongoDB, Redis, and MinIO containers;
-- shared TypeScript contracts;
-- Docker development and watch configurations.
+Warning: the following command permanently deletes local Docker volume data for services such as Redis and MinIO. It does not delete MongoDB Atlas data.
 
-Before implementing business components, complete the decisions and checks in [`BASE_SETUP_CHECKLIST.md`](BASE_SETUP_CHECKLIST.md).
-
-The first business implementation milestone should be Firebase ID-token verification, local user bootstrap, role-based authorization, and protected-route tests.
+```powershell
+docker compose down -v
+```
