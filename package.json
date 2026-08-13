@@ -7,9 +7,6 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspace @motorx/shared-contracts && npm run build --workspace @motorx/backend && npm run build --workspace @motorx/worker && npm run build --workspace @motorx/frontend",
-    "dev:backend": "npm run dev --workspace @motorx/backend",
-    "dev:worker": "npm run dev --workspace @motorx/worker",
     "test": "npm run test --workspaces --if-present"
   }
 }

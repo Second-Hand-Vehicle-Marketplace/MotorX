@@ -34,4 +34,4 @@ const dealerSchema = new Schema<Dealer>({
 
 dealerSchema.index({ status: 1, createdAt: 1 }, { name: 'status_createdAt' });
 
-export const DealerModel = models.Dealer ?? model<Dealer>('Dealer', dealerSchema);
+export const DealerModel: mongoose.Model<Dealer> = models.Dealer ?? model<Dealer>('Dealer', dealerSchema);
