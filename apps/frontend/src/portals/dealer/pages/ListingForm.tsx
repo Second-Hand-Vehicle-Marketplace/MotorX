@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { listingApi } from '@/features/listings/services/listingApi';
-import { availableMakes, bodyTypes, fuelTypes, transmissionTypes } from '@/shared/mockData';
+import { availableMakes, bodyTypes, fuelTypes, transmissionTypes } from '@/features/listings/constants/filterOptions';
 
 export const ListingForm: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
   const [formData, setFormData] = useState({
     make: 'BMW',
     model: '',
@@ -21,9 +23,32 @@ export const ListingForm: React.FC = () => {
     vin: '',
   });
 
+  React.useEffect(() => {
+    if (!editId) return;
+    void listingApi.getListingById(editId).then((listing) => {
+      if (!listing) return;
+      setFormData({
+        make: listing.make,
+        model: listing.model,
+        year: listing.year,
+        price: listing.price,
+        mileage: listing.mileage,
+        bodyType: listing.bodyType,
+        fuelType: listing.fuelType,
+        transmission: listing.transmission,
+        condition: listing.condition,
+        color: listing.color,
+        title: listing.title,
+        description: listing.description,
+        vin: listing.vin ?? '',
+      });
+    });
+  }, [editId]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await listingApi.createListing(formData as any);
+    if (editId) await listingApi.updateListing(editId, formData as any);
+    else await listingApi.createListing(formData as any);
     navigate('/dealer/listings');
   };
 
@@ -31,8 +56,8 @@ export const ListingForm: React.FC = () => {
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Add New Vehicle Listing</h1>
-          <p className="page-subtitle">Fill in the details below to add a vehicle to the marketplace</p>
+          <h1 className="page-title">{editId ? 'Edit Vehicle Listing' : 'Add New Vehicle Listing'}</h1>
+          <p className="page-subtitle">{editId ? 'Update the details for this vehicle listing' : 'Fill in the details below to add a vehicle to the marketplace'}</p>
         </div>
       </div>
 
@@ -200,7 +225,7 @@ export const ListingForm: React.FC = () => {
             Cancel
           </button>
           <button type="submit" className="btn btn-primary btn-lg">
-            Create Listing
+            {editId ? 'Save Changes' : 'Create Listing'}
           </button>
         </div>
       </form>

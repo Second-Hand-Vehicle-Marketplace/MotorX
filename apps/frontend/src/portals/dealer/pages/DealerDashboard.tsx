@@ -1,14 +1,30 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockListings, mockUploadJobs, formatPrice, formatDate } from '@/shared/mockData';
+import { formatPrice, formatDate } from '@/shared/utils/formatters';
 import { ListingStatusBadge } from '@/features/listings/components/ListingStatusBadge';
+import { adminApi } from '@/features/admin/services/adminApi';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 export const DealerDashboard: React.FC = () => {
-  const dealerListings = mockListings.filter(l => l.dealerId === 'usr_002');
+  const { user } = useAuth();
+  const [dealerListings, setDealerListings] = useState<any[]>([]);
+  const [uploadJobs, setUploadJobs] = useState<any[]>([]);
+
+  useEffect(() => {
+    void Promise.all([
+      adminApi.getListings(),
+      adminApi.getUploadJobs(),
+    ]).then(([listings, jobs]) => {
+      const myListings = listings.filter((l: any) => l.dealerId === user?.id);
+      setDealerListings(myListings);
+      setUploadJobs(jobs.filter((job: any) => job.dealerId === user?.id));
+    });
+  }, [user?.id]);
+
   const activeCount = dealerListings.filter(l => l.status === 'active').length;
   const pendingCount = dealerListings.filter(l => l.status === 'pending').length;
-  const totalViews = dealerListings.reduce((sum, l) => sum + l.views, 0);
-  const totalLeads = dealerListings.reduce((sum, l) => sum + l.leads, 0);
+  const totalViews = dealerListings.reduce((sum, l) => sum + (l.views ?? 0), 0);
+  const totalLeads = dealerListings.reduce((sum, l) => sum + (l.leads ?? 0), 0);
 
   return (
     <div>
@@ -32,25 +48,25 @@ export const DealerDashboard: React.FC = () => {
         <div className="stat-card">
           <span className="stat-label">Total Listings</span>
           <div className="stat-value">{dealerListings.length}</div>
-          <span className="stat-change positive">↑ {activeCount} active on marketplace</span>
+          <span className="stat-change" style={{ color: 'var(--color-info)' }}>{activeCount} active on marketplace</span>
         </div>
 
         <div className="stat-card">
           <span className="stat-label">Pending Approval</span>
           <div className="stat-value">{pendingCount}</div>
-          <span className="stat-change" style={{ color: 'var(--color-warning)' }}>Under review</span>
+          <span className="stat-change" style={{ color: 'var(--color-warning)' }}>{pendingCount > 0 ? 'Under review' : 'No pending listings'}</span>
         </div>
 
         <div className="stat-card">
           <span className="stat-label">Total Listing Views</span>
           <div className="stat-value">{totalViews.toLocaleString()}</div>
-          <span className="stat-change positive">↑ 18% this month</span>
+          <span className="stat-change" style={{ color: 'var(--color-info)' }}>{dealerListings.length > 0 ? 'From all active inventory' : 'No listing views yet'}</span>
         </div>
 
         <div className="stat-card">
           <span className="stat-label">Buyer Leads Generated</span>
           <div className="stat-value">{totalLeads}</div>
-          <span className="stat-change positive">↑ 12 new inquiries</span>
+          <span className="stat-change" style={{ color: 'var(--color-info)' }}>{totalLeads > 0 ? 'Captured from listing activity' : 'No leads yet'}</span>
         </div>
       </div>
 
@@ -104,7 +120,7 @@ export const DealerDashboard: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {mockUploadJobs.slice(0, 4).map(job => (
+            {uploadJobs.slice(0, 4).map(job => (
               <div
                 key={job.id}
                 style={{

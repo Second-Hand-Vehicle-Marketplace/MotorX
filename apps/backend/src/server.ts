@@ -1,6 +1,11 @@
 import { app } from './app.js';
+import { connectDatabase } from './config/database.js';
+import { initializeFirebaseAdmin } from './config/firebase.js';
 
 const port = Number(process.env.PORT ?? 3000);
+
+void connectDatabase();
+void initializeFirebaseAdmin();
 
 const server = app.listen(port, '0.0.0.0', () => {
   console.log(`MotorX backend is running on port ${port}.`);

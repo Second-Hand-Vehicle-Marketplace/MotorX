@@ -20,11 +20,11 @@ export const RegisterPage: React.FC = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-      const application = registerDealerApplication(formData);
+      const application = await registerDealerApplication(formData);
       navigate('/dealer/pending', {
         state: {
           email: application.email,

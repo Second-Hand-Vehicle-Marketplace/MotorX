@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { mockListings } from '../shared/mockData';
 import { ListingCard } from '../features/listings/components/ListingCard';
+import { useListings } from '@/features/listings/hooks/useListings';
 
 export const LandingPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const { data } = useListings({}, 6);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,7 +17,9 @@ export const LandingPage: React.FC = () => {
     }
   };
 
-  const featuredListings = mockListings.slice(0, 6);
+  const listings = Array.isArray(data?.data) ? data.data : [];
+  const featuredListings = listings.slice(0, 6);
+  const totalListings = typeof data?.total === 'number' ? data.total : listings.length;
 
   return (
     <div>
@@ -74,7 +77,7 @@ export const LandingPage: React.FC = () => {
             <p style={{ color: 'var(--color-text-tertiary)', marginTop: '0.25rem' }}>Hand-picked top quality pre-owned vehicles available now</p>
           </div>
           <Link to="/marketplace" className="btn btn-secondary">
-            View All ({mockListings.length}) →
+            View All ({totalListings}) →
           </Link>
         </div>
 

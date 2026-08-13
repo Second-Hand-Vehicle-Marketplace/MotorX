@@ -1,20 +1,27 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockListings, formatPrice, formatMileage, formatDate } from '@/shared/mockData';
+import { formatPrice, formatMileage, formatDate } from '@/shared/utils/formatters';
 import { ListingStatusBadge } from '@/features/listings/components/ListingStatusBadge';
-import type { ListingStatus } from '@/features/listings/types/listing.types';
+import { adminApi } from '@/features/admin/services/adminApi';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 export const ListingManager: React.FC = () => {
+  const { user } = useAuth();
+  const [allListings, setAllListings] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const dealerListings = mockListings.filter(l => l.dealerId === 'usr_002');
+  useEffect(() => {
+    void adminApi.getListings().then(setAllListings).catch(() => setAllListings([]));
+  }, []);
+
+  const dealerListings = allListings.filter((l) => l.dealerId === user?.id);
 
   const filteredListings = dealerListings.filter(l => {
     if (statusFilter !== 'all' && l.status !== statusFilter) return false;
     if (search) {
       const q = search.toLowerCase();
-      return l.title.toLowerCase().includes(q) || l.make.toLowerCase().includes(q) || l.model.toLowerCase().includes(q);
+      return String(l.title ?? '').toLowerCase().includes(q) || String(l.make ?? '').toLowerCase().includes(q) || String(l.model ?? '').toLowerCase().includes(q);
     }
     return true;
   });
@@ -77,11 +84,11 @@ export const ListingManager: React.FC = () => {
                   <td style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <img
-                        src={listing.images[0]?.url}
+                        src={Array.isArray(listing.images) ? listing.images[0]?.url : undefined}
                         alt=""
                         style={{ width: 44, height: 32, borderRadius: 4, objectFit: 'cover' }}
                       />
-                      <span>{listing.title}</span>
+                      <span>{listing.title || `${listing.year} ${listing.make} ${listing.model}`}</span>
                     </div>
                   </td>
                   <td>{listing.year}</td>
@@ -94,7 +101,7 @@ export const ListingManager: React.FC = () => {
                   <td>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <Link to={`/marketplace/${listing.id}`} className="btn btn-ghost btn-sm">View</Link>
-                      <button className="btn btn-secondary btn-sm">Edit</button>
+                      <Link to={`/dealer/listings/new?edit=${listing.id}`} className="btn btn-secondary btn-sm">Edit</Link>
                     </div>
                   </td>
                 </tr>

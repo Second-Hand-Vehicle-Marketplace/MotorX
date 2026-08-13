@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useListings } from '@/features/listings/hooks/useListings';
 import { ListingCard } from '@/features/listings/components/ListingCard';
-import { availableMakes, bodyTypes, fuelTypes } from '@/shared/mockData';
+import { availableMakes, bodyTypes, fuelTypes } from '@/features/listings/constants/filterOptions';
 import type { BodyType, FuelType } from '@/features/listings/types/listing.types';
 
 export const Marketplace: React.FC = () => {

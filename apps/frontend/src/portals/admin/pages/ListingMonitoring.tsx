@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
-import { mockListings, formatPrice, formatDate } from '@/shared/mockData';
+import React, { useEffect, useState } from 'react';
+import { formatPrice, formatDate } from '@/shared/utils/formatters';
 import { ListingStatusBadge } from '@/features/listings/components/ListingStatusBadge';
+import { adminApi } from '@/features/admin/services/adminApi';
 
 export const ListingMonitoring: React.FC = () => {
-  const [listings, setListings] = useState(mockListings);
+  const [listings, setListings] = useState<any[]>([]);
   const [search, setSearch] = useState('');
 
-  const handleRemove = (id: string) => {
-    setListings(prev => prev.filter(l => l.id !== id));
+  useEffect(() => {
+    void adminApi.getListings().then(setListings).catch(() => setListings([]));
+  }, []);
+
+  const handleRemove = async (id: string) => {
+    await adminApi.updateListingStatus(id, 'archived');
+    setListings((prev) => prev.map((listing) => (listing.id === id ? { ...listing, status: 'archived' } : listing)));
   };
 
   const filtered = listings.filter(l => {

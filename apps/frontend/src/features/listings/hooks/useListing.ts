@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Listing } from '../types/listing.types';
-import { mockListings } from '../../../shared/mockData';
+import { listingApi } from '../services/listingApi';
 
 export function useListing(id?: string) {
   const [listing, setListing] = useState<Listing | null>(null);
@@ -13,14 +13,21 @@ export function useListing(id?: string) {
       return;
     }
 
+    let active = true;
     setIsLoading(true);
-    const timer = setTimeout(() => {
-      const found = mockListings.find(l => l.id === id) || null;
-      setListing(found);
-      setIsLoading(false);
-    }, 200);
 
-    return () => clearTimeout(timer);
+    listingApi
+      .getListingById(id)
+      .then((result) => {
+        if (active) setListing(result);
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   return { listing, isLoading };

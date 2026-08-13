@@ -1,14 +1,20 @@
-import React, { useState } from 'react';
-import { mockUsers, formatDate } from '@/shared/mockData';
-import type { UserRole } from '@/features/auth/types/auth.types';
+import React, { useEffect, useState } from 'react';
+import { formatDate } from '@/shared/utils/formatters';
+import { adminApi } from '@/features/admin/services/adminApi';
+import type { User } from '@/features/auth/types/auth.types';
 
 export const UserManagement: React.FC = () => {
-  const [usersList, setUsersList] = useState(mockUsers);
+  const [usersList, setUsersList] = useState<User[]>([]);
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
 
-  const toggleUserStatus = (id: string) => {
-    setUsersList(prev => prev.map(u => u.id === id ? { ...u, isActive: !u.isActive } : u));
+  useEffect(() => {
+    void adminApi.getUsers().then(setUsersList).catch(() => setUsersList([]));
+  }, []);
+
+  const toggleUserStatus = async (id: string, currentStatus: boolean) => {
+    const updated = await adminApi.toggleUserStatus(id, !currentStatus);
+    setUsersList(prev => prev.map(u => u.id === id ? { ...u, isActive: updated.isActive } : u));
   };
 
   const filteredUsers = usersList.filter(u => {
@@ -90,7 +96,7 @@ export const UserManagement: React.FC = () => {
                   <td>{formatDate(user.lastLoginAt)}</td>
                   <td>
                     <button
-                      onClick={() => toggleUserStatus(user.id)}
+                      onClick={() => void toggleUserStatus(user.id, user.isActive)}
                       className={`btn btn-sm ${user.isActive ? 'btn-danger' : 'btn-success'}`}
                     >
                       {user.isActive ? 'Suspend' : 'Activate'}

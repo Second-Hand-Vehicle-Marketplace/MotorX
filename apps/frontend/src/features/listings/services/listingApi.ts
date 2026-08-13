@@ -1,63 +1,59 @@
 import type { Listing, ListingFilters, PaginatedResponse } from '../types/listing.types';
-import { mockListings } from '../../../shared/mockData';
 import { apiClient } from '../../../shared/services/apiClient';
+
+type ApiEnvelope<T> = {
+  success: boolean;
+  message: string;
+  data: T;
+  meta: unknown;
+};
+
+const emptyPage = (pageSize = 9): PaginatedResponse<Listing> => ({
+  data: [],
+  total: 0,
+  page: 1,
+  pageSize,
+  totalPages: 1,
+});
 
 export const listingApi = {
   getListings: async (filters: ListingFilters = {}): Promise<PaginatedResponse<Listing>> => {
-    try {
-      const response = await apiClient.get<PaginatedResponse<Listing>>('/api/v1/listings', {
-        params: filters,
-      });
-      return response.data;
-    } catch {
+    const response = await apiClient.get<ApiEnvelope<PaginatedResponse<Listing> | Listing[]>>('/listings', {
+      params: filters,
+    });
+
+    const payload = response.data?.data;
+    if (Array.isArray(payload)) {
+      const pageSize = Number(filters.pageSize ?? (payload.length || 9));
       return {
-        data: mockListings,
-        total: mockListings.length,
-        page: 1,
-        pageSize: 10,
+        data: payload,
+        total: payload.length,
+        page: Number(filters.page ?? 1),
+        pageSize,
         totalPages: 1,
       };
     }
+
+    if (payload && Array.isArray((payload as PaginatedResponse<Listing>).data)) {
+      return payload as PaginatedResponse<Listing>;
+    }
+
+    return emptyPage(Number(filters.pageSize ?? 9));
   },
   getListingById: async (id: string): Promise<Listing | null> => {
-    try {
-      const response = await apiClient.get<Listing | null>(`/api/v1/listings/${id}`);
-      return response.data;
-    } catch {
-      return mockListings.find(l => l.id === id) || null;
-    }
+    const response = await apiClient.get<ApiEnvelope<Listing | null>>(`/listings/${id}`);
+    return response.data?.data ?? null;
   },
   createListing: async (data: Partial<Listing>): Promise<Listing> => {
-    try {
-      const response = await apiClient.post<Listing>('/api/v1/dealer/listings', data);
-      return response.data;
-    } catch {
-      const newListing: Listing = {
-        id: `lst_${Date.now()}`,
-        dealerId: 'usr_002',
-        dealerName: 'Premium Autos',
-        make: data.make || 'BMW',
-        model: data.model || '3 Series',
-        year: data.year || 2024,
-        bodyType: data.bodyType || 'sedan',
-        fuelType: data.fuelType || 'petrol',
-        transmission: data.transmission || 'automatic',
-        condition: data.condition || 'excellent',
-        mileage: data.mileage || 1000,
-        color: data.color || 'Black',
-        price: data.price || 30000,
-        currency: 'USD',
-        title: data.title || 'New Listing',
-        description: data.description || 'Description here',
-        images: data.images || [{ id: 'img_1', url: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&h=400&fit=crop', alt: 'Car', isPrimary: true }],
-        status: 'active',
-        views: 0,
-        leads: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      mockListings.unshift(newListing);
-      return newListing;
-    }
+    const response = await apiClient.post<ApiEnvelope<Listing>>('/dealer/listings', data);
+    return response.data.data;
+  },
+  updateListing: async (id: string, data: Partial<Listing>): Promise<Listing> => {
+    const response = await apiClient.put<ApiEnvelope<Listing>>(`/listings/${id}`, data);
+    return response.data.data;
+  },
+  createInquiry: async (id: string, data: { type: 'contact' | 'test_drive'; buyerName: string; buyerEmail: string; buyerPhone?: string; message?: string; preferredDate?: string }) => {
+    const response = await apiClient.post<ApiEnvelope<{ id: string; status: string }>>(`/listings/${id}/inquiries`, data);
+    return response.data.data;
   },
 };

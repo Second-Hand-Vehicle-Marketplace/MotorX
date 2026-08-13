@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
-import { mockAuditLogs, formatDateTime } from '../../../shared/mockData';
+import React, { useEffect, useState } from 'react';
+import { formatDateTime } from '../../../shared/utils/formatters';
+import { adminApi } from '@/features/admin/services/adminApi';
 
 export const AuditLogs: React.FC = () => {
+  const [logs, setLogs] = useState<any[]>([]);
   const [filterType, setFilterType] = useState<string>('all');
 
-  const filteredLogs = mockAuditLogs.filter(log => {
+  useEffect(() => {
+    void adminApi.getAuditLogs().then(setLogs).catch(() => setLogs([]));
+  }, []);
+
+  const filteredLogs = logs.filter(log => {
     if (filterType !== 'all' && log.eventType !== filterType) return false;
     return true;
   });

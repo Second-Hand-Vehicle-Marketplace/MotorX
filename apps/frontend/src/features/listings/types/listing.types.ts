@@ -17,6 +17,11 @@ export interface Listing {
   id: string;
   dealerId: string;
   dealerName: string;
+  dealerContact?: {
+    email?: string;
+    phone?: string;
+    address?: string;
+  };
 
   // Vehicle info
   make: string;
@@ -60,6 +65,8 @@ export interface ListingFilters {
   transmission?: TransmissionType;
   status?: ListingStatus;
   search?: string;
+  page?: number;
+  pageSize?: number;
   sortBy?: 'price-asc' | 'price-desc' | 'year-desc' | 'mileage-asc' | 'newest';
 }
 

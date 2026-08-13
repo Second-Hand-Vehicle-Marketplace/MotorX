@@ -1,12 +1,32 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockUsers, mockListings, mockUploadJobs, mockAuditLogs, formatDateTime } from '../../../shared/mockData';
+import { formatDateTime } from '../../../shared/utils/formatters';
+import { adminApi } from '@/features/admin/services/adminApi';
 
 export const AdminDashboard: React.FC = () => {
-  const totalUsers = mockUsers.length;
-  const dealers = mockUsers.filter(u => u.role === 'dealer');
-  const activeListings = mockListings.filter(l => l.status === 'active').length;
-  const pendingJobs = mockUploadJobs.filter(j => j.status === 'pending' || j.status === 'processing').length;
+  const [users, setUsers] = useState<any[]>([]);
+  const [listings, setListings] = useState<any[]>([]);
+  const [uploadJobs, setUploadJobs] = useState<any[]>([]);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+
+  useEffect(() => {
+    void Promise.all([
+      adminApi.getUsers(),
+      adminApi.getListings(),
+      adminApi.getUploadJobs(),
+      adminApi.getAuditLogs(),
+    ]).then(([nextUsers, nextListings, nextUploadJobs, nextAuditLogs]) => {
+      setUsers(nextUsers);
+      setListings(nextListings);
+      setUploadJobs(nextUploadJobs);
+      setAuditLogs(nextAuditLogs);
+    });
+  }, []);
+
+  const totalUsers = users.length;
+  const dealers = users.filter(u => u.role === 'dealer');
+  const activeListings = listings.filter(l => l.status === 'active').length;
+  const pendingJobs = uploadJobs.filter(j => j.status === 'pending' || j.status === 'processing').length;
 
   return (
     <div>
@@ -28,12 +48,12 @@ export const AdminDashboard: React.FC = () => {
         <div className="stat-card">
           <span className="stat-label">Active Listings</span>
           <div className="stat-value">{activeListings}</div>
-          <span className="stat-change positive">Across 3 dealerships</span>
+          <span className="stat-change positive">Across {dealers.length} dealerships</span>
         </div>
 
         <div className="stat-card">
           <span className="stat-label">ETL Upload Jobs</span>
-          <div className="stat-value">{mockUploadJobs.length}</div>
+          <div className="stat-value">{uploadJobs.length}</div>
           <span className="stat-change" style={{ color: 'var(--color-info)' }}>{pendingJobs} in queue/processing</span>
         </div>
 
@@ -57,7 +77,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {mockAuditLogs.slice(0, 5).map(log => (
+            {auditLogs.slice(0, 5).map(log => (
               <div
                 key={log.id}
                 style={{

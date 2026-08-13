@@ -117,6 +117,8 @@ services:
           --ignore-existing \
           "motorx-local/$${S3_BUCKET}"
 
+        mc anonymous set download "motorx-local/$${S3_BUCKET}"
+
         echo "MinIO bucket is ready."
 
     networks:
@@ -139,12 +141,13 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3000
 
-      # Internal Docker addresses
-      MONGODB_URI: mongodb://mongodb:27017/motorx
+      # Real Atlas MongoDB connection (or local fallback only if .env is missing)
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongodb:27017/motorx}
       REDIS_URL: redis://redis:6379
 
       # Local S3-compatible storage
       S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9000}
       S3_REGION: ${S3_REGION:-us-east-1}
       S3_BUCKET: ${S3_BUCKET:-motorx}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY}
@@ -155,9 +158,6 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
 
     depends_on:
-      mongodb:
-        condition: service_healthy
-
       redis:
         condition: service_healthy
 
@@ -193,7 +193,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
 
-      MONGODB_URI: mongodb://mongodb:27017/motorx
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongodb:27017/motorx}
       REDIS_URL: redis://redis:6379
 
       S3_ENDPOINT: http://minio:9000
@@ -210,9 +210,6 @@ services:
       HF_EMBEDDING_MODEL: ${HF_EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
 
     depends_on:
-      mongodb:
-        condition: service_healthy
-
       redis:
         condition: service_healthy
 

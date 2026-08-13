@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { DealerApplication } from '@/features/auth/types/auth.types';
 import {
   approveDealerApplication,
@@ -7,16 +7,26 @@ import {
 } from '@/features/auth/services/dealerApplications';
 
 export const DealerApprovals: React.FC = () => {
-  const [dealers, setDealers] = useState<DealerApplication[]>(() => listDealerApplications());
+  const [dealers, setDealers] = useState<DealerApplication[]>([]);
+  const pendingDealers = dealers.filter((dealer) => dealer.status === 'pending');
 
-  const handleApprove = (id: string) => {
-    approveDealerApplication(id);
-    setDealers(listDealerApplications());
+  useEffect(() => {
+    void listDealerApplications().then(setDealers).catch(() => setDealers([]));
+  }, []);
+
+  const refreshDealers = async () => {
+    const next = await listDealerApplications();
+    setDealers(next);
   };
 
-  const handleReject = (id: string) => {
-    rejectDealerApplication(id);
-    setDealers(listDealerApplications());
+  const handleApprove = async (id: string) => {
+    await approveDealerApplication(id);
+    await refreshDealers();
+  };
+
+  const handleReject = async (id: string) => {
+    await rejectDealerApplication(id);
+    await refreshDealers();
   };
 
   return (
@@ -28,9 +38,9 @@ export const DealerApprovals: React.FC = () => {
         </div>
       </div>
 
-      {dealers.length > 0 ? (
+      {pendingDealers.length > 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {dealers.map(dealer => (
+          {pendingDealers.map(dealer => (
             <div key={dealer.id} className="glass-card" style={{ padding: '1.75rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>

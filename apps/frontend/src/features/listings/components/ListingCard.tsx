@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import type { Listing } from '../types/listing.types';
-import { formatPrice, formatMileage } from '../../../shared/mockData';
+import { formatPrice, formatMileage } from '../../../shared/utils/formatters';
 import { ListingStatusBadge } from './ListingStatusBadge';
 
 interface ListingCardProps {

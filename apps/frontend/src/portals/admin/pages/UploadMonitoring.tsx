@@ -1,7 +1,13 @@
-import React from 'react';
-import { mockUploadJobs, formatDate } from '../../../shared/mockData';
+import React, { useEffect, useState } from 'react';
+import { formatDate } from '../../../shared/utils/formatters';
+import { adminApi } from '@/features/admin/services/adminApi';
 
 export const UploadMonitoring: React.FC = () => {
+  const [uploadJobs, setUploadJobs] = useState<any[]>([]);
+
+  useEffect(() => {
+    void adminApi.getUploadJobs().then(setUploadJobs).catch(() => setUploadJobs([]));
+  }, []);
   return (
     <div>
       <div className="page-header">
@@ -26,7 +32,7 @@ export const UploadMonitoring: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {mockUploadJobs.map(job => (
+              {uploadJobs.map(job => (
                 <tr key={job.id}>
                   <td style={{ fontFamily: 'monospace', fontSize: '0.8125rem' }}>{job.id}</td>
                   <td style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{job.dealerName}</td>
