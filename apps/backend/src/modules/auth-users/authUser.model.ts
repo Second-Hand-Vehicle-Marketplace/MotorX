@@ -1,4 +1,4 @@
-import { Schema, model, models, type HydratedDocument } from 'mongoose';
+import mongoose, { type HydratedDocument } from 'mongoose';
 
 export const userRoles = ['buyer', 'dealer', 'admin'] as const;
 export const userStatuses = ['active', 'pending', 'suspended'] as const;
@@ -15,6 +15,8 @@ export interface AuthUser {
 }
 
 export type AuthUserDocument = HydratedDocument<AuthUser>;
+
+const { Schema, model, models } = mongoose;
 
 const authUserSchema = new Schema<AuthUser>(
   {

@@ -140,7 +140,8 @@ services:
       PORT: 3000
 
       # Internal Docker addresses
-      MONGODB_URI: mongodb://mongodb:27017/motorx
+      # Use the MongoDB Atlas connection string from the root .env file.
+      MONGODB_URI: ${MONGODB_URI:?MONGODB_URI is required}
       REDIS_URL: redis://redis:6379
 
       # Local S3-compatible storage
@@ -193,7 +194,8 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
 
-      MONGODB_URI: mongodb://mongodb:27017/motorx
+      # Use the MongoDB Atlas connection string from the root .env file.
+      MONGODB_URI: ${MONGODB_URI:?MONGODB_URI is required}
       REDIS_URL: redis://redis:6379
 
       S3_ENDPOINT: http://minio:9000
@@ -243,7 +245,7 @@ services:
       VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID}
 
     ports:
-      - "5173:5173"
+      - "8080:5173"
 
     depends_on:
       backend:

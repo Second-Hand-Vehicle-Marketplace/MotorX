@@ -143,7 +143,7 @@ docker compose logs -f worker
 
 | Service | Address |
 |---|---|
-| Frontend | `http://localhost:5173` |
+| Frontend | `http://localhost:8080` |
 | Backend API | `http://localhost:3000` |
 | Backend liveness | `http://localhost:3000/health/live` |
 | Backend readiness | `http://localhost:3000/health/ready` |
