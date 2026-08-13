@@ -146,8 +146,8 @@ export const LandingPage: React.FC = () => {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '1rem' }}>
-            <Link to="/dealer" className="btn btn-primary btn-lg">
-              Explore Dealer Portal
+            <Link to="/dealer/apply" className="btn btn-primary btn-lg">
+              Apply as Dealer
             </Link>
             <Link to="/login" className="btn btn-secondary btn-lg">
               Sign In

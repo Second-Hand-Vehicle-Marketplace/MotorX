@@ -38,8 +38,12 @@ export function App() {
         <Routes>
           {/* Auth Route */}
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/dealer/register" element={<RegisterPage />} />
+          <Route path="/signup" element={<RegisterPage mode="buyer" />} />
+          <Route path="/buyer/register" element={<RegisterPage mode="buyer" />} />
+          <Route path="/dealer/apply" element={<RegisterPage mode="dealer" />} />
+          <Route path="/dealer/register" element={<RegisterPage mode="dealer" />} />
           <Route path="/dealer/pending" element={<DealerPendingPage />} />
+          <Route path="/dealer/application-status" element={<DealerPendingPage />} />
 
           {/* Public Buyer Routes (with Buyer Header/Footer Layout) */}
           <Route element={<BuyerLayout />}>

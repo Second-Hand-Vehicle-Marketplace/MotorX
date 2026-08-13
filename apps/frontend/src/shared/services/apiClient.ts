@@ -23,3 +23,14 @@ apiClient.interceptors.request.use(async (config) => {
 
   return config;
 });
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: unknown) => {
+    if (axios.isAxiosError(error)) {
+      const message = (error.response?.data as { error?: { message?: string } } | undefined)?.error?.message;
+      return Promise.reject(new Error(message ?? error.message));
+    }
+    return Promise.reject(error);
+  },
+);
