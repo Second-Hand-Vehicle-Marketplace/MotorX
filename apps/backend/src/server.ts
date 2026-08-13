@@ -1,20 +1,26 @@
 import { app } from './app.js';
+import { connectDatabase, disconnectDatabase } from './config/database.js';
+import { env } from './config/env.js';
 
-const port = Number(process.env.PORT ?? 3000);
+const port = env.PORT;
+
+await connectDatabase();
 
 const server = app.listen(port, '0.0.0.0', () => {
   console.log(`MotorX backend is running on port ${port}.`);
 });
 
+// Stops HTTP traffic first, then releases the database connection.
 function shutdown(signal: string): void {
   console.log(`Received ${signal}. Shutting down backend.`);
 
-  server.close((error) => {
+  server.close(async (error) => {
     if (error) {
       console.error('Backend shutdown failed.', error);
       process.exit(1);
     }
 
+    await disconnectDatabase();
     process.exit(0);
   });
 }
