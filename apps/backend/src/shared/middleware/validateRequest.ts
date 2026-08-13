@@ -9,6 +9,7 @@ interface RequestSchemas {
   query?: ZodType;
 }
 
+// Parses selected request sections and rejects invalid input with HTTP 400.
 export function validateRequest(schemas: RequestSchemas): RequestHandler {
   return (request, _response, next) => {
     try {

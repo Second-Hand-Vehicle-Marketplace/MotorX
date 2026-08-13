@@ -1,1 +1,1 @@
-export { listingRouter } from './listing.routes.js';
+export { listingImageRouter, listingRouter } from './listing.routes.js';

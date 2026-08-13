@@ -1,11 +1,13 @@
 import mongoose, { type Types } from 'mongoose';
+import type { DealerApplicationDto } from '@motorx/shared-contracts';
 import { AppError } from '../../shared/errors/AppError.js';
 import { errorCodes } from '../../shared/errors/errorCodes.js';
 import type { Dealer } from './dealer.model.js';
 import { createDealer, findDealerById, findDealerByUserId, listDealersByStatus, promoteUserToDealer, updateDealerReview } from './dealer.repository.js';
 import type { CreateDealerApplicationBody } from './dealer.validation.js';
 
-function serializeDealer(dealer: Dealer & { _id: Types.ObjectId }) {
+// Converts a MongoDB dealer record into the public API contract.
+function serializeDealer(dealer: Dealer & { _id: Types.ObjectId }): DealerApplicationDto {
   return {
     id: dealer._id.toString(), userId: dealer.userId.toString(), businessName: dealer.businessName,
     registrationNumber: dealer.registrationNumber, phone: dealer.phone, address: dealer.address,
@@ -15,6 +17,7 @@ function serializeDealer(dealer: Dealer & { _id: Types.ObjectId }) {
   };
 }
 
+// Creates one unique application for an eligible buyer account.
 export async function submitDealerApplication(userId: Types.ObjectId, role: string, input: CreateDealerApplicationBody) {
   if (role !== 'buyer') throw new AppError(409, errorCodes.conflict, 'Only buyer accounts can submit a dealer application.');
   if (await findDealerByUserId(userId)) throw new AppError(409, errorCodes.conflict, 'A dealer application already exists for this account.');
@@ -26,17 +29,20 @@ export async function submitDealerApplication(userId: Types.ObjectId, role: stri
   }
 }
 
+// Returns the current user's dealer application and review state.
 export async function getMyDealerApplication(userId: Types.ObjectId) {
   const dealer = await findDealerByUserId(userId);
   if (!dealer) throw new AppError(404, errorCodes.notFound, 'No dealer application was found for this account.');
   return serializeDealer(dealer as unknown as Dealer & { _id: Types.ObjectId });
 }
 
+// Returns pending applications for the admin review queue.
 export async function getPendingDealerApplications() {
   const dealers = await listDealersByStatus('pending');
   return dealers.map((dealer) => serializeDealer(dealer as unknown as Dealer & { _id: Types.ObjectId }));
 }
 
+// Approves or rejects an application atomically with any role promotion.
 export async function reviewDealerApplication(dealerId: string, adminId: Types.ObjectId, decision: 'approved' | 'rejected', reason?: string) {
   const session = await mongoose.startSession();
   let result: ReturnType<typeof serializeDealer> | undefined;

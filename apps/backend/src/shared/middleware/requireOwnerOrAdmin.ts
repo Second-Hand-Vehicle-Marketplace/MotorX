@@ -3,6 +3,7 @@ import { AppError } from '../errors/AppError.js';
 import { errorCodes } from '../errors/errorCodes.js';
 import type { AuthenticatedRequest } from '../types/authenticatedRequest.js';
 
+// Allows resource access to its owner or an administrator.
 export const requireOwnerOrAdmin = (ownerParameter = 'userId') =>
   (request: AuthenticatedRequest, _response: Response, next: NextFunction) => {
     const user = request.localUser;

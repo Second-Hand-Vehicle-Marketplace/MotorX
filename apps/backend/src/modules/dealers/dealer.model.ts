@@ -1,7 +1,7 @@
 import mongoose, { type HydratedDocument, type Types } from 'mongoose';
+import { dealerApplicationStatuses, type DealerApplicationStatus } from '@motorx/shared-contracts';
 
-export const dealerApplicationStatuses = ['pending', 'approved', 'rejected'] as const;
-export type DealerApplicationStatus = (typeof dealerApplicationStatuses)[number];
+export type { DealerApplicationStatus };
 
 export interface Dealer {
   userId: Types.ObjectId;

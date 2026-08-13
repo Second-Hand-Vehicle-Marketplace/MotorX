@@ -4,6 +4,7 @@ import { AppError } from '../errors/AppError.js';
 import { errorCodes } from '../errors/errorCodes.js';
 import type { AuthenticatedRequest } from '../types/authenticatedRequest.js';
 
+// Restricts a route to one or more MotorX roles.
 export const requireRole = (...roles: readonly UserRole[]) =>
   (request: AuthenticatedRequest, _response: Response, next: NextFunction) => {
     if (!request.localUser) return next(new AppError(401, errorCodes.unauthorized, 'Authentication is required.'));

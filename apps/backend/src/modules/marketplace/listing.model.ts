@@ -1,12 +1,14 @@
 import mongoose, { type HydratedDocument, type Types } from 'mongoose';
+import {
+  fuelTypes,
+  listingStatuses,
+  transmissionTypes,
+  type FuelType,
+  type ListingStatus,
+  type TransmissionType,
+} from '@motorx/shared-contracts';
 
-export const listingStatuses = ['draft', 'active', 'sold', 'archived'] as const;
-export const fuelTypes = ['petrol', 'diesel', 'hybrid', 'electric', 'other'] as const;
-export const transmissionTypes = ['automatic', 'manual', 'other'] as const;
-
-export type ListingStatus = (typeof listingStatuses)[number];
-export type FuelType = (typeof fuelTypes)[number];
-export type TransmissionType = (typeof transmissionTypes)[number];
+export type { ListingStatus, FuelType, TransmissionType };
 
 export interface ListingImage {
   key: string;

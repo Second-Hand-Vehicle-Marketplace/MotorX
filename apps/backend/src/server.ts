@@ -10,6 +10,7 @@ const server = app.listen(port, '0.0.0.0', () => {
   console.log(`MotorX backend is running on port ${port}.`);
 });
 
+// Stops HTTP traffic first, then releases the database connection.
 function shutdown(signal: string): void {
   console.log(`Received ${signal}. Shutting down backend.`);
 

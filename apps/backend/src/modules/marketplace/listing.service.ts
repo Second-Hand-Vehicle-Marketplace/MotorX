@@ -1,10 +1,14 @@
 import type { Types } from 'mongoose';
+import type { ListingDto } from '@motorx/shared-contracts';
 import { AppError } from '../../shared/errors/AppError.js';
 import { errorCodes } from '../../shared/errors/errorCodes.js';
-import { createListingRecord, findActiveListingById, listActiveListings, type ListingRecord } from './listing.repository.js';
-import type { CreateListingBody, ListListingsQuery } from './listing.validation.js';
+import { createListingRecord, findActiveListingById, findOwnedListing, listActiveListings, listDealerListings, transitionOwnedListingStatus, updateOwnedListing, type ListingRecord } from './listing.repository.js';
+import type { CreateListingBody, ListListingsQuery, UpdateListingBody } from './listing.validation.js';
+import { buildPaginationMeta } from '../../shared/utils/pagination.js';
+import type { ListingStatus } from '@motorx/shared-contracts';
 
-function serializeListing(listing: ListingRecord) {
+// Converts a listing record into the shared API DTO.
+export function serializeListing(listing: ListingRecord): ListingDto {
   return {
     id: listing._id.toString(), dealerId: listing.dealerId.toString(), title: listing.title,
     make: listing.make, model: listing.model, year: listing.year, price: listing.price,
@@ -16,14 +20,16 @@ function serializeListing(listing: ListingRecord) {
   };
 }
 
+// Returns paginated active listings for the public marketplace.
 export async function getActiveListings(query: ListListingsQuery) {
   const { documents, total } = await listActiveListings(query);
   return {
     listings: documents.map(serializeListing),
-    pagination: { page: query.page, limit: query.limit, total, totalPages: total === 0 ? 0 : Math.ceil(total / query.limit) },
+    pagination: buildPaginationMeta(query.page, query.limit, total),
   };
 }
 
+// Creates a draft or immediately published listing for a dealer.
 export async function createDealerListing(dealerId: Types.ObjectId, input: CreateListingBody) {
   const document = await createListingRecord({
     ...input, dealerId, images: [], publishedAt: input.status === 'active' ? new Date() : undefined,
@@ -31,8 +37,47 @@ export async function createDealerListing(dealerId: Types.ObjectId, input: Creat
   return serializeListing(document.toObject() as ListingRecord);
 }
 
+// Returns one active listing or a not-found error.
 export async function getActiveListing(listingId: string) {
   const listing = await findActiveListingById(listingId);
   if (!listing) throw new AppError(404, errorCodes.notFound, 'The vehicle listing was not found.');
   return serializeListing(listing);
+}
+
+// Returns every listing owned by the authenticated dealer.
+export async function getDealerListings(dealerId: Types.ObjectId, query: ListListingsQuery) {
+  const { documents, total } = await listDealerListings(dealerId, query.page, query.limit);
+  return { listings: documents.map(serializeListing), pagination: buildPaginationMeta(query.page, query.limit, total) };
+}
+
+// Updates editable fields while preserving listing ownership and status.
+export async function updateDealerListing(listingId: string, dealerId: Types.ObjectId, input: UpdateListingBody) {
+  const update = { ...input } as Record<string, unknown>;
+  if (input.description === null) {
+    delete update.description;
+    const listing = await updateOwnedListing(listingId, dealerId, update, true);
+    if (!listing) throw new AppError(404, errorCodes.notFound, 'The vehicle listing was not found.');
+    return serializeListing(listing.toObject() as ListingRecord);
+  }
+  const listing = await updateOwnedListing(listingId, dealerId, update);
+  if (!listing) throw new AppError(404, errorCodes.notFound, 'The vehicle listing was not found.');
+  return serializeListing(listing.toObject() as ListingRecord);
+}
+
+const allowedTransitions: Record<ListingStatus, readonly ListingStatus[]> = {
+  draft: ['active', 'archived'], active: ['sold', 'archived'], sold: ['active', 'archived'], archived: [],
+};
+
+// Enforces the listing lifecycle before applying an atomic status transition.
+export async function changeDealerListingStatus(listingId: string, dealerId: Types.ObjectId, nextStatus: ListingStatus) {
+  const existing = await findOwnedListing(listingId, dealerId);
+  if (!existing) throw new AppError(404, errorCodes.notFound, 'The vehicle listing was not found.');
+  const currentStatus = existing.status as ListingStatus;
+  if (!allowedTransitions[currentStatus].includes(nextStatus))
+    throw new AppError(409, errorCodes.conflict, `A ${currentStatus} listing cannot transition to ${nextStatus}.`);
+  const update: Record<string, unknown> = { status: nextStatus };
+  if (nextStatus === 'active' && !existing.publishedAt) update.publishedAt = new Date();
+  const listing = await transitionOwnedListingStatus(listingId, dealerId, currentStatus, update);
+  if (!listing) throw new AppError(409, errorCodes.conflict, 'The listing status changed before this request completed.');
+  return serializeListing(listing.toObject() as ListingRecord);
 }

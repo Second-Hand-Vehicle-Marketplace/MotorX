@@ -4,6 +4,7 @@ import { AppError } from '../errors/AppError.js';
 import { errorCodes } from '../errors/errorCodes.js';
 import type { AuthenticatedRequest } from '../types/authenticatedRequest.js';
 
+// Loads or creates the local user associated with the verified Firebase identity.
 export async function loadLocalUser(request: AuthenticatedRequest, _response: Response, next: NextFunction) {
   try {
     if (!request.firebaseUser) return next(new AppError(401, errorCodes.unauthorized, 'Authentication is required.'));

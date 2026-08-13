@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { fuelTypes, listingStatuses, transmissionTypes } from '@motorx/shared-contracts';
 
 export const listingSchema = z.object({
   id: z.string(),
@@ -10,12 +11,12 @@ export const listingSchema = z.object({
   price: z.number().nonnegative(),
   currency: z.string().length(3),
   mileageKm: z.number().nonnegative(),
-  fuelType: z.enum(['petrol', 'diesel', 'hybrid', 'electric', 'other']),
-  transmission: z.enum(['automatic', 'manual', 'other']),
+  fuelType: z.enum(fuelTypes),
+  transmission: z.enum(transmissionTypes),
   location: z.string(),
   description: z.string().nullable(),
   images: z.array(z.object({ key: z.string(), url: z.string(), alt: z.string().nullable(), order: z.number() })),
-  status: z.enum(['draft', 'active', 'sold', 'archived']),
+  status: z.enum(listingStatuses),
   publishedAt: z.string().nullable(),
 });
 

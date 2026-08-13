@@ -4,6 +4,7 @@ import { AppError } from '../errors/AppError.js';
 import { errorCodes } from '../errors/errorCodes.js';
 import type { AuthenticatedRequest } from '../types/authenticatedRequest.js';
 
+// Verifies the bearer token and attaches its Firebase identity to the request.
 export async function verifyFirebaseToken(
   request: AuthenticatedRequest,
   _response: Response,

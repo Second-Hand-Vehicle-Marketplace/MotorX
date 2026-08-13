@@ -1,16 +1,8 @@
 import type { User } from 'firebase/auth';
+import type { AuthUserDto, UserRole, UserStatus } from '@motorx/shared-contracts';
 
-export type UserRole = 'buyer' | 'dealer' | 'admin';
-export type UserStatus = 'active' | 'pending' | 'suspended';
-
-export interface LocalUser {
-  id: string;
-  firebaseUid: string;
-  email: string;
-  displayName: string | null;
-  role: UserRole;
-  status: UserStatus;
-}
+export type { UserRole, UserStatus };
+export type LocalUser = AuthUserDto;
 
 export interface AuthContextValue {
   firebaseUser: User | null;

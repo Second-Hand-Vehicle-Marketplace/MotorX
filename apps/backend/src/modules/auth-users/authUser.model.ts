@@ -1,9 +1,7 @@
 import mongoose, { type HydratedDocument } from 'mongoose';
+import { userRoles, userStatuses, type UserRole, type UserStatus } from '@motorx/shared-contracts';
 
-export const userRoles = ['buyer', 'dealer', 'admin'] as const;
-export const userStatuses = ['active', 'pending', 'suspended'] as const;
-export type UserRole = (typeof userRoles)[number];
-export type UserStatus = (typeof userStatuses)[number];
+export type { UserRole, UserStatus };
 
 export interface AuthUser {
   firebaseUid: string;
