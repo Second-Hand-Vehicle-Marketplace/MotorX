@@ -6,7 +6,7 @@ services:
     tmpfs:
       - /data/db
 
-    volumes: []
+    volumes: !reset []
 
 
   redis:
@@ -20,14 +20,14 @@ services:
     tmpfs:
       - /data
 
-    volumes: []
+    volumes: !reset []
 
 
   minio:
     tmpfs:
       - /data
 
-    volumes: []
+    volumes: !reset []
 
 
   minio-init:
