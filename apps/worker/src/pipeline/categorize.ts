@@ -1,1 +1,1 @@
-export const categorize = () => undefined;
+export const categorize = (value: string) => value.toLowerCase() || 'sedan';

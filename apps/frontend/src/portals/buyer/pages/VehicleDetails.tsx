@@ -105,6 +105,12 @@ export const VehicleDetails: React.FC = () => {
                   <p style={{ fontSize: '0.875rem', fontWeight: 600, fontFamily: 'monospace' }}>{listing.vin}</p>
                 </div>
               )}
+              {listing.plateNumber && (
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>Plate Number</span>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 600, fontFamily: 'monospace' }}>{listing.plateNumber}</p>
+                </div>
+              )}
             </div>
           </div>
 

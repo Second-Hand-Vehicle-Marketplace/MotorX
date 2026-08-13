@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { listingApi } from '@/features/listings/services/listingApi';
 import { availableMakes, bodyTypes, fuelTypes, transmissionTypes } from '@/features/listings/constants/filterOptions';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 export const ListingForm: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const editId = searchParams.get('edit');
   const [formData, setFormData] = useState({
@@ -21,7 +23,9 @@ export const ListingForm: React.FC = () => {
     title: '',
     description: '',
     vin: '',
+    plateNumber: '',
   });
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
 
   React.useEffect(() => {
     if (!editId) return;
@@ -41,14 +45,19 @@ export const ListingForm: React.FC = () => {
         title: listing.title,
         description: listing.description,
         vin: listing.vin ?? '',
+        plateNumber: listing.plateNumber ?? '',
       });
     });
   }, [editId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.vin.trim() && !formData.plateNumber.trim()) {
+      window.alert('Provide a VIN or plate number before saving the listing.');
+      return;
+    }
     if (editId) await listingApi.updateListing(editId, formData as any);
-    else await listingApi.createListing(formData as any);
+    else await listingApi.createListing({ ...formData, dealerId: user?.id, dealerName: user?.businessName || user?.displayName } as any, selectedImages);
     navigate('/dealer/listings');
   };
 
@@ -112,6 +121,29 @@ export const ListingForm: React.FC = () => {
               onChange={(e) => setFormData({ ...formData, color: e.target.value })}
               required
             />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">VIN or Plate Number *</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="VIN or registration plate number"
+              value={formData.vin}
+              onChange={(e) => setFormData({ ...formData, vin: e.target.value.toUpperCase() })}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Plate Number</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Optional if VIN is provided"
+              value={formData.plateNumber}
+              onChange={(e) => setFormData({ ...formData, plateNumber: e.target.value.toUpperCase() })}
+            />
+            <small style={{ color: 'var(--color-text-tertiary)' }}>Provide at least a VIN or plate number.</small>
           </div>
         </div>
 
@@ -219,6 +251,30 @@ export const ListingForm: React.FC = () => {
             required
           />
         </div>
+
+        {!editId && (
+          <div className="form-group">
+            <label className="form-label">Vehicle Images</label>
+            <input
+              type="file"
+              className="form-input"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              multiple
+              onChange={(event) => {
+                const newlySelected = Array.from(event.target.files ?? []);
+                setSelectedImages((current) => {
+                  const files = [...current, ...newlySelected];
+                  return files.filter((file, index, all) => all.findIndex((item) => item.name === file.name && item.size === file.size) === index);
+                });
+                event.target.value = '';
+              }}
+            />
+            <small style={{ color: 'var(--color-text-tertiary)' }}>
+              Select multiple photos with Ctrl/Shift, or choose more photos in several rounds. The first image becomes the primary image.
+              {selectedImages.length ? ` ${selectedImages.length} image${selectedImages.length === 1 ? '' : 's'} selected.` : ''}
+            </small>
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
           <button type="button" onClick={() => navigate('/dealer/listings')} className="btn btn-secondary">

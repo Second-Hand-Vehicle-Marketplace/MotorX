@@ -14,6 +14,7 @@ const listingSchema = new Schema(
     mileage: { type: Number, default: 0 },
     color: { type: String, trim: true },
     vin: { type: String, trim: true },
+    plateNumber: { type: String, trim: true },
     price: { type: Number, default: 0 },
     currency: { type: String, default: 'USD', trim: true },
     title: { type: String, required: true, trim: true },
@@ -29,6 +30,7 @@ const listingSchema = new Schema(
     }],
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
+    sourceUploadJobId: { type: String, trim: true },
   },
   {
     versionKey: false,

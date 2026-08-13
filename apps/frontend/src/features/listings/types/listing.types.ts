@@ -34,6 +34,7 @@ export interface Listing {
   mileage: number;
   color: string;
   vin?: string;
+  plateNumber?: string;
 
   // Pricing
   price: number;

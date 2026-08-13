@@ -58,6 +58,8 @@ export const getListings = (_request: Request, response: Response) => {
         price: listing.price,
         status: listing.status,
         title: listing.title,
+        vin: listing.vin,
+        plateNumber: listing.plateNumber,
         images: (listing.images ?? []).map((image: any) => ({ ...image, url: toPublicStorageUrl(image.url) })),
         createdAt: new Date(listing.createdAt).toISOString(),
         views: listing.views,

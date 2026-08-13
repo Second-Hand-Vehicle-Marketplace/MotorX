@@ -8,6 +8,8 @@ const uploadJobSchema = new Schema(
     zipFileName: { type: String, required: false, trim: true },
     csvFileUrl: { type: String, required: false, trim: true },
     zipFileUrl: { type: String, required: false, trim: true },
+    csvObjectKey: { type: String, required: false, trim: true },
+    zipObjectKey: { type: String, required: false, trim: true },
     fileSize: { type: Number, default: 0 },
     status: { type: String, enum: ['pending', 'processing', 'completed', 'completedWithErrors', 'failed'], default: 'pending' },
     totalRecords: { type: Number, default: 0 },

@@ -1,10 +1,7 @@
 import type { Request, Response } from 'express';
-import { parse } from 'csv-parse/sync';
-import unzipper from 'unzipper';
+import { uploadQueue } from '../../config/redis.js';
 import { uploadFileToStorage } from '../../config/storage.js';
-import { ListingModel } from '../listings/listing.model.js';
 import { UploadJobModel } from './upload-job.model.js';
-import { AuditLogModel } from '../admin/audit-log.model.js';
 
 type RejectedRow = { row: number; data: Record<string, string>; errors: string[] };
 
@@ -26,48 +23,6 @@ const toApiJob = (job: any) => ({
   completedAt: job.completedAt ? new Date(job.completedAt).toISOString() : undefined,
   errorMessage: job.errorMessage,
 });
-
-const getField = (row: Record<string, unknown>, names: string[]): string => {
-  const key = names.find((name) => row[name] !== undefined && row[name] !== null);
-  return key ? String(row[key] ?? '').trim() : '';
-};
-
-const toNumber = (value: string, fallback = 0) => {
-  const parsed = Number(value.replace(/[$,]/g, ''));
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
-
-const imageColumns = (row: Record<string, unknown>) => Object.entries(row)
-  .filter(([key, value]) => /^image\d*$/i.test(key) && String(value ?? '').trim())
-  .map(([, value]) => String(value).trim());
-
-async function readZipImages(file: Express.Multer.File | undefined) {
-  const images = new Map<string, { buffer: Buffer; contentType: string; originalPath: string }>();
-  if (!file) return images;
-  const directory = await unzipper.Open.buffer(file.buffer);
-  for (const entry of directory.files) {
-    if (entry.type !== 'File' || !/\.(png|jpe?g|webp|gif)$/i.test(entry.path)) continue;
-    const normalizedPath = entry.path.replace(/\\/g, '/').replace(/^\.\//, '').toLowerCase();
-    const extension = normalizedPath.split('.').pop() ?? 'jpeg';
-    const image = { buffer: await entry.buffer(), contentType: `image/${extension === 'jpg' ? 'jpeg' : extension}`, originalPath: entry.path };
-    images.set(normalizedPath, image);
-    images.set(normalizedPath.split('/').pop() ?? normalizedPath, image);
-  }
-  return images;
-}
-
-const findImage = (images: Map<string, { buffer: Buffer; contentType: string; originalPath: string }>, reference: string) => {
-  const normalized = reference.replace(/\\/g, '/').replace(/^\.\//, '').toLowerCase();
-  const basename = normalized.split('/').pop() ?? normalized;
-  const exact = images.get(normalized) ?? images.get(basename);
-  if (exact) return exact;
-
-  const referenceStem = basename.replace(/\.[^.]+$/, '');
-  for (const [key, image] of images.entries()) {
-    if (key.split('/').pop()?.replace(/\.[^.]+$/, '') === referenceStem) return image;
-  }
-  return undefined;
-};
 
 export const getUploads = async (request: Request, response: Response) => {
   const query = request.query.dealerId ? { dealerId: String(request.query.dealerId) } : {};
@@ -95,97 +50,38 @@ export const createUploadJob = async (request: Request, response: Response) => {
     return;
   }
 
-  const dealerId = String(payload.dealerId ?? '');
-  const dealerName = String(payload.dealerName ?? '');
   const job = await UploadJobModel.create({
-    dealerId,
-    dealerName,
+    dealerId: String(payload.dealerId ?? ''),
+    dealerName: String(payload.dealerName ?? ''),
     csvFileName: csvFile.originalname,
-    zipFileName: zipFile?.originalname,
-    fileSize: csvFile.size + (zipFile?.size ?? 0),
-    status: 'processing',
+    zipFileName: zipFile.originalname,
+    fileSize: csvFile.size + zipFile.size,
+    status: 'pending',
   });
 
   try {
-    const jobPrefix = `uploads/${job._id.toString()}`;
-    await uploadFileToStorage(`${jobPrefix}/source/${csvFile.originalname}`, csvFile.buffer, csvFile.mimetype || 'text/csv');
-    if (zipFile) await uploadFileToStorage(`${jobPrefix}/source/${zipFile.originalname}`, zipFile.buffer, zipFile.mimetype || 'application/zip');
+    const prefix = `uploads/${job._id.toString()}/source`;
+    const csvObjectKey = `${prefix}/${csvFile.originalname}`;
+    const zipObjectKey = `${prefix}/${zipFile.originalname}`;
+    const csvFileUrl = await uploadFileToStorage(csvObjectKey, csvFile.buffer, csvFile.mimetype || 'text/csv');
+    const zipFileUrl = await uploadFileToStorage(zipObjectKey, zipFile.buffer, zipFile.mimetype || 'application/zip');
 
-    const imageFiles = await readZipImages(zipFile);
-    const rows = parse(csvFile.buffer.toString('utf8'), { columns: true, skip_empty_lines: true, bom: true, relax_column_count: true }) as Record<string, unknown>[];
-    const rejectedRows: RejectedRow[] = [];
-    let validRecords = 0;
+    await UploadJobModel.findByIdAndUpdate(job._id, { csvObjectKey, zipObjectKey, csvFileUrl, zipFileUrl });
+    await uploadQueue.add('inventory-upload', {
+      uploadJobId: String(job._id),
+      dealerId: job.dealerId,
+      dealerName: job.dealerName,
+      csvObjectKey,
+      zipObjectKey,
+      csvFileName: csvFile.originalname,
+      zipFileName: zipFile.originalname,
+    }, { removeOnComplete: 100, removeOnFail: 100 });
 
-    for (const [index, row] of rows.entries()) {
-      const make = getField(row, ['make', 'Make']);
-      const model = getField(row, ['model', 'Model']);
-      const year = getField(row, ['year', 'Year']);
-      const price = getField(row, ['price', 'Price']);
-      const errors: string[] = [];
-      if (!make) errors.push('Make is required');
-      if (!model) errors.push('Model is required');
-      if (!year || !Number.isFinite(Number(year))) errors.push('Year must be a valid number');
-      if (!price || toNumber(price) <= 0) errors.push('Price must be a positive number');
-      if (errors.length) {
-        rejectedRows.push({ row: index + 2, data: Object.fromEntries(Object.entries(row).map(([key, value]) => [key, String(value ?? '')])), errors });
-        continue;
-      }
-
-      const uploadedImages = [];
-      for (const [imageIndex, reference] of imageColumns(row).entries()) {
-        const image = findImage(imageFiles, reference);
-        if (!image) continue;
-        const imageKey = `${jobPrefix}/images/${index + 1}-${imageIndex}-${image.originalPath.split('/').pop()}`;
-        const url = await uploadFileToStorage(imageKey, image.buffer, image.contentType);
-        uploadedImages.push({ id: `${job._id}-${index + 1}-${imageIndex}`, url, alt: `${make} ${model}`, isPrimary: imageIndex === 0 });
-      }
-
-      await ListingModel.create({
-        dealerId,
-        dealerName,
-        make,
-        model,
-        year: Number(year),
-        bodyType: getField(row, ['bodyType', 'body_type', 'Body Type']) || 'sedan',
-        fuelType: getField(row, ['fuelType', 'fuel_type', 'Fuel Type']) || 'petrol',
-        transmission: getField(row, ['transmission', 'Transmission']) || 'automatic',
-        condition: getField(row, ['condition', 'Condition']) || 'good',
-        mileage: toNumber(getField(row, ['mileage', 'Mileage'])),
-        color: getField(row, ['color', 'Color']),
-        vin: getField(row, ['vin', 'VIN']),
-        price: toNumber(price),
-        currency: getField(row, ['currency', 'Currency']) || 'USD',
-        title: getField(row, ['title', 'Title']) || `${year} ${make} ${model}`,
-        description: getField(row, ['description', 'Description']),
-        images: uploadedImages,
-        status: 'active',
-      });
-      validRecords += 1;
-    }
-
-    const updated = await UploadJobModel.findByIdAndUpdate(job._id, {
-      status: rejectedRows.length ? 'completedWithErrors' : 'completed',
-      totalRecords: rows.length,
-      processedRecords: rows.length,
-      validRecords,
-      rejectedRecords: rejectedRows.length,
-      rejectedRows,
-      completedAt: new Date(),
-    }, { new: true }).lean();
-
-    await AuditLogModel.create({
-      eventType: 'upload_completed',
-      actorId: dealerId,
-      actorName: dealerName || dealerId,
-      targetId: String(job._id),
-      targetName: csvFile.originalname,
-      details: `Inventory batch completed with ${validRecords} valid and ${rejectedRows.length} rejected rows.`,
-    });
-
-    response.status(201).json({ success: true, message: 'CSV and ZIP inventory processed successfully.', data: toApiJob(updated), meta: null });
+    const queued = await UploadJobModel.findById(job._id).lean();
+    response.status(202).json({ success: true, message: 'Inventory batch queued for ETL processing.', data: toApiJob(queued), meta: null });
   } catch (error) {
-    await UploadJobModel.findByIdAndUpdate(job._id, { status: 'failed', errorMessage: error instanceof Error ? error.message : 'Upload processing failed.' });
-    response.status(500).json({ success: false, message: 'Inventory processing failed.', data: null, meta: null });
+    await UploadJobModel.findByIdAndUpdate(job._id, { status: 'failed', errorMessage: error instanceof Error ? error.message : 'Upload could not be queued.' });
+    response.status(500).json({ success: false, message: 'Inventory upload could not be queued.', data: null, meta: null });
   }
 };
 

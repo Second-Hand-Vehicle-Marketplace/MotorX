@@ -44,8 +44,15 @@ export const listingApi = {
     const response = await apiClient.get<ApiEnvelope<Listing | null>>(`/listings/${id}`);
     return response.data?.data ?? null;
   },
-  createListing: async (data: Partial<Listing>): Promise<Listing> => {
-    const response = await apiClient.post<ApiEnvelope<Listing>>('/dealer/listings', data);
+  createListing: async (data: Partial<Listing>, images: File[] = []): Promise<Listing> => {
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) formData.append(key, String(value));
+    });
+    images.forEach((image) => formData.append('images', image));
+    const response = await apiClient.post<ApiEnvelope<Listing>>('/dealer/listings', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response.data.data;
   },
   updateListing: async (id: string, data: Partial<Listing>): Promise<Listing> => {

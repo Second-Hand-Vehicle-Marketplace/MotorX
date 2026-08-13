@@ -1,15 +1,17 @@
 import type { Request, Response } from 'express';
 import { ListingModel } from '../listings/listing.model.js';
-import { toPublicStorageUrl } from '../../config/storage.js';
+import { toPublicStorageUrl, uploadFileToStorage } from '../../config/storage.js';
 import { InquiryModel } from './inquiry.model.js';
 import { sendMail } from '../../config/mailer.js';
 import { UserModel } from '../auth-users/user.model.js';
+import { AuditLogModel } from '../admin/audit-log.model.js';
 
 const toApiListing = (listing: any) => ({
   id: String(listing._id ?? listing.id),
   dealerId: listing.dealerId,
   dealerName: listing.dealerName,
   dealerContact: listing.dealerContact,
+  plateNumber: listing.plateNumber,
   make: listing.make,
   model: listing.model,
   year: Number(listing.year ?? 0),
@@ -183,7 +185,7 @@ export const createInquiry = async (request: Request, response: Response) => {
 };
 
 export const updateListing = async (request: Request, response: Response) => {
-  const allowedFields = ['make', 'model', 'year', 'price', 'mileage', 'bodyType', 'fuelType', 'transmission', 'condition', 'color', 'title', 'description', 'vin'];
+  const allowedFields = ['make', 'model', 'year', 'price', 'mileage', 'bodyType', 'fuelType', 'transmission', 'condition', 'color', 'title', 'description', 'vin', 'plateNumber'];
   const updates = Object.fromEntries(Object.entries(request.body ?? {}).filter(([key]) => allowedFields.includes(key)));
   const listing = await ListingModel.findByIdAndUpdate(request.params.id, { $set: { ...updates, updatedAt: new Date() } }, { new: true }).lean();
   if (!listing) {
@@ -195,6 +197,22 @@ export const updateListing = async (request: Request, response: Response) => {
 
 export const createListing = async (request: Request, response: Response) => {
   const payload = request.body ?? {};
+  const vin = String(payload.vin ?? '').trim().toUpperCase();
+  const plateNumber = String(payload.plateNumber ?? '').trim().toUpperCase();
+  if (!vin && !plateNumber) {
+    response.status(400).json({ success: false, message: 'VIN or plate number is required.', data: null, meta: null });
+    return;
+  }
+
+  const identifierFilters: Array<Record<string, string>> = [];
+  if (vin) identifierFilters.push({ vin });
+  if (plateNumber) identifierFilters.push({ plateNumber });
+  const existingIdentifier = await ListingModel.findOne({ $or: identifierFilters });
+  if (existingIdentifier) {
+    response.status(409).json({ success: false, message: 'A listing with this VIN or plate number already exists.', data: null, meta: null });
+    return;
+  }
+
   const createdListing = await ListingModel.create({
     dealerId: payload.dealerId ?? 'usr_002',
     dealerName: payload.dealerName ?? 'Premium Autos',
@@ -207,17 +225,44 @@ export const createListing = async (request: Request, response: Response) => {
     condition: payload.condition ?? 'excellent',
     mileage: Number(payload.mileage ?? 0),
     color: payload.color ?? 'Black',
-    vin: payload.vin ?? undefined,
+    vin: vin || undefined,
+    plateNumber: plateNumber || undefined,
     price: Number(payload.price ?? 0),
     currency: payload.currency ?? 'USD',
     title: payload.title ?? 'New Listing',
     description: payload.description ?? 'Newly created marketplace listing.',
-    images: payload.images ?? [{ id: `img_${Date.now()}`, url: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&h=400&fit=crop', alt: 'New vehicle', isPrimary: true }],
+    images: [],
     status: 'active',
     views: 0,
     leads: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
+  });
+
+  const imageFiles = Array.isArray(request.files) ? request.files : [];
+  const uploadedImages = [];
+  for (const [index, file] of imageFiles.entries()) {
+    const key = `listings/${createdListing._id.toString()}/images/${index}-${file.originalname}`;
+    const url = await uploadFileToStorage(key, file.buffer, file.mimetype || 'application/octet-stream');
+    uploadedImages.push({
+      id: `${createdListing._id}-${index}`,
+      url,
+      alt: `${createdListing.make} ${createdListing.model}`,
+      isPrimary: index === 0,
+    });
+  }
+
+  if (uploadedImages.length) {
+    await ListingModel.findByIdAndUpdate(createdListing._id, { $set: { images: uploadedImages } });
+  }
+
+  await AuditLogModel.create({
+    eventType: 'listing_created',
+    actorId: String(createdListing.dealerId),
+    actorName: String(createdListing.dealerName),
+    targetId: String(createdListing._id),
+    targetName: String(createdListing.title),
+    details: 'Manual vehicle listing created by dealer.',
   });
 
   response.status(201).json({
