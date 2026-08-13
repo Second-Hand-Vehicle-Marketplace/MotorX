@@ -1,5 +1,7 @@
 # MotorX
 
+For the team's branch, pull-request, automated-check, and AWS release processes, see the [Continuous Integration Guide](docs/CI_GUIDE.md) and [Continuous Deployment Guide](docs/CD_GUIDE.md).
+
 MotorX is a second-hand vehicle marketplace with a React and TypeScript frontend, an Express modular-monolith backend, a separate ETL worker, MongoDB Atlas, Redis/BullMQ, MinIO object storage, and Firebase Authentication.
 
 ## Architecture
