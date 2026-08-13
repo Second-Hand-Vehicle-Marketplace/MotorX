@@ -1,9 +1,17 @@
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import React from 'react';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
-export function ProtectedRoute() {
-  const { localUser, loading } = useAuth();
-  const location = useLocation();
-  if (loading) return <p>Checking your session…</p>;
-  return localUser ? <Outlet /> : <Navigate to="/login" replace state={{ from: location }} />;
-}
+export const ProtectedRoute: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="loading-spinner" style={{ margin: '4rem auto', display: 'block' }} />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Outlet />;
+};

@@ -1,9 +1,21 @@
+import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
-export function PortalRedirect() {
-  const { localUser, loading } = useAuth();
-  if (loading) return <p>Loading…</p>;
-  if (!localUser) return <Navigate to="/login" replace />;
-  return <Navigate to={localUser.role === 'admin' ? '/admin' : localUser.role === 'dealer' ? '/dealer' : '/marketplace'} replace />;
-}
+export const PortalRedirect: React.FC = () => {
+  const { user, isAuthenticated } = useAuth();
+
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role === 'dealer') {
+    return <Navigate to="/dealer" replace />;
+  }
+
+  if (user.role === 'admin') {
+    return <Navigate to="/admin" replace />;
+  }
+
+  return <Navigate to="/marketplace" replace />;
+};

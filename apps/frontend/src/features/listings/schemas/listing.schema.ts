@@ -1,34 +1,19 @@
 import { z } from 'zod';
-import { fuelTypes, listingStatuses, transmissionTypes } from '@motorx/shared-contracts';
 
-export const listingSchema = z.object({
-  id: z.string(),
-  dealerId: z.string(),
-  title: z.string(),
-  make: z.string(),
-  model: z.string(),
-  year: z.number().int(),
-  price: z.number().nonnegative(),
-  currency: z.string().length(3),
-  mileageKm: z.number().nonnegative(),
-  fuelType: z.enum(fuelTypes),
-  transmission: z.enum(transmissionTypes),
-  location: z.string(),
-  description: z.string().nullable(),
-  images: z.array(z.object({ key: z.string(), url: z.string(), alt: z.string().nullable(), order: z.number() })),
-  status: z.enum(listingStatuses),
-  publishedAt: z.string().nullable(),
+export const createListingSchema = z.object({
+  make: z.string().min(1, 'Make is required'),
+  model: z.string().min(1, 'Model is required'),
+  year: z.number().min(1900, 'Year must be after 1900').max(new Date().getFullYear() + 1),
+  price: z.number().min(0, 'Price must be positive'),
+  mileage: z.number().min(0, 'Mileage must be positive'),
+  bodyType: z.enum(['sedan', 'suv', 'hatchback', 'coupe', 'truck', 'van', 'wagon', 'convertible']),
+  fuelType: z.enum(['petrol', 'diesel', 'electric', 'hybrid', 'plug-in-hybrid']),
+  transmission: z.enum(['automatic', 'manual', 'cvt']),
+  condition: z.enum(['excellent', 'good', 'fair', 'poor']),
+  color: z.string().min(1, 'Color is required'),
+  title: z.string().min(5, 'Title must be at least 5 characters'),
+  description: z.string().min(10, 'Description must be at least 10 characters'),
+  vin: z.string().optional(),
 });
 
-export const listingsResponseSchema = z.object({
-  success: z.literal(true),
-  data: z.array(listingSchema),
-  meta: z.object({
-    pagination: z.object({
-      page: z.number().int(),
-      limit: z.number().int(),
-      total: z.number().int(),
-      totalPages: z.number().int(),
-    }),
-  }),
-});
+export type CreateListingInput = z.infer<typeof createListingSchema>;

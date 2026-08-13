@@ -1,8 +1,37 @@
+import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import type { UserRole } from '../types/auth.types';
 
-export function RoleGuard({ roles }: { roles: readonly UserRole[] }) {
-  const { localUser } = useAuth();
-  return localUser && roles.includes(localUser.role) ? <Outlet /> : <Navigate to="/" replace />;
+interface RoleGuardProps {
+  allowedRoles: UserRole[];
 }
+
+export const RoleGuard: React.FC<RoleGuardProps> = ({ allowedRoles }) => {
+  const { user, isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="loading-spinner" style={{ margin: '4rem auto', display: 'block' }} />;
+  }
+
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role === 'dealer' && user.dealerStatus !== 'approved' && allowedRoles.includes('dealer')) {
+    return <Navigate to="/dealer/pending" replace />;
+  }
+
+  if (!allowedRoles.includes(user.role)) {
+    return (
+      <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-error)' }}>Access Restricted</h2>
+        <p style={{ color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
+          Your account role ({user.role}) does not have permission to view this page.
+        </p>
+      </div>
+    );
+  }
+
+  return <Outlet />;
+};
