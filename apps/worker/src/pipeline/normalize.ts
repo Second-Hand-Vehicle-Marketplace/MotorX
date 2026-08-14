@@ -1,1 +1,1 @@
-export const normalize = () => undefined;
+export const normalize = (value: string) => value.trim();
