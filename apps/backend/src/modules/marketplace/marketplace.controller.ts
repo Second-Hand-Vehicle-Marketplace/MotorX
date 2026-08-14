@@ -42,6 +42,7 @@ export const getListings = async (request: Request, response: Response) => {
   const bodyType = String(request.query.bodyType ?? '').trim();
   const fuelType = String(request.query.fuelType ?? '').trim();
   const priceMax = Number(request.query.priceMax ?? 0);
+  const sortBy = String(request.query.sortBy ?? 'newest');
   const safePage = Math.max(1, Number.isFinite(page) ? page : 1);
   const safePageSize = Math.max(1, Number.isFinite(pageSize) ? pageSize : 9);
 
@@ -53,6 +54,8 @@ export const getListings = async (request: Request, response: Response) => {
       { make: { $regex: search, $options: 'i' } },
       { model: { $regex: search, $options: 'i' } },
       { description: { $regex: search, $options: 'i' } },
+      { vin: { $regex: search, $options: 'i' } },
+      { plateNumber: { $regex: search, $options: 'i' } },
     ];
   }
 
@@ -61,9 +64,19 @@ export const getListings = async (request: Request, response: Response) => {
   if (fuelType) query.fuelType = fuelType;
   if (priceMax > 0) query.price = { $lte: priceMax };
 
+  const sort: Record<string, 1 | -1> = sortBy === 'price-asc'
+    ? { price: 1 }
+    : sortBy === 'price-desc'
+      ? { price: -1 }
+      : sortBy === 'year-desc'
+        ? { year: -1 }
+        : sortBy === 'mileage-asc'
+          ? { mileage: 1 }
+          : { createdAt: -1 };
+
   const [totalDocs, rawListings] = await Promise.all([
     ListingModel.countDocuments(query),
-    ListingModel.find(query).sort({ createdAt: -1 }).skip((safePage - 1) * safePageSize).limit(safePageSize).lean(),
+    ListingModel.find(query).sort({ status: 1, ...sort }).skip((safePage - 1) * safePageSize).limit(safePageSize).lean(),
   ]);
 
   const data = rawListings.map(toApiListing);
@@ -80,6 +93,21 @@ export const getListings = async (request: Request, response: Response) => {
       pageSize: safePageSize,
       totalPages,
     },
+    meta: null,
+  });
+};
+
+export const getMarketplaceStats = async (_request: Request, response: Response) => {
+  const [activeVehicles, soldVehicles, registeredDealers] = await Promise.all([
+    ListingModel.countDocuments({ status: 'active' }),
+    ListingModel.countDocuments({ status: 'sold' }),
+    UserModel.countDocuments({ role: 'dealer' }),
+  ]);
+
+  response.status(200).json({
+    success: true,
+    message: 'Marketplace statistics retrieved successfully.',
+    data: { activeVehicles, soldVehicles, registeredDealers },
     meta: null,
   });
 };
@@ -195,12 +223,35 @@ export const updateListing = async (request: Request, response: Response) => {
   response.status(200).json({ success: true, message: 'Listing updated successfully.', data: toApiListing(listing), meta: null });
 };
 
+export const updateListingStatus = async (request: Request, response: Response) => {
+  const status = String(request.body?.status ?? '').trim();
+  if (!['active', 'sold', 'pending', 'hidden'].includes(status)) {
+    response.status(400).json({ success: false, message: 'Invalid listing status.', data: null, meta: null });
+    return;
+  }
+  const listing = await ListingModel.findByIdAndUpdate(request.params.id, { $set: { status, updatedAt: new Date() } }, { new: true }).lean();
+  if (!listing) {
+    response.status(404).json({ success: false, message: 'Listing not found.', data: null, meta: null });
+    return;
+  }
+  response.status(200).json({ success: true, message: 'Listing status updated.', data: toApiListing(listing), meta: null });
+};
+
+export const deleteListing = async (request: Request, response: Response) => {
+  const listing = await ListingModel.findByIdAndDelete(request.params.id).lean();
+  if (!listing) {
+    response.status(404).json({ success: false, message: 'Listing not found.', data: null, meta: null });
+    return;
+  }
+  response.status(200).json({ success: true, message: 'Listing permanently deleted.', data: { id: String(listing._id) }, meta: null });
+};
+
 export const createListing = async (request: Request, response: Response) => {
   const payload = request.body ?? {};
   const vin = String(payload.vin ?? '').trim().toUpperCase();
   const plateNumber = String(payload.plateNumber ?? '').trim().toUpperCase();
-  if (!vin && !plateNumber) {
-    response.status(400).json({ success: false, message: 'VIN or plate number is required.', data: null, meta: null });
+  if (!vin || !plateNumber) {
+    response.status(400).json({ success: false, message: 'Both VIN and plate number are required.', data: null, meta: null });
     return;
   }
 

@@ -29,4 +29,7 @@ export const adminApi = {
     const response = await apiClient.patch<{ data: any }>(`/admin/listings/${id}/status`, { status });
     return response.data.data;
   },
+  deleteListing: async (id: string) => {
+    await apiClient.delete(`/admin/listings/${id}`);
+  },
 };

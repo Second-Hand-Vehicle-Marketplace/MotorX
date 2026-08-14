@@ -131,6 +131,8 @@ export const VehicleDetails: React.FC = () => {
               {formatPrice(listing.price, listing.currency)}
             </div>
 
+            {listing.status === 'sold' && <div className="badge badge-error" style={{ display: 'inline-block', marginBottom: '1rem' }}>Sold</div>}
+
             <div style={{ borderTop: '1px solid var(--color-glass-border)', borderBottom: '1px solid var(--color-glass-border)', padding: '1rem 0', margin: '1rem 0' }}>
               <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Sold By Dealer
@@ -149,10 +151,10 @@ export const VehicleDetails: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <button className="btn btn-primary btn-lg" style={{ width: '100%' }} onClick={() => void submitInquiry('contact')} disabled={isSubmitting}>
-                Contact Dealer
+              <button className="btn btn-primary btn-lg" style={{ width: '100%' }} onClick={() => void submitInquiry('contact')} disabled={isSubmitting || listing.status === 'sold'}>
+                {listing.status === 'sold' ? 'Vehicle Sold' : 'Contact Dealer'}
               </button>
-              <button className="btn btn-secondary" style={{ width: '100%' }} onClick={() => void submitInquiry('test_drive')} disabled={isSubmitting}>
+              <button className="btn btn-secondary" style={{ width: '100%' }} onClick={() => void submitInquiry('test_drive')} disabled={isSubmitting || listing.status === 'sold'}>
                 Schedule Test Drive
               </button>
             </div>

@@ -22,6 +22,7 @@ export const DealerDashboard: React.FC = () => {
   }, [user?.id]);
 
   const activeCount = dealerListings.filter(l => l.status === 'active').length;
+  const soldCount = dealerListings.filter(l => l.status === 'sold').length;
   const pendingCount = dealerListings.filter(l => l.status === 'pending').length;
   const totalViews = dealerListings.reduce((sum, l) => sum + (l.views ?? 0), 0);
   const totalLeads = dealerListings.reduce((sum, l) => sum + (l.leads ?? 0), 0);
@@ -67,6 +68,12 @@ export const DealerDashboard: React.FC = () => {
           <span className="stat-label">Buyer Leads Generated</span>
           <div className="stat-value">{totalLeads}</div>
           <span className="stat-change" style={{ color: 'var(--color-info)' }}>{totalLeads > 0 ? 'Captured from listing activity' : 'No leads yet'}</span>
+        </div>
+
+        <div className="stat-card">
+          <span className="stat-label">Sold Vehicles</span>
+          <div className="stat-value">{soldCount}</div>
+          <span className="stat-change" style={{ color: 'var(--color-success)' }}>Marked sold in your inventory</span>
         </div>
       </div>
 

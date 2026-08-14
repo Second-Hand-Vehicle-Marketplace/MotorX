@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ListingCard } from '../features/listings/components/ListingCard';
 import { useListings } from '@/features/listings/hooks/useListings';
+import { listingApi } from '@/features/listings/services/listingApi';
 
 export const LandingPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
   const { data } = useListings({}, 6);
+  const [marketplaceStats, setMarketplaceStats] = useState({ activeVehicles: 0, soldVehicles: 0, registeredDealers: 0 });
+
+  useEffect(() => {
+    void listingApi.getMarketplaceStats().then(setMarketplaceStats).catch(() => setMarketplaceStats({ activeVehicles: 0, soldVehicles: 0, registeredDealers: 0 }));
+  }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +72,26 @@ export const LandingPage: React.FC = () => {
           <span>✓ 100% Verified Dealers</span>
           <span>✓ Real-time Inventory</span>
           <span>✓ Automated ETL Batch Sync</span>
+        </div>
+      </section>
+
+      <section style={{ maxWidth: 1280, margin: '0 auto', padding: '2rem 1.5rem 0' }}>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <span className="stat-label">Active Vehicles</span>
+            <div className="stat-value">{marketplaceStats.activeVehicles.toLocaleString()}</div>
+            <span className="stat-change" style={{ color: 'var(--color-success)' }}>Available on marketplace</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-label">Vehicles Sold</span>
+            <div className="stat-value">{marketplaceStats.soldVehicles.toLocaleString()}</div>
+            <span className="stat-change" style={{ color: 'var(--color-info)' }}>Successfully sold through MotorX</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-label">Registered Dealers</span>
+            <div className="stat-value">{marketplaceStats.registeredDealers.toLocaleString()}</div>
+            <span className="stat-change" style={{ color: 'var(--color-amber)' }}>Verified dealership network</span>
+          </div>
         </div>
       </section>
 

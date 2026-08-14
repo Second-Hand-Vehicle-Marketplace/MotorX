@@ -210,3 +210,15 @@ export const updateListingStatus = (request: Request, response: Response) => {
   })();
 };
 
+export const deleteListing = (request: Request, response: Response) => {
+  void (async () => {
+    const target = await ListingModel.findByIdAndDelete(request.params.id).lean();
+    if (!target) {
+      response.status(404).json({ success: false, message: 'Listing not found.', data: null, meta: null });
+      return;
+    }
+    await recordAudit('listing_removed', String(target._id), target.title, 'Listing permanently deleted by admin moderation.');
+    response.status(200).json({ success: true, message: 'Listing permanently deleted.', data: { id: String(target._id) }, meta: null });
+  })();
+};
+

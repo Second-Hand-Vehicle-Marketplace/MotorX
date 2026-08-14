@@ -12,14 +12,15 @@ export const ListingMonitoring: React.FC = () => {
   }, []);
 
   const handleRemove = async (id: string) => {
-    await adminApi.updateListingStatus(id, 'archived');
-    setListings((prev) => prev.map((listing) => (listing.id === id ? { ...listing, status: 'archived' } : listing)));
+    if (!window.confirm('Permanently delete this listing?')) return;
+    await adminApi.deleteListing(id);
+    setListings((prev) => prev.filter((listing) => listing.id !== id));
   };
 
   const filtered = listings.filter(l => {
     if (!search) return true;
     const q = search.toLowerCase();
-    return l.title.toLowerCase().includes(q) || l.dealerName.toLowerCase().includes(q);
+    return String(l.title ?? '').toLowerCase().includes(q) || String(l.dealerName ?? '').toLowerCase().includes(q) || String(l.vin ?? '').toLowerCase().includes(q) || String(l.plateNumber ?? '').toLowerCase().includes(q);
   });
 
   return (
@@ -35,7 +36,7 @@ export const ListingMonitoring: React.FC = () => {
         <input
           type="text"
           className="form-input"
-          placeholder="Search listings by title or dealer name..."
+          placeholder="Search by VIN, plate, title, or dealer name..."
           style={{ maxWidth: 360 }}
           value={search}
           onChange={(e) => setSearch(e.target.value)}

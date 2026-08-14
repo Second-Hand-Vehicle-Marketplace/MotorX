@@ -26,6 +26,7 @@ export const AdminDashboard: React.FC = () => {
   const totalUsers = users.length;
   const dealers = users.filter(u => u.role === 'dealer');
   const activeListings = listings.filter(l => l.status === 'active').length;
+  const soldListings = listings.filter(l => l.status === 'sold').length;
   const pendingJobs = uploadJobs.filter(j => j.status === 'pending' || j.status === 'processing').length;
 
   return (
@@ -48,7 +49,7 @@ export const AdminDashboard: React.FC = () => {
         <div className="stat-card">
           <span className="stat-label">Active Listings</span>
           <div className="stat-value">{activeListings}</div>
-          <span className="stat-change positive">Across {dealers.length} dealerships</span>
+          <span className="stat-change positive">{soldListings} sold across {dealers.length} dealerships</span>
         </div>
 
         <div className="stat-card">

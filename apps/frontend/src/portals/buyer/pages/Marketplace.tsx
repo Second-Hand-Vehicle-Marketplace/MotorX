@@ -1,12 +1,13 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useListings } from '@/features/listings/hooks/useListings';
 import { ListingCard } from '@/features/listings/components/ListingCard';
 import { availableMakes, bodyTypes, fuelTypes } from '@/features/listings/constants/filterOptions';
 import type { BodyType, FuelType } from '@/features/listings/types/listing.types';
 
 export const Marketplace: React.FC = () => {
-  const { data, filters, updateFilters, resetFilters, page, setPage } = useListings({}, 9);
+  const [searchParams] = useSearchParams();
+  const { data, filters, updateFilters, resetFilters, page, setPage } = useListings({ search: searchParams.get('search') ?? undefined }, 9);
 
   return (
     <div style={{ maxWidth: 1440, margin: '0 auto', padding: '2rem 1.5rem' }}>
@@ -148,7 +149,7 @@ export const Marketplace: React.FC = () => {
           {data.data.length > 0 ? (
             <div className="listings-grid">
               {data.data.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
+                <ListingCard key={listing.id} listing={listing} showStatus={listing.status === 'sold'} />
               ))}
             </div>
           ) : (

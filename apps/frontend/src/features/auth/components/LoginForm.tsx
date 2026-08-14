@@ -73,14 +73,6 @@ export const LoginForm: React.FC = () => {
         </button>
       </form>
 
-      <div style={{ marginTop: '1.5rem', padding: '1rem', borderRadius: 'var(--radius-lg)', background: 'var(--color-accent-subtle)', border: '1px solid var(--color-glass-border)' }}>
-        <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem' }}>
-          Want to upload inventory? Register as a Dealer.
-        </p>
-        <button type="button" onClick={() => navigate('/dealer/register')} className="btn btn-secondary btn-sm" style={{ width: '100%' }}>
-          Go to Dealer Sign-Up
-        </button>
-      </div>
     </div>
   );
 };

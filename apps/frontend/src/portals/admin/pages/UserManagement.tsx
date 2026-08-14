@@ -21,7 +21,7 @@ export const UserManagement: React.FC = () => {
     if (roleFilter !== 'all' && u.role !== roleFilter) return false;
     if (search) {
       const q = search.toLowerCase();
-      return u.displayName.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+      return u.displayName.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || String(u.businessName ?? '').toLowerCase().includes(q) || String(u.phone ?? '').toLowerCase().includes(q);
     }
     return true;
   });

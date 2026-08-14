@@ -6,7 +6,8 @@ export function validate(row: Record<string, unknown>, rowNumber: number): Rejec
 	if (!text(['model', 'Model'])) errors.push('Model is required');
 	const vin = text(['vin', 'VIN']);
 	const plateNumber = text(['plateNumber', 'plate_number', 'plate', 'Plate Number']);
-	if (!vin && !plateNumber) errors.push('VIN or plate number is required');
+	if (!vin) errors.push('VIN is required');
+	if (!plateNumber) errors.push('Plate number is required');
 	if (!Number.isFinite(Number(text(['year', 'Year'])))) errors.push('Year must be a valid number');
 	if (Number(text(['price', 'Price']).replace(/[$,]/g, '')) <= 0) errors.push('Price must be positive');
 	return errors.length ? { row: rowNumber, data: Object.fromEntries(Object.entries(row).map(([key, value]) => [key, String(value ?? '')])), errors } : null;

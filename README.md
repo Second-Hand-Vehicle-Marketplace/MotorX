@@ -188,7 +188,7 @@ docker compose down -v
 5. Redis stores the BullMQ job.
 6. The worker receives the job and downloads both files from MinIO.
 7. `extract.ts` parses CSV rows and reads ZIP images.
-8. `validate.ts` checks required fields, including at least one `vin` or `plateNumber` identifier.
+8. `validate.ts` checks required fields, including both `vin` and `plateNumber` identifiers.
 9. `detectDuplicates.ts` rejects repeated VINs, plate numbers, or identical vehicle rows.
 10. The worker matches `image1`, `image2`, and later image columns to ZIP filenames.
 11. Images are stored under a job-specific path so duplicate filenames cannot overwrite another upload.
@@ -212,7 +212,7 @@ make,model,year,price,mileage,bodyType,fuelType,transmission,condition,vin,plate
 Toyota,Corolla,2020,18500,45000,sedan,petrol,automatic,used,JTDBR32E720123456,WP-CAB-1234,2020 Toyota Corolla,First owner,corolla_front.png,corolla_side.png
 ```
 
-Each row must contain at least one of `vin` or `plateNumber`. If both are present, both are used for duplicate protection.
+Each row must contain both `vin` and `plateNumber`. Both identifiers are used for duplicate protection.
 
 ## Verify Redis, BullMQ, and ETL
 
@@ -297,6 +297,6 @@ Check `SMTP_USER` and the Gmail app password. The application logs SMTP failures
 
 ### Upload is rejected
 
-Open the upload report. It shows every rejected CSV row and reason. Each row must have `make`, `model`, `year`, `price`, and either `vin` or `plateNumber`. Image names in the CSV must match files in the ZIP.
+Open the upload report. It shows every rejected CSV row and reason. Each row must have `make`, `model`, `year`, `price`, `vin`, and `plateNumber`. Image names in the CSV must match files in the ZIP.
 
 

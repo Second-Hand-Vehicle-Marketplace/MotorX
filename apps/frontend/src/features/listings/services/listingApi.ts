@@ -17,6 +17,10 @@ const emptyPage = (pageSize = 9): PaginatedResponse<Listing> => ({
 });
 
 export const listingApi = {
+  getMarketplaceStats: async (): Promise<{ activeVehicles: number; soldVehicles: number; registeredDealers: number }> => {
+    const response = await apiClient.get<ApiEnvelope<{ activeVehicles: number; soldVehicles: number; registeredDealers: number }>>('/listings/stats');
+    return response.data.data;
+  },
   getListings: async (filters: ListingFilters = {}): Promise<PaginatedResponse<Listing>> => {
     const response = await apiClient.get<ApiEnvelope<PaginatedResponse<Listing> | Listing[]>>('/listings', {
       params: filters,
@@ -58,6 +62,13 @@ export const listingApi = {
   updateListing: async (id: string, data: Partial<Listing>): Promise<Listing> => {
     const response = await apiClient.put<ApiEnvelope<Listing>>(`/listings/${id}`, data);
     return response.data.data;
+  },
+  updateListingStatus: async (id: string, status: string): Promise<Listing> => {
+    const response = await apiClient.patch<ApiEnvelope<Listing>>(`/dealer/listings/${id}/status`, { status });
+    return response.data.data;
+  },
+  deleteListing: async (id: string): Promise<void> => {
+    await apiClient.delete(`/dealer/listings/${id}`);
   },
   createInquiry: async (id: string, data: { type: 'contact' | 'test_drive'; buyerName: string; buyerEmail: string; buyerPhone?: string; message?: string; preferredDate?: string }) => {
     const response = await apiClient.post<ApiEnvelope<{ id: string; status: string }>>(`/listings/${id}/inquiries`, data);

@@ -132,7 +132,7 @@ export const InventoryUpload: React.FC = () => {
       <div className="glass-card" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
         <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem' }}>CSV + ZIP Template & Format Requirements</h3>
         <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.6, marginBottom: '1rem' }}>
-          CSV rows can include image columns such as <code>image1,image2,...,imageN</code>. ZIP uploads should contain the matching vehicle photos referenced by those columns. Required CSV fields include: <code>make, model, year, price, mileage, bodyType, fuelType, transmission, condition, title, description</code>. Each row must include at least one flexible identifier: <code>vin</code> or <code>plateNumber</code>. If both are provided, both must be unique.
+          CSV rows can include image columns such as <code>image1,image2,...,imageN</code>. ZIP uploads should contain the matching vehicle photos referenced by those columns. Required CSV fields include: <code>make, model, year, price, mileage, bodyType, fuelType, transmission, condition, vin, plateNumber, title, description</code>. Every row must include both <code>vin</code> and <code>plateNumber</code>, and both identifiers must be unique.
         </p>
         <button className="btn btn-secondary btn-sm">
           ↓ Download Sample CSV Template

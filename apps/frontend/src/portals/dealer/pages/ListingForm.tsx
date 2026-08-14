@@ -52,8 +52,8 @@ export const ListingForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.vin.trim() && !formData.plateNumber.trim()) {
-      window.alert('Provide a VIN or plate number before saving the listing.');
+    if (!formData.vin.trim() || !formData.plateNumber.trim()) {
+      window.alert('Provide both a VIN and plate number before saving the listing.');
       return;
     }
     if (editId) await listingApi.updateListing(editId, formData as any);
@@ -124,26 +124,26 @@ export const ListingForm: React.FC = () => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">VIN or Plate Number *</label>
+            <label className="form-label">VIN *</label>
             <input
               type="text"
               className="form-input"
-              placeholder="VIN or registration plate number"
+              placeholder="Vehicle identification number"
               value={formData.vin}
               onChange={(e) => setFormData({ ...formData, vin: e.target.value.toUpperCase() })}
             />
           </div>
 
           <div className="form-group">
-            <label className="form-label">Plate Number</label>
+            <label className="form-label">Plate Number *</label>
             <input
               type="text"
               className="form-input"
-              placeholder="Optional if VIN is provided"
+              placeholder="Registration plate number"
               value={formData.plateNumber}
               onChange={(e) => setFormData({ ...formData, plateNumber: e.target.value.toUpperCase() })}
             />
-            <small style={{ color: 'var(--color-text-tertiary)' }}>Provide at least a VIN or plate number.</small>
+            <small style={{ color: 'var(--color-text-tertiary)' }}>Both identifiers are required.</small>
           </div>
         </div>
 

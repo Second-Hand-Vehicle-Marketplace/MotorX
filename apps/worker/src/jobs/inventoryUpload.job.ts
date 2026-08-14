@@ -52,7 +52,7 @@ export async function processInventoryUpload(job: Job): Promise<void> {
         text(row, ['title', 'Title']),
       ].join('|');
       if (detectDuplicates([vin, plateNumber], fingerprint, seenVins)) {
-        rejectedRows.push({ row: index + 2, data: Object.fromEntries(Object.entries(row).map(([key, value]) => [key, String(value ?? '')])), errors: [vin ? 'Duplicate VIN in upload' : plateNumber ? 'Duplicate plate number in upload' : 'Duplicate vehicle row in upload'] });
+        rejectedRows.push({ row: index + 2, data: Object.fromEntries(Object.entries(row).map(([key, value]) => [key, String(value ?? '')])), errors: ['Duplicate VIN or plate number in upload'] });
         continue;
       }
 

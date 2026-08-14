@@ -8,6 +8,7 @@ import {
   updateUserStatus,
   updateDealerStatus,
   updateListingStatus,
+  deleteListing,
 } from './admin.controller.js';
 
 export const adminRouter = Router();
@@ -20,3 +21,4 @@ adminRouter.get('/uploads', getUploadJobs);
 adminRouter.patch('/users/:id/status', updateUserStatus);
 adminRouter.patch('/dealers/:id/status', updateDealerStatus);
 adminRouter.patch('/listings/:id/status', updateListingStatus);
+adminRouter.delete('/listings/:id', deleteListing);

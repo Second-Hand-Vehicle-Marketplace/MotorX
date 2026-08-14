@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { formatPrice, formatMileage, formatDate } from '@/shared/utils/formatters';
 import { ListingStatusBadge } from '@/features/listings/components/ListingStatusBadge';
 import { adminApi } from '@/features/admin/services/adminApi';
+import { listingApi } from '@/features/listings/services/listingApi';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 
 export const ListingManager: React.FC = () => {
@@ -21,10 +22,22 @@ export const ListingManager: React.FC = () => {
     if (statusFilter !== 'all' && l.status !== statusFilter) return false;
     if (search) {
       const q = search.toLowerCase();
-      return String(l.title ?? '').toLowerCase().includes(q) || String(l.make ?? '').toLowerCase().includes(q) || String(l.model ?? '').toLowerCase().includes(q);
+      return String(l.title ?? '').toLowerCase().includes(q) || String(l.make ?? '').toLowerCase().includes(q) || String(l.model ?? '').toLowerCase().includes(q) || String(l.vin ?? '').toLowerCase().includes(q) || String(l.plateNumber ?? '').toLowerCase().includes(q);
     }
     return true;
   });
+
+  const removeListing = async (id: string) => {
+    if (!window.confirm('Permanently delete this vehicle listing?')) return;
+    await listingApi.deleteListing(id);
+    setAllListings((current) => current.filter((listing) => listing.id !== id));
+  };
+
+  const toggleListingStatus = async (listing: any) => {
+    const nextStatus = listing.status === 'active' ? 'sold' : 'active';
+    const updated = await listingApi.updateListingStatus(listing.id, nextStatus);
+    setAllListings((current) => current.map((item) => item.id === listing.id ? { ...item, status: updated.status } : item));
+  };
 
   return (
     <div>
@@ -43,7 +56,7 @@ export const ListingManager: React.FC = () => {
         <input
           type="text"
           className="form-input"
-          placeholder="Search by make, model, or title..."
+          placeholder="Search by VIN, plate, make, model, or title..."
           style={{ width: 280 }}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -102,6 +115,10 @@ export const ListingManager: React.FC = () => {
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <Link to={`/marketplace/${listing.id}`} className="btn btn-ghost btn-sm">View</Link>
                       <Link to={`/dealer/listings/new?edit=${listing.id}`} className="btn btn-secondary btn-sm">Edit</Link>
+                      <button type="button" onClick={() => void toggleListingStatus(listing)} className={`btn btn-sm ${listing.status === 'active' ? 'btn-warning' : 'btn-success'}`}>
+                        {listing.status === 'active' ? 'Mark Sold' : 'Mark Active'}
+                      </button>
+                      <button type="button" onClick={() => void removeListing(listing.id)} className="btn btn-danger btn-sm">Delete</button>
                     </div>
                   </td>
                 </tr>
