@@ -4,6 +4,16 @@ import { fuelTypes, transmissionTypes } from '@motorx/shared-contracts';
 export const listListingsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
+  search: z.string().trim().max(120).optional(),
+  make: z.string().trim().max(80).optional(),
+  model: z.string().trim().max(80).optional(),
+  yearMin: z.coerce.number().int().min(1900).optional(),
+  yearMax: z.coerce.number().int().min(1900).optional(),
+  priceMin: z.coerce.number().nonnegative().optional(),
+  priceMax: z.coerce.number().nonnegative().optional(),
+  fuelType: z.enum(['petrol', 'diesel', 'hybrid', 'electric', 'other']).optional(),
+  transmission: z.enum(['automatic', 'manual', 'other']).optional(),
+  sortBy: z.enum(['newest', 'price-asc', 'price-desc', 'year-desc', 'mileage-asc']).optional(),
 });
 
 const currentYear = new Date().getFullYear();

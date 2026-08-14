@@ -1,44 +1,117 @@
-import { onAuthStateChanged, type User } from 'firebase/auth';
-import { createContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { firebaseAuth } from '../../../config/firebase';
-import { getCurrentLocalUser } from '../services/authApi';
-import { loginWithEmail, logoutFromFirebase, registerWithEmail, sendResetEmail } from '../services/firebaseAuth';
-import type { AuthContextValue, LocalUser } from '../types/auth.types';
+import React, { createContext, useState, useEffect } from 'react';
+import type { User, AuthContextValue, BuyerRegistrationInput, DealerApplicationInput } from '../types/auth.types';
+import { authApi } from '../services/authApi';
+import { firebaseAuth } from '../services/firebaseAuth';
+import { getMyDealerApplication, submitDealerApplication } from '../../dealers/services/dealerApi';
 
-export const AuthContext = createContext<AuthContextValue | null>(null);
+export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
-  const [localUser, setLocalUser] = useState<LocalUser | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => onAuthStateChanged(firebaseAuth, async (user) => {
-    setFirebaseUser(user);
+async function loadUserWithDealerStatus(): Promise<User> {
+  const currentUser = await authApi.getCurrentUser();
+  if (currentUser.role === 'buyer') {
     try {
-      setLocalUser(user ? await getCurrentLocalUser() : null);
+      const application = await getMyDealerApplication();
+      currentUser.dealerStatus = application.status;
+      currentUser.businessName = application.businessName;
+    } catch { /* A normal buyer has no dealer application. */ }
+  }
+  return currentUser;
+}
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => firebaseAuth.onAuthStateChanged(async (isSignedIn) => {
+    if (!isSignedIn) {
+      setUser(null);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setUser(await loadUserWithDealerStatus());
     } catch {
-      setLocalUser(null);
-      if (user) await logoutFromFirebase();
+      setUser(null);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }), []);
 
-  const value = useMemo<AuthContextValue>(() => ({
-    firebaseUser,
-    localUser,
-    loading,
-    login: async (email, password) => {
-      setLoading(true);
-      try { await loginWithEmail(email, password); } catch (error) { setLoading(false); throw error; }
-    },
-    register: async (email, password, displayName) => {
-      setLoading(true);
-      try { await registerWithEmail(email, password, displayName); } catch (error) { setLoading(false); throw error; }
-    },
-    logout: logoutFromFirebase,
-    resetPassword: sendResetEmail,
-  }), [firebaseUser, localUser, loading]);
+  const login = async (email: string, password: string) => {
+    await firebaseAuth.signInWithEmail(email, password);
+    try {
+      const currentUser = await loadUserWithDealerStatus();
+      setUser(currentUser);
+      return currentUser;
+    } catch (error) {
+      await firebaseAuth.signOut().catch(() => undefined);
+      setUser(null);
+      throw error;
+    }
+  };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+  const registerBuyer = async (data: BuyerRegistrationInput) => {
+    await firebaseAuth.registerWithEmail(data.email, data.password, data.fullName);
+    await authApi.getCurrentUser();
+    setUser(await authApi.updateProfile(data.fullName, data.phone));
+  };
+
+  const registerDealerApplication = async (data: DealerApplicationInput) => {
+    await firebaseAuth.registerWithEmail(data.email, data.password, data.applicantName);
+    let applicationSubmitted = false;
+    try {
+      await authApi.getCurrentUser();
+      await authApi.updateProfile(data.applicantName, data.phone);
+      const application = await submitDealerApplication({
+        representativeName: data.applicantName,
+        businessName: data.businessName,
+        registrationNumber: data.businessLicense,
+        phone: data.phone,
+        address: data.address,
+        city: data.city ?? '',
+        province: data.province ?? '',
+        businessPhone: data.businessContact ?? data.phone,
+        businessEmail: data.businessEmail ?? data.email,
+        website: data.website || undefined,
+        dealershipType: data.dealershipType ?? 'both',
+        brands: data.brandFocus ? data.brandFocus.split(',').map((brand) => brand.trim()).filter(Boolean) : [],
+        description: data.businessDescription ?? '',
+        inventoryCount: data.inventoryCount ? Number(data.inventoryCount) : undefined,
+      }, {
+        businessRegistration: data.businessRegistration,
+        identityProof: data.identityProof,
+        additionalDocument: data.additionalDocument,
+      });
+      applicationSubmitted = true;
+      await firebaseAuth.signOut();
+      setUser(null);
+      return application;
+    } catch (error) {
+      if (!applicationSubmitted) await firebaseAuth.deleteCurrentUser().catch(() => undefined);
+      setUser(null);
+      throw error;
+    }
+  };
+
+  const logout = async () => {
+    await firebaseAuth.signOut();
+    setUser(null);
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        login,
+        registerBuyer,
+        registerDealerApplication,
+        logout,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};

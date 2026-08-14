@@ -1,11 +1,109 @@
-name: ci
+name: CI
 
 on:
   push:
+    branches:
+      - main
+      - dewni
   pull_request:
+    branches:
+      - main
+      - dewni
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  build:
+  build-and-test:
+    name: Build and test
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      CI: true
+      NODE_ENV: test
+      MONGODB_URI: mongodb://127.0.0.1:27017/motorx_test
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Audit high-severity dependency vulnerabilities
+        run: npm audit --audit-level=high
+
+      - name: Validate Docker Compose configuration
+        run: |
+          cp .env.example .env
+          docker compose --env-file .env.example config --quiet
+
+      - name: Build shared contracts
+        run: npm run build --workspace @motorx/shared-contracts
+
+      - name: Build backend
+        run: npm run build --workspace @motorx/backend
+
+      - name: Build worker
+        run: npm run build --workspace @motorx/worker
+
+      - name: Build frontend
+        run: npm run build --workspace @motorx/frontend
+
+      - name: Test backend
+        run: npm test --workspace @motorx/backend -- --maxWorkers=1
+
+      - name: Test worker
+        run: npm test --workspace @motorx/worker -- --maxWorkers=1
+
+  docker-build:
+    name: Build ${{ matrix.component }} image
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: backend
+            dockerfile: infrastructure/docker/backend.Dockerfile
+          - component: worker
+            dockerfile: infrastructure/docker/worker.Dockerfile
+          - component: frontend
+            dockerfile: infrastructure/docker/frontend.production.Dockerfile
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: >-
+          docker build
+          --file ${{ matrix.dockerfile }}
+          --tag motorx-${{ matrix.component }}:${{ github.sha }}
+          .

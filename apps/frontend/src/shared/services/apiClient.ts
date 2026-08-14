@@ -1,11 +1,36 @@
 import axios from 'axios';
-import { firebaseAuth } from '../../config/firebase';
+import { firebaseAuthClient } from '../../config/firebase';
 import { env } from '../../config/env';
 
-export const apiClient = axios.create({ baseURL: env.VITE_API_BASE_URL, timeout: 15_000 });
+export const apiClient = axios.create({
+  baseURL: env.API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
 apiClient.interceptors.request.use(async (config) => {
-  const user = firebaseAuth.currentUser;
-  if (user) config.headers.Authorization = `Bearer ${await user.getIdToken()}`;
+  if (config.data instanceof FormData) {
+    config.headers.delete('Content-Type');
+  }
+
+  const firebaseUser = firebaseAuthClient.currentUser;
+
+  if (firebaseUser) {
+    const token = await firebaseUser.getIdToken();
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
   return config;
 });
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: unknown) => {
+    if (axios.isAxiosError(error)) {
+      const message = (error.response?.data as { error?: { message?: string } } | undefined)?.error?.message;
+      return Promise.reject(new Error(message ?? error.message));
+    }
+    return Promise.reject(error);
+  },
+);

@@ -8,7 +8,7 @@ export const findDealerByUserId = (userId: Types.ObjectId) => DealerModel.findOn
 // Loads an application, optionally within an approval transaction.
 export const findDealerById = (dealerId: string, session?: ClientSession) => DealerModel.findById(dealerId).session(session ?? null);
 // Creates a pending dealer application for a buyer.
-export const createDealer = (userId: Types.ObjectId, input: CreateDealerApplicationBody) => DealerModel.create({ userId, ...input });
+export const createDealer = (userId: Types.ObjectId, input: CreateDealerApplicationBody & { verificationDocuments: Array<{ category: 'businessRegistration' | 'identityProof' | 'additionalDocument'; key: string; originalName: string; contentType: string; size: number }> }) => DealerModel.create({ userId, ...input });
 // Lists applications by review status in submission order.
 export const listDealersByStatus = (status: DealerApplicationStatus = 'pending') => DealerModel.find({ status }).sort({ createdAt: 1 }).lean();
 

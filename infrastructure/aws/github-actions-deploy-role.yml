@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Least-privilege GitHub Actions OIDC role for MotorX production deployments.
+
+Parameters:
+  GitHubOwner:
+    Type: String
+    Description: GitHub user or organization that owns the repository.
+  GitHubRepository:
+    Type: String
+    Default: MotorX
+    Description: GitHub repository name.
+  GitHubOidcProviderArn:
+    Type: String
+    Description: ARN of the existing token.actions.githubusercontent.com IAM OIDC provider.
+  EcsClusterName:
+    Type: String
+    Default: motorx-production
+  TaskExecutionRoleArn:
+    Type: String
+    Description: ARN of the ECS task execution role used by all task definitions.
+  TaskRoleArn:
+    Type: String
+    Description: ARN of the MotorX application task role.
+
+Resources:
+  GitHubActionsDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: motorx-github-production-deploy
+      Description: Allows the protected GitHub production environment to publish and deploy MotorX images.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Ref GitHubOidcProviderArn
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubOwner}/${GitHubRepository}:environment:production
+      Policies:
+        - PolicyName: MotorXProductionDeployment
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: GetEcrAuthorizationToken
+                Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: "*"
+              - Sid: PublishMotorXImages
+                Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:DescribeImages
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                  - ecr:PutImage
+                Resource: !Sub arn:${AWS::Partition}:ecr:${AWS::Region}:${AWS::AccountId}:repository/motorx-*
+              - Sid: ReadAndRegisterTaskDefinitions
+                Effect: Allow
+                Action:
+                  - ecs:DescribeTaskDefinition
+                  - ecs:RegisterTaskDefinition
+                Resource: "*"
+              - Sid: DeployMotorXServices
+                Effect: Allow
+                Action:
+                  - ecs:DescribeServices
+                  - ecs:UpdateService
+                Resource: !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:service/${EcsClusterName}/motorx-*
+              - Sid: PassOnlyMotorXTaskRoles
+                Effect: Allow
+                Action: iam:PassRole
+                Resource:
+                  - !Ref TaskExecutionRoleArn
+                  - !Ref TaskRoleArn
+
+Outputs:
+  DeployRoleArn:
+    Description: Add this ARN to the GitHub production variable AWS_ROLE_TO_ASSUME.
+    Value: !GetAtt GitHubActionsDeployRole.Arn

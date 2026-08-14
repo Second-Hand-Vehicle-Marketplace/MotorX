@@ -1,41 +1,99 @@
-import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { firebaseAuth } from '../services/firebaseAuth';
 
-export function LoginForm() {
-  const { login, register, resetPassword } = useAuth();
+function friendlyMessage(error: unknown): string {
+  const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : '';
+  if (code.includes('invalid-credential')) return 'The email address or password is incorrect.';
+  if (code.includes('too-many-requests')) return 'Too many attempts. Please wait before trying again.';
+  return error instanceof Error ? error.message : 'Unable to sign in right now.';
+}
+
+export const LoginForm: React.FC = () => {
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [registering, setRegistering] = useState(false);
-  const [message, setMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
 
-  async function submit(event: FormEvent) {
+  const handleSignIn = async (event: React.FormEvent) => {
     event.preventDefault();
-    setMessage('');
+    setMessage(null);
+    setIsSubmitting(true);
     try {
-      if (registering) await register(email, password, displayName);
-      else await login(email, password);
-      navigate('/', { replace: true });
+      const user = await login(email.trim(), password);
+      if (user.dealerStatus === 'pending' || user.dealerStatus === 'rejected') {
+        navigate('/dealer/application-status');
+      } else if (user.role === 'dealer') {
+        navigate('/dealer');
+      } else if (user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/marketplace');
+      }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Authentication failed.');
+      setMessage({ kind: 'error', text: friendlyMessage(error) });
+    } finally {
+      setIsSubmitting(false);
     }
-  }
+  };
 
-  async function reset() {
-    if (!email) return setMessage('Enter your email address first.');
-    try { await resetPassword(email); setMessage('Password reset email sent.'); }
-    catch (error) { setMessage(error instanceof Error ? error.message : 'Could not send reset email.'); }
-  }
+  const handlePasswordReset = async () => {
+    if (!email.trim()) {
+      setMessage({ kind: 'error', text: 'Enter your email address before requesting a password reset.' });
+      return;
+    }
+    try {
+      await firebaseAuth.sendPasswordReset(email.trim());
+      setMessage({ kind: 'success', text: 'Password reset instructions have been sent to your email.' });
+    } catch (error) {
+      setMessage({ kind: 'error', text: friendlyMessage(error) });
+    }
+  };
 
-  return <form onSubmit={submit} style={{ display: 'grid', gap: 12, maxWidth: 360 }}>
-    {registering && <input aria-label="Display name" autoComplete="name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Display name" maxLength={120} />}
-    <input aria-label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
-    <input aria-label="Password" type="password" autoComplete={registering ? 'new-password' : 'current-password'} required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
-    <button type="submit">{registering ? 'Create account' : 'Sign in'}</button>
-    <button type="button" onClick={() => setRegistering((value) => !value)}>{registering ? 'Use existing account' : 'Create an account'}</button>
-    {!registering && <button type="button" onClick={reset}>Forgot password?</button>}
-    {message && <p role="alert">{message}</p>}
-  </form>;
-}
+  return (
+    <div className="glass-card auth-card">
+      <div className="auth-heading">
+        <span className="auth-eyebrow">Secure account access</span>
+        <h1>Welcome back</h1>
+        <p>Sign in to browse saved vehicles or manage your MotorX workspace.</p>
+      </div>
+
+      {message && <div className={`auth-message auth-message-${message.kind}`} role="alert">{message.text}</div>}
+
+      <form onSubmit={handleSignIn} className="auth-form">
+        <label className="form-group">
+          <span className="form-label">Email address</span>
+          <input type="email" className="form-input" autoComplete="email" placeholder="name@example.com"
+            value={email} onChange={(event) => setEmail(event.target.value)} disabled={isSubmitting} required />
+        </label>
+
+        <label className="form-group">
+          <span className="form-label">Password</span>
+          <span className="password-field">
+            <input type={showPassword ? 'text' : 'password'} className="form-input" autoComplete="current-password"
+              placeholder="Enter your password" value={password} onChange={(event) => setPassword(event.target.value)}
+              disabled={isSubmitting} required />
+            <button type="button" className="password-toggle" onClick={() => setShowPassword((visible) => !visible)}>
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </span>
+        </label>
+
+        <button type="button" className="auth-text-button" onClick={handlePasswordReset} disabled={isSubmitting}>
+          Forgot password?
+        </button>
+
+        <button type="submit" className="btn btn-primary btn-lg" disabled={isSubmitting}>
+          {isSubmitting ? 'Signing in...' : 'Sign In'}
+        </button>
+      </form>
+
+      <p className="auth-switch">Don't have an account? <Link to="/signup">Sign Up</Link></p>
+      <div className="auth-footer-links"><Link to="/">Home</Link><span aria-hidden="true">&bull;</span><Link to="/marketplace">Browse vehicles</Link></div>
+    </div>
+  );
+};
