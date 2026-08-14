@@ -10,7 +10,7 @@ export const LoginPage: React.FC = () => {
       flexDirection: 'column',
       justifyContent: 'center',
       alignItems: 'center',
-      padding: '2rem 1rem',
+      padding: '1.5rem 1rem',
       position: 'relative',
       overflow: 'hidden',
     }}>
@@ -26,7 +26,7 @@ export const LoginPage: React.FC = () => {
         pointerEvents: 'none',
       }} />
 
-      <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2.5rem', textDecoration: 'none' }}>
+      <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', textDecoration: 'none' }}>
         <div style={{
           width: 42,
           height: 42,
@@ -50,18 +50,6 @@ export const LoginPage: React.FC = () => {
 
       <LoginForm />
 
-      <div className="glass-card" style={{ width: '100%', maxWidth: 440, padding: '1rem 1.25rem', marginTop: '1rem', textAlign: 'left' }}>
-        <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem' }}>
-          Dealers should create a dealership account first. Approval is required before sign-in is enabled.
-        </p>
-        <Link to="/dealer/register" className="btn btn-secondary btn-sm" style={{ width: '100%' }}>
-          Register as a Dealer
-        </Link>
-      </div>
-
-      <p style={{ marginTop: '2rem', fontSize: '0.8125rem', color: 'var(--color-text-tertiary)' }}>
-        Back to <Link to="/" style={{ color: 'var(--color-accent-light)' }}>Home</Link> | <Link to="/marketplace" style={{ color: 'var(--color-accent-light)' }}>Marketplace</Link>
-      </p>
     </div>
   );
 };

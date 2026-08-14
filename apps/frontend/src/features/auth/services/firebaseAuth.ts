@@ -1,4 +1,4 @@
-import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, deleteUser, onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
 import { firebaseAuthClient } from '../../../config/firebase';
 
 export const firebaseAuth = {
@@ -16,6 +16,12 @@ export const firebaseAuth = {
     firebaseAuthClient.currentUser?.getIdToken() ?? null,
 
   signOut: () => signOut(firebaseAuthClient),
+
+  deleteCurrentUser: async () => {
+    if (firebaseAuthClient.currentUser) await deleteUser(firebaseAuthClient.currentUser);
+  },
+
+  sendPasswordReset: (email: string) => sendPasswordResetEmail(firebaseAuthClient, email),
 
   onAuthStateChanged: (callback: (isSignedIn: boolean) => void) =>
     onAuthStateChanged(firebaseAuthClient, (user) => callback(Boolean(user))),

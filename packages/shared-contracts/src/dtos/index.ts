@@ -12,8 +12,22 @@ export interface AuthUserDto {
   firebaseUid: string;
   email: string;
   displayName: string | null;
+  phone: string | null;
   role: UserRole;
   status: UserStatus;
+}
+
+export interface UpdateAuthProfileInput {
+  displayName: string;
+  phone: string;
+}
+
+export interface DealerVerificationDocumentDto {
+  category: 'businessRegistration' | 'identityProof' | 'additionalDocument';
+  key: string;
+  originalName: string;
+  contentType: string;
+  size: number;
 }
 
 export interface DealerApplicationDto {
@@ -23,6 +37,17 @@ export interface DealerApplicationDto {
   registrationNumber: string;
   phone: string;
   address: string;
+  representativeName: string;
+  city: string;
+  province: string;
+  businessPhone: string;
+  businessEmail: string;
+  website: string | null;
+  dealershipType: 'new' | 'used' | 'both';
+  brands: string[];
+  description: string;
+  inventoryCount: number | null;
+  verificationDocuments: DealerVerificationDocumentDto[];
   status: DealerApplicationStatus;
   rejectionReason: string | null;
   reviewedBy: string | null;
@@ -33,8 +58,13 @@ export interface DealerApplicationDto {
 
 export type CreateDealerApplicationInput = Pick<
   DealerApplicationDto,
-  'businessName' | 'registrationNumber' | 'phone' | 'address'
->;
+  'representativeName' | 'businessName' | 'registrationNumber' | 'phone' | 'address' |
+  'city' | 'province' | 'businessPhone' | 'businessEmail' | 'dealershipType' | 'description'
+> & {
+  website?: string;
+  brands?: string[];
+  inventoryCount?: number;
+};
 
 export interface ListingImageDto {
   key: string;

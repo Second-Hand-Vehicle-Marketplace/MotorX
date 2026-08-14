@@ -11,21 +11,31 @@ These are the places the frontend should call the backend instead of reading moc
 - Listings: [apps/frontend/src/features/listings/services/listingApi.ts](../apps/frontend/src/features/listings/services/listingApi.ts)
 - API client: [apps/frontend/src/shared/services/apiClient.ts](../apps/frontend/src/shared/services/apiClient.ts)
 
-While the backend is still being built, these files may fall back to mock data so the UI can keep working in demo mode.
+Authentication and dealer approvals use the backend as their only source of truth; they do not fall back to browser mock data.
 
 ## Recommended API Surface
 
 ### Auth
 
 - `GET /api/v1/auth/me` returns the current user after Firebase token verification.
-- `POST /api/v1/auth/logout` ends the backend session if one is used.
-- `POST /api/v1/auth/demo-role` is optional and only for local preview while Firebase is not wired.
+- `PATCH /api/v1/auth/me` stores the authenticated user's display name and phone number.
 
 Expected backend behavior:
 
 - Verify the Firebase ID token from the `Authorization: Bearer <token>` header.
 - Find or create the local user document in MongoDB.
 - Return the user profile, role, and approval status.
+
+### Dealer Applications
+
+- `POST /api/v1/dealers/applications` accepts multipart form data from a newly authenticated buyer account.
+- `GET /api/v1/dealers/me` returns the current user's application, including pending/rejected status and review reason.
+- `GET /api/v1/admin/dealer-applications` returns pending applications to administrators.
+- `GET /api/v1/admin/dealer-applications/:dealerId/documents/:documentIndex` streams a protected verification document to an administrator.
+- `PATCH /api/v1/admin/dealer-applications/:dealerId/approve` approves an application and atomically promotes the user to the dealer role.
+- `PATCH /api/v1/admin/dealer-applications/:dealerId/reject` stores the rejection reason, reviewer, and review date.
+
+The multipart application requires `businessRegistration` and `identityProof` files. `additionalDocument` is optional. Files must be PDF, JPG, or PNG and no larger than 10 MB each.
 
 ### Listings
 
@@ -85,8 +95,9 @@ Expected backend behavior:
 
 Frontend note:
 
-- Until Firebase is wired, the UI may keep a demo login mode for local preview.
-- Once Firebase is ready, the frontend should exchange the Firebase token for the backend user profile.
+- Public sign-up always creates a buyer. There is no public admin-registration path.
+- A dealer applicant keeps the buyer role while pending or rejected and therefore cannot pass backend dealer-role middleware.
+- Approval updates the local role to `dealer`; the user signs in again to refresh access to the dealer portal.
 
 ## Validation
 

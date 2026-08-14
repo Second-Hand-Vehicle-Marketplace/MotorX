@@ -18,8 +18,8 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({ allowedRoles }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (user.role === 'dealer' && user.dealerStatus !== 'approved' && allowedRoles.includes('dealer')) {
-    return <Navigate to="/dealer/pending" replace />;
+  if (allowedRoles.includes('dealer') && (user.dealerStatus === 'pending' || user.dealerStatus === 'rejected')) {
+    return <Navigate to="/dealer/application-status" replace />;
   }
 
   if (!allowedRoles.includes(user.role)) {
