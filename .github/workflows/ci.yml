@@ -58,7 +58,9 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Validate Docker Compose configuration
-        run: docker compose --env-file .env.example config --quiet
+        run: |
+          cp .env.example .env
+          docker compose --env-file .env.example config --quiet
 
       - name: Build shared contracts
         run: npm run build --workspace @motorx/shared-contracts
