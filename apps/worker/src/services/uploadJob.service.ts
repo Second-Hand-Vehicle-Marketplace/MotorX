@@ -1,5 +1,6 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import type { Readable } from 'node:stream';
+import type { VehicleCategory } from '@motorx/shared-contracts';
 import { env } from '../config/env.js';
 import { Types } from 'mongoose';
 import { workerStorageClient, workerStorageConfig } from '../config/storage.js';
@@ -19,10 +20,10 @@ async function downloadInventoryStream(storageKey: string) {
 interface ProcessingCounts { processedRecords: number; validRecords: number; rejectedRecords: number; duplicateRecords: number }
 
 // Transforms and persists one batch before advancing durable progress counters.
-async function processInventoryBatch(uploadJobId: string, dealerId: Types.ObjectId, rows: ExtractedInventoryRow[], processedRecords: number, counts: ProcessingCounts, seenKeys: Set<string>) {
+async function processInventoryBatch(uploadJobId: string, dealerId: Types.ObjectId, category: VehicleCategory, rows: ExtractedInventoryRow[], processedRecords: number, counts: ProcessingCounts, seenKeys: Set<string>) {
   const firstRowNumber = processedRecords - rows.length + 2;
-  const prepared = prepareInventoryBatch(rows, firstRowNumber);
-  const duplicateResult = await detectExactDuplicates(dealerId, prepared.valid, seenKeys);
+  const prepared = prepareInventoryBatch(category, rows, firstRowNumber);
+  const duplicateResult = await detectExactDuplicates(prepared.valid, seenKeys);
   const rejected = [
     ...prepared.invalid.map((row) => ({ uploadJobId: new Types.ObjectId(uploadJobId), rowNumber: row.rowNumber, originalData: row.originalData, errors: row.errors, reason: 'validation' as const })),
     ...duplicateResult.duplicates.map((row) => ({ uploadJobId: new Types.ObjectId(uploadJobId), rowNumber: row.rowNumber, originalData: row.originalData, errors: ['An exact matching listing already exists.'], reason: 'duplicate' as const })),
@@ -38,11 +39,11 @@ export async function extractInventoryUpload(uploadJobId: string) {
   const upload = await claimPendingUploadJob(uploadJobId);
   if (!upload) throw new Error('The upload job is missing or is not pending.');
   try {
-    const claimedUpload = upload as unknown as { storageKey: string; dealerId: Types.ObjectId };
+    const claimedUpload = upload as unknown as { storageKey: string; dealerId: Types.ObjectId; category: VehicleCategory };
     const stream = await downloadInventoryStream(claimedUpload.storageKey);
     const counts: ProcessingCounts = { processedRecords: 0, validRecords: 0, rejectedRecords: 0, duplicateRecords: 0 };
     const seenKeys = new Set<string>();
-    await extractCsvBatches(stream, env.ETL_BATCH_SIZE, (rows, processed) => processInventoryBatch(uploadJobId, claimedUpload.dealerId, rows, processed, counts, seenKeys));
+    await extractCsvBatches(stream, env.ETL_BATCH_SIZE, (rows, processed) => processInventoryBatch(uploadJobId, claimedUpload.dealerId, claimedUpload.category, rows, processed, counts, seenKeys));
     await completeUploadJob(uploadJobId, counts);
     return { uploadJobId, ...counts, stage: 'completed' as const };
   } catch (error) {

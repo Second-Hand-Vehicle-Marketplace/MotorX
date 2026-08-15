@@ -1,13 +1,22 @@
+import type { Job } from 'bullmq';
 import { Worker } from 'bullmq';
 import { connectWorkerDatabase, disconnectWorkerDatabase } from './config/database.js';
 import { env } from './config/env.js';
 import { disconnectWorkerRedis, redisConnection } from './config/redis.js';
+import { processInventoryImagesJob } from './jobs/inventoryImages.job.js';
 import { processInventoryUploadJob } from './jobs/inventoryUpload.job.js';
+
+// Both job types share one queue; this dispatches by name to the right handler.
+async function processInventoryJob(job: Job) {
+  if (job.name === 'process-inventory') return processInventoryUploadJob(job);
+  if (job.name === 'process-inventory-images') return processInventoryImagesJob(job);
+  throw new Error(`Unsupported inventory job: ${job.name}`);
+}
 
 // Opens durable dependencies before the worker begins consuming queue messages.
 async function startWorker() {
   await connectWorkerDatabase();
-  const worker = new Worker(env.INVENTORY_QUEUE_NAME, processInventoryUploadJob, { connection: redisConnection, concurrency: env.WORKER_CONCURRENCY });
+  const worker = new Worker(env.INVENTORY_QUEUE_NAME, processInventoryJob, { connection: redisConnection, concurrency: env.WORKER_CONCURRENCY });
 
   // Emits concise lifecycle events for operational diagnosis.
   worker.on('completed', (job, result) => console.log('Inventory extraction completed.', { bullJobId: job.id, result }));

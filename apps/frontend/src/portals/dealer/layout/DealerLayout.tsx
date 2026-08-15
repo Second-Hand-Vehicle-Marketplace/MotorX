@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { getInitials } from '@/shared/mockData';
+import { getInitials } from '@/shared/utils/formatters';
 
 export const DealerLayout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -72,7 +72,7 @@ export const DealerLayout: React.FC = () => {
             {getInitials(user?.displayName || 'Dealer User')}
           </div>
           <div className="user-info">
-            <div className="user-name">{user?.displayName || 'Premium Autos'}</div>
+            <div className="user-name">{user?.displayName || 'Dealer'}</div>
             <div className="user-role">Authorized Dealer</div>
           </div>
           <button onClick={logout} title="Sign Out" style={{ marginLeft: 'auto', color: 'var(--color-text-tertiary)' }}>

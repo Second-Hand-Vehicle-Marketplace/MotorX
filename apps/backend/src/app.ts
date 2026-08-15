@@ -12,7 +12,11 @@ import { sendSuccess } from './shared/responses/apiResponse.js';
 
 export const app = express();
 
-app.use(helmet());
+// The frontend and backend are intentionally different origins (separate SPA + API deployment,
+// e.g. localhost:8080 vs localhost:3000 in dev). Helmet's default same-origin resource policy
+// blocks the browser from rendering anything the backend serves — most visibly, every <img>
+// pointed at /api/v1/listing-images — so it's relaxed here to match how this app is actually deployed.
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(
   cors({
     origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
@@ -30,8 +34,10 @@ app.get('/health/ready', (_request, response) => {
 });
 
 app.use('/api/v1/auth', authUserRouter);
-app.use('/api/v1/listings', buyerRouter);
+// listingRouter must mount before buyerRouter: buyerRouter's public GET /:listingId
+// would otherwise shadow listingRouter's GET /mine (matching "mine" as a listing id).
 app.use('/api/v1/listings', listingRouter);
+app.use('/api/v1/listings', buyerRouter);
 app.use('/api/v1/listing-images', listingImageRouter);
 app.use('/api/v1/dealers', dealerRouter);
 app.use('/api/v1/dealer/uploads', inventoryRouter);

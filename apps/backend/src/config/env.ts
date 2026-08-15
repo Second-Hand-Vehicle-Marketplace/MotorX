@@ -28,6 +28,7 @@ const envSchema = z.object({
   ALLOWED_IMAGE_TYPES: z.string().default('image/jpeg,image/png,image/webp').transform((value) => value.split(',').map((type) => type.trim())),
   MAX_FILE_SIZE_MB: z.coerce.number().positive().default(20),
   ALLOWED_UPLOAD_TYPES: z.string().default('text/csv,application/csv,application/vnd.ms-excel').transform((value) => value.split(',').map((type) => type.trim())),
+  MAX_IMAGE_ZIP_SIZE_MB: z.coerce.number().positive().default(50),
 });
 
 export const env = envSchema.parse(process.env);

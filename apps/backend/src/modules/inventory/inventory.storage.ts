@@ -6,3 +6,9 @@ export async function storeInventoryCsv(key: string, file: Express.Multer.File) 
 
 // Removes an uploaded object when job creation or enqueueing cannot complete.
 export async function deleteInventoryCsv(key: string) { await storageClient.send(new DeleteObjectCommand({ Bucket: storageConfig.bucket, Key: key })); }
+
+// Stores the original vehicle-photos zip for worker processing.
+export async function storeInventoryImagesZip(key: string, file: Express.Multer.File) { await storageClient.send(new PutObjectCommand({ Bucket: storageConfig.bucket, Key: key, Body: file.buffer, ContentType: 'application/zip' })); }
+
+// Removes an uploaded zip when job creation or enqueueing cannot complete.
+export async function deleteInventoryImagesZip(key: string) { await storageClient.send(new DeleteObjectCommand({ Bucket: storageConfig.bucket, Key: key })); }

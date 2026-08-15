@@ -1,9 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { carBodyTypes, transmissionTypes, vehicleConditions } from '@motorx/shared-contracts';
 import { useBuyerListings } from '@/features/buyers/hooks/useBuyerListings';
 import { ListingCard } from '@/features/listings/components/ListingCard';
-import { buyerFuelTypes, buyerVehicleMakes } from '@/features/buyers/buyer.constants';
-import type { FuelType } from '@/features/listings/types/listing.types';
+import { buyerFuelTypes, buyerVehicleCategories, buyerVehicleMakes } from '@/features/buyers/buyer.constants';
+import { formatEnumLabel } from '@/features/listings/utils/vehicleAttributes';
+import type { FuelType, VehicleCategory } from '@/features/listings/types/listing.types';
 
 export const Marketplace: React.FC = () => {
   const { data, filters, updateFilters, resetFilters, page, setPage, isLoading, isError } = useBuyerListings({}, 9);
@@ -52,6 +54,21 @@ export const Marketplace: React.FC = () => {
             />
           </div>
 
+          {/* Category Filter */}
+          <div className="filter-section">
+            <label className="filter-title">Vehicle Type</label>
+            <select
+              className="form-select"
+              value={filters.category || ''}
+              onChange={(e) => updateFilters({ category: (e.target.value as VehicleCategory) || undefined })}
+            >
+              <option value="">All Types</option>
+              {buyerVehicleCategories.map(category => (
+                <option key={category} value={category}>{formatEnumLabel(category)}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Make Filter */}
           <div className="filter-section">
             <label className="filter-title">Make</label>
@@ -82,16 +99,93 @@ export const Marketplace: React.FC = () => {
             </select>
           </div>
 
+          {/* Transmission */}
+          <div className="filter-section">
+            <label className="filter-title">Transmission</label>
+            <select
+              className="form-select"
+              value={filters.transmission || ''}
+              onChange={(e) => updateFilters({ transmission: e.target.value || undefined })}
+            >
+              <option value="">Any Transmission</option>
+              {transmissionTypes.map(value => (
+                <option key={value} value={value}>{formatEnumLabel(value)}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Condition */}
+          <div className="filter-section">
+            <label className="filter-title">Condition</label>
+            <select
+              className="form-select"
+              value={filters.condition || ''}
+              onChange={(e) => updateFilters({ condition: e.target.value || undefined })}
+            >
+              <option value="">Any Condition</option>
+              {vehicleConditions.map(value => (
+                <option key={value} value={value}>{formatEnumLabel(value)}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Body Type — only meaningful once narrowed to cars */}
+          {filters.category === 'car' && (
+            <div className="filter-section">
+              <label className="filter-title">Body Type</label>
+              <select
+                className="form-select"
+                value={filters.bodyType || ''}
+                onChange={(e) => updateFilters({ bodyType: e.target.value || undefined })}
+              >
+                <option value="">Any Body Type</option>
+                {carBodyTypes.map(value => (
+                  <option key={value} value={value}>{formatEnumLabel(value)}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Year Range */}
+          <div className="filter-section">
+            <label className="filter-title">Year</label>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <input
+                type="number"
+                className="form-input"
+                placeholder="From"
+                value={filters.yearMin || ''}
+                onChange={(e) => updateFilters({ yearMin: e.target.value ? Number(e.target.value) : undefined })}
+              />
+              <input
+                type="number"
+                className="form-input"
+                placeholder="To"
+                value={filters.yearMax || ''}
+                onChange={(e) => updateFilters({ yearMax: e.target.value ? Number(e.target.value) : undefined })}
+              />
+            </div>
+          </div>
+
           {/* Price Range */}
           <div className="filter-section">
-            <label className="filter-title">Max Price ($)</label>
-            <input
-              type="number"
-              className="form-input"
-              placeholder="e.g. 50000"
-              value={filters.priceMax || ''}
-              onChange={(e) => updateFilters({ priceMax: e.target.value ? Number(e.target.value) : undefined })}
-            />
+            <label className="filter-title">Price Range (LKR)</label>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <input
+                type="number"
+                className="form-input"
+                placeholder="Min"
+                value={filters.priceMin || ''}
+                onChange={(e) => updateFilters({ priceMin: e.target.value ? Number(e.target.value) : undefined })}
+              />
+              <input
+                type="number"
+                className="form-input"
+                placeholder="Max"
+                value={filters.priceMax || ''}
+                onChange={(e) => updateFilters({ priceMax: e.target.value ? Number(e.target.value) : undefined })}
+              />
+            </div>
           </div>
         </aside>
 

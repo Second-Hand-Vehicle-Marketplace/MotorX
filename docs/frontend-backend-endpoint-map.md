@@ -62,12 +62,13 @@ The frontend should not talk directly to MongoDB, Firebase, or S3.
 ### Request data
 
 - Search text
-- Make
-- Body type
-- Fuel type
-- Price range
+- Category (car/motorcycle/van/truck/three_wheeler/bus), make, body type, condition, fuel type, transmission
+- Year range, price range
 - Sort order
 - Pagination
+
+Body type is only meaningful once narrowed to `category=car` — see
+[api-contract.md](./api-contract.md#vehicle-categories) for the full category/attributes model.
 
 ### Backend should provide
 
@@ -96,17 +97,24 @@ The frontend should not talk directly to MongoDB, Firebase, or S3.
 
 ### Backend endpoints
 
-- `GET /api/v1/dealer/listings`
-- `POST /api/v1/dealer/listings`
-- `PATCH /api/v1/dealer/listings/:id`
-- `DELETE /api/v1/dealer/listings/:id`
+- `GET /api/v1/listings/mine`
+- `POST /api/v1/listings`
+- `PATCH /api/v1/listings/:id`
+- `PATCH /api/v1/listings/:id/status`
+
+(Note: dealer routes and the public buyer routes above share the `/api/v1/listings` prefix —
+there's no separate `/dealer/listings` path. `listingRouter` must stay mounted before
+`buyerRouter` in `app.ts`, or the buyer's catch-all `GET /:listingId` shadows `GET /mine`.)
 
 ### Backend should provide
 
 - Only the signed-in dealer's own listings.
-- Create and update listing documents in MongoDB.
+- Create and update listing documents in MongoDB. The listing form is category-aware: selecting a
+  category (car/motorcycle/van/truck/three_wheeler/bus) changes which attribute fields are shown
+  and required, and the required fields further depend on the selected fuel type (engine capacity
+  vs. battery capacity/range).
 - Ownership checks so one dealer cannot edit another dealer's data.
-- Listing status, views, leads, and timestamps.
+- Listing status and timestamps.
 
 ### UI depends on
 
@@ -149,16 +157,21 @@ The frontend should not talk directly to MongoDB, Firebase, or S3.
 
 ### Backend endpoints
 
+- `GET /api/v1/dealer/uploads/template/:category`
 - `POST /api/v1/dealer/uploads`
 - `GET /api/v1/dealer/uploads`
 - `GET /api/v1/dealer/uploads/:id`
+- `GET /api/v1/dealer/uploads/:id/rejected-records`
 
 ### Backend should provide
 
-- Store the raw CSV file in S3.
+- A downloadable CSV template (with a filled-in example row) per vehicle category.
+- Store the raw CSV file in S3, tagged with the dealer-selected category.
 - Create an upload job record in MongoDB.
-- Send the job to the worker for parsing and ETL.
-- Return processing state, counts, and rejected rows.
+- Send the job to the worker for parsing and ETL — the worker validates each row against that
+  category's schema (shared with the manual listing form) and detects duplicates by registration
+  number, not by title/make/model/year.
+- Return processing state, counts, and rejected rows (each with its row number and error list).
 
 ### UI depends on
 

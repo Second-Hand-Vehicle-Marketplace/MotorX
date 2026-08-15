@@ -8,6 +8,16 @@ export async function createListingRecord(input: Omit<Listing, 'createdAt' | 'up
   return ListingModel.create(input);
 }
 
+// Finds a currently listed (draft/active) vehicle sharing the given normalized registration
+// number, excluding one listing (used when editing/reactivating that same listing).
+export async function findActiveListingByRegistration(normalizedRegistrationNumber: string, excludeListingId?: string) {
+  return ListingModel.findOne({
+    normalizedRegistrationNumber,
+    status: { $in: ['draft', 'active'] },
+    ...(excludeListingId ? { _id: { $ne: excludeListingId } } : {}),
+  }).select('_id').lean();
+}
+
 // Returns all statuses of listings owned by one dealer.
 export async function listDealerListings(dealerId: Types.ObjectId, page: number, limit: number) {
   const filter = { dealerId };

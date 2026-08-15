@@ -33,6 +33,7 @@ export function updateAdminUserStatus(userId: string, status: 'active' | 'suspen
 export async function listAdminListings(options: ListAdminListingsQuery) {
   const filter: FilterQuery<Listing> = {};
   if (options.status) filter.status = options.status;
+  if (options.category) filter.category = options.category;
   if (options.search) {
     const search = new RegExp(escapeRegex(options.search), 'i');
     filter.$or = [{ title: search }, { make: search }, { model: search }];

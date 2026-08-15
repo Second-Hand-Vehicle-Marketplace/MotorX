@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { vehicleCategories } from '@motorx/shared-contracts';
 
 // Shared pagination rules keep every admin collection bounded.
 const adminPaginationSchema = {
@@ -20,6 +21,7 @@ export const listAdminListingsQuerySchema = z.object({
   ...adminPaginationSchema,
   search: z.string().trim().max(160).optional(),
   status: z.enum(['draft', 'active', 'sold', 'archived']).optional(),
+  category: z.enum(vehicleCategories).optional(),
 });
 
 export const adminListingIdParamsSchema = z.object({ listingId: z.string().regex(/^[a-f\d]{24}$/i) });

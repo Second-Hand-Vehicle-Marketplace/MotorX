@@ -13,7 +13,7 @@ function serializeUser(user: Record<string, any>) { return { id: String(user._id
 // Converts populated listing fields into the admin API representation.
 function serializeListing(record: Record<string, any>) {
   const dealer = record.dealerId && typeof record.dealerId === 'object' ? record.dealerId : null;
-  return { id: String(record._id), dealerId: dealer ? String(dealer._id) : String(record.dealerId), dealerName: dealer?.displayName || dealer?.email || 'Unknown dealer', title: record.title, make: record.make, model: record.model, year: record.year, price: record.price, currency: record.currency, status: record.status, createdAt: record.createdAt };
+  return { id: String(record._id), dealerId: dealer ? String(dealer._id) : String(record.dealerId), dealerName: dealer?.displayName || dealer?.email || 'Unknown dealer', title: record.title, make: record.make, model: record.model, year: record.year, category: record.category, registrationNumber: record.registrationNumber, price: record.price, currency: record.currency, status: record.status, createdAt: record.createdAt };
 }
 
 // Converts dealer persistence fields into the shared administration contract.

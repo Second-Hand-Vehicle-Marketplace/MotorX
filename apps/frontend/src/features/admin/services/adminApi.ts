@@ -1,4 +1,4 @@
-import type { ApiSuccessResponse, PaginationMeta } from '@motorx/shared-contracts';
+import type { ApiSuccessResponse, PaginationMeta, VehicleCategory } from '@motorx/shared-contracts';
 import type { UserRole } from '../../auth/types/auth.types';
 import { apiClient } from '../../../shared/services/apiClient';
 
@@ -9,7 +9,8 @@ export interface AdminUser {
 
 export interface AdminListing {
   id: string; dealerId: string; dealerName: string; title: string; make: string; model: string;
-  year: number; price: number; currency: string; status: 'draft' | 'active' | 'sold' | 'archived'; createdAt: string;
+  year: number; category: VehicleCategory; registrationNumber: string;
+  price: number; currency: string; status: 'draft' | 'active' | 'sold' | 'archived'; createdAt: string;
 }
 
 export interface AdminStats {
@@ -22,7 +23,7 @@ export interface AdminUpload { id: string; dealerId: string; dealerName: string;
 export interface AdminSystemHealth { checkedAt: string; backend: { status: string; uptimeSeconds: number }; database: { status: string; readyState: number }; queue: { status: string }; worker: { status: string } }
 
 export interface AdminUserFilters { search?: string; role?: UserRole; status?: AdminUser['status']; page?: number; limit?: number }
-export interface AdminListingFilters { search?: string; status?: AdminListing['status']; page?: number; limit?: number }
+export interface AdminListingFilters { search?: string; status?: AdminListing['status']; category?: VehicleCategory; page?: number; limit?: number }
 
 // Provides one frontend entry point for every admin API operation.
 export const adminApi = {

@@ -10,6 +10,10 @@ const envSchema = z.object({
   S3_ENDPOINT: z.string().url(), S3_REGION: z.string().trim().min(1).default('us-east-1'),
   S3_BUCKET: z.string().trim().min(1), S3_ACCESS_KEY: z.string().trim().min(1), S3_SECRET_KEY: z.string().trim().min(1),
   S3_FORCE_PATH_STYLE: z.string().default('true').transform((value) => value === 'true'),
+  S3_PUBLIC_URL: z.string().url().default('http://localhost:3000/api/v1/listing-images'),
+  MAX_LISTING_IMAGES: z.coerce.number().int().positive().max(30).default(10),
+  MAX_IMAGE_SIZE_MB: z.coerce.number().positive().default(10),
+  ALLOWED_IMAGE_TYPES: z.string().default('image/jpeg,image/png,image/webp').transform((value) => value.split(',').map((type) => type.trim())),
 });
 
 // Parses worker configuration once so invalid deployments fail before consuming jobs.

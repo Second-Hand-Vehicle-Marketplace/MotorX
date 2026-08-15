@@ -13,15 +13,13 @@ function toListing(dto: ListingDto): Listing {
   return {
     id: dto.id,
     dealerId: dto.dealerId,
+    registrationNumber: dto.registrationNumber,
     title: dto.title,
     make: dto.make,
     model: dto.model,
     year: dto.year,
     price: dto.price,
     currency: dto.currency,
-    mileage: dto.mileageKm,
-    fuelType: dto.fuelType,
-    transmission: dto.transmission,
     location: dto.location,
     description: dto.description ?? '',
     images: dto.images.map((image, index) => ({
@@ -32,7 +30,9 @@ function toListing(dto: ListingDto): Listing {
     })),
     status: dto.status,
     publishedAt: dto.publishedAt,
-  };
+    category: dto.category,
+    attributes: dto.attributes,
+  } as Listing;
 }
 
 function toPaginatedResponse(
