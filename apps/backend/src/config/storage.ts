@@ -15,4 +15,6 @@ export const storageConfig = {
   maxImageBytes: env.MAX_IMAGE_SIZE_MB * 1024 * 1024,
   maxListingImages: env.MAX_LISTING_IMAGES,
   allowedImageTypes: new Set(env.ALLOWED_IMAGE_TYPES),
+  maxInventoryBytes: env.MAX_FILE_SIZE_MB * 1024 * 1024,
+  allowedInventoryTypes: new Set(env.ALLOWED_UPLOAD_TYPES),
 } as const;

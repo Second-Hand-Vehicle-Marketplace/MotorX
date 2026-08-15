@@ -1,12 +1,12 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useListing } from '@/features/listings/hooks/useListing';
+import { useBuyerListing } from '@/features/buyers/hooks/useBuyerListing';
 import { ListingGallery } from '@/features/listings/components/ListingGallery';
-import { formatPrice, formatMileage, formatDate } from '@/shared/mockData';
+import { formatPrice, formatDate } from '@/shared/utils/formatters';
 
 export const VehicleDetails: React.FC = () => {
   const { listingId } = useParams<{ listingId: string }>();
-  const { listing, isLoading } = useListing(listingId);
+  const { listing, isLoading } = useBuyerListing(listingId);
 
   if (isLoading) {
     return <div className="loading-spinner" style={{ margin: '6rem auto', display: 'block' }} />;
@@ -52,7 +52,7 @@ export const VehicleDetails: React.FC = () => {
               </div>
               <div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>Mileage</span>
-                <p style={{ fontSize: '1rem', fontWeight: 600 }}>{formatMileage(listing.mileage)}</p>
+                <p style={{ fontSize: '1rem', fontWeight: 600 }}>{new Intl.NumberFormat('en-LK').format(listing.mileage)} km</p>
               </div>
               <div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>Fuel Type</span>

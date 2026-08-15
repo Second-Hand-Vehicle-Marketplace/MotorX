@@ -1,9 +1,9 @@
-import mongoose, { type Types } from 'mongoose';
+import type { Types } from 'mongoose';
 import type { DealerApplicationDto } from '@motorx/shared-contracts';
 import { AppError } from '../../shared/errors/AppError.js';
 import { errorCodes } from '../../shared/errors/errorCodes.js';
 import type { Dealer } from './dealer.model.js';
-import { createDealer, findDealerById, findDealerByUserId, listDealersByStatus, promoteUserToDealer, updateDealerReview } from './dealer.repository.js';
+import { createDealer, findDealerByUserId } from './dealer.repository.js';
 import type { CreateDealerApplicationBody } from './dealer.validation.js';
 import type { StoredDealerDocument } from './dealerDocument.storage.js';
 
@@ -43,28 +43,3 @@ export async function getMyDealerApplication(userId: Types.ObjectId) {
   return serializeDealer(dealer as unknown as Dealer & { _id: Types.ObjectId });
 }
 
-// Returns pending applications for the admin review queue.
-export async function getPendingDealerApplications() {
-  const dealers = await listDealersByStatus('pending');
-  return dealers.map((dealer) => serializeDealer(dealer as unknown as Dealer & { _id: Types.ObjectId }));
-}
-
-// Approves or rejects an application atomically with any role promotion.
-export async function reviewDealerApplication(dealerId: string, adminId: Types.ObjectId, decision: 'approved' | 'rejected', reason?: string) {
-  const session = await mongoose.startSession();
-  let result: ReturnType<typeof serializeDealer> | undefined;
-  try {
-    await session.withTransaction(async () => {
-      const existing = await findDealerById(dealerId, session);
-      if (!existing) throw new AppError(404, errorCodes.notFound, 'The dealer application was not found.');
-      if (existing.status !== 'pending') throw new AppError(409, errorCodes.conflict, 'This dealer application has already been reviewed.');
-      const updated = await updateDealerReview(dealerId, decision, adminId, reason, session);
-      if (!updated) throw new AppError(409, errorCodes.conflict, 'This dealer application has already been reviewed.');
-      if (decision === 'approved' && !(await promoteUserToDealer(updated.userId, session)))
-        throw new AppError(404, errorCodes.notFound, 'The applicant user account was not found.');
-      result = serializeDealer(updated.toObject() as Dealer & { _id: Types.ObjectId });
-    });
-  } finally { await session.endSession(); }
-  if (!result) throw new AppError(500, errorCodes.internal, 'The dealer review could not be completed.');
-  return result;
-}

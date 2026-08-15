@@ -1,134 +1,37 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockUsers, mockListings, mockUploadJobs, mockAuditLogs, formatDateTime } from '../../../shared/mockData';
-import { DemoDataNotice } from '../../../shared/components/DemoDataNotice';
+import { adminApi, type AdminStats } from '@/features/admin/services/adminApi';
+
+const emptyStats: AdminStats = { totalUsers: 0, registeredDealers: 0, totalListings: 0, pendingDealerApplications: 0 };
 
 export const AdminDashboard: React.FC = () => {
-  const totalUsers = mockUsers.length;
-  const dealers = mockUsers.filter(u => u.role === 'dealer');
-  const activeListings = mockListings.filter(l => l.status === 'active').length;
-  const pendingJobs = mockUploadJobs.filter(j => j.status === 'pending' || j.status === 'processing').length;
+  const [stats, setStats] = useState(emptyStats);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  return (
-    <div>
-      <DemoDataNotice />
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Admin Dashboard</h1>
-          <p className="page-subtitle">Platform overview, system health status, and administrative logs</p>
-        </div>
-      </div>
+  useEffect(() => {
+    let active = true;
+    // Ignore late responses after navigation away from the dashboard.
+    void adminApi.getStats().then((result) => { if (active) setStats(result); })
+      .catch((requestError: unknown) => { if (active) setError(requestError instanceof Error ? requestError.message : 'Unable to load dashboard statistics.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
-      {/* Stats Grid */}
-      <div className="stats-grid" style={{ marginBottom: '2rem' }}>
-        <div className="stat-card">
-          <span className="stat-label">Total Users</span>
-          <div className="stat-value">{totalUsers}</div>
-          <span className="stat-change positive">↑ {dealers.length} registered dealers</span>
-        </div>
-
-        <div className="stat-card">
-          <span className="stat-label">Active Listings</span>
-          <div className="stat-value">{activeListings}</div>
-          <span className="stat-change positive">Across 3 dealerships</span>
-        </div>
-
-        <div className="stat-card">
-          <span className="stat-label">ETL Upload Jobs</span>
-          <div className="stat-value">{mockUploadJobs.length}</div>
-          <span className="stat-change" style={{ color: 'var(--color-info)' }}>{pendingJobs} in queue/processing</span>
-        </div>
-
-        <div className="stat-card">
-          <span className="stat-label">System Status</span>
-          <div className="stat-value" style={{ color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span className="status-dot online" /> Operational
-          </div>
-          <span className="stat-change positive">All services operational</span>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-        {/* Recent Audit Events */}
-        <div className="glass-card" style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Recent Audit Activity</h3>
-            <Link to="/admin/audit-logs" style={{ fontSize: '0.8125rem', color: 'var(--color-amber)' }}>
-              View All Logs →
-            </Link>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {mockAuditLogs.slice(0, 5).map(log => (
-              <div
-                key={log.id}
-                style={{
-                  padding: '0.75rem 1rem',
-                  background: 'var(--color-bg-tertiary)',
-                  borderRadius: 'var(--radius-lg)',
-                  border: '1px solid var(--color-glass-border)',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-amber)' }}>
-                    {log.eventType.replace('_', ' ').toUpperCase()}
-                  </span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>
-                    {formatDateTime(log.timestamp)}
-                  </span>
-                </div>
-                <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem' }}>
-                  {log.details}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* System Health Quick Status */}
-        <div className="glass-card" style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Service Health</h3>
-            <Link to="/admin/system-health" style={{ fontSize: '0.8125rem', color: 'var(--color-amber)' }}>
-              Detailed Metrics →
-            </Link>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-lg)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span className="status-dot online" />
-                <span style={{ fontWeight: 600 }}>API Gateway</span>
-              </div>
-              <span className="badge badge-success">Live (12ms)</span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-lg)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span className="status-dot online" />
-                <span style={{ fontWeight: 600 }}>MongoDB Database</span>
-              </div>
-              <span className="badge badge-success">Ready (5ms)</span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-lg)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span className="status-dot online" />
-                <span style={{ fontWeight: 600 }}>Redis Queue (BullMQ)</span>
-              </div>
-              <span className="badge badge-success">Active</span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-lg)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span className="status-dot online" />
-                <span style={{ fontWeight: 600 }}>ETL Worker Engine</span>
-              </div>
-              <span className="badge badge-success">Running</span>
-            </div>
-          </div>
-        </div>
+  return <div>
+    <div className="page-header"><div><h1 className="page-title">Admin Dashboard</h1><p className="page-subtitle">Live platform overview and administrative shortcuts</p></div></div>
+    {error && <div className="alert alert-error" role="alert" style={{ marginBottom: '1rem' }}>{error}</div>}
+    <div className="stats-grid" style={{ marginBottom: '2rem' }}>
+      <div className="stat-card"><span className="stat-label">Total Users</span><div className="stat-value">{loading ? '—' : stats.totalUsers}</div><span className="stat-change positive">{stats.registeredDealers} active dealers</span></div>
+      <div className="stat-card"><span className="stat-label">Total Listings</span><div className="stat-value">{loading ? '—' : stats.totalListings}</div><Link to="/admin/listings" className="stat-change positive">Review listings →</Link></div>
+      <div className="stat-card"><span className="stat-label">Pending Applications</span><div className="stat-value">{loading ? '—' : stats.pendingDealerApplications}</div><Link to="/admin/dealers" className="stat-change" style={{ color: 'var(--color-info)' }}>Review dealers →</Link></div>
+      <div className="stat-card"><span className="stat-label">Upload Jobs</span><div className="stat-value">—</div><span className="stat-change">Available after the upload pipeline</span></div>
+    </div>
+    <div className="glass-card" style={{ padding: '1.5rem' }}>
+      <h3 style={{ marginBottom: '1rem' }}>Administration</h3>
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <Link className="btn btn-secondary" to="/admin/users">Manage Users</Link><Link className="btn btn-secondary" to="/admin/dealers">Dealer Approvals</Link><Link className="btn btn-secondary" to="/admin/listings">Listing Oversight</Link><Link className="btn btn-secondary" to="/admin/system-health">System Health</Link>
       </div>
     </div>
-  );
+  </div>;
 };

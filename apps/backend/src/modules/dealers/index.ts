@@ -1,1 +1,1 @@
-export { adminDealerRouter, dealerRouter } from './dealer.routes.js';
+export { dealerRouter } from './dealer.routes.js';

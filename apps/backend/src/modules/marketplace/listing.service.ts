@@ -2,7 +2,7 @@ import type { Types } from 'mongoose';
 import type { ListingDto } from '@motorx/shared-contracts';
 import { AppError } from '../../shared/errors/AppError.js';
 import { errorCodes } from '../../shared/errors/errorCodes.js';
-import { createListingRecord, findActiveListingById, findOwnedListing, listActiveListings, listDealerListings, transitionOwnedListingStatus, updateOwnedListing, type ListingRecord } from './listing.repository.js';
+import { createListingRecord, findOwnedListing, listDealerListings, transitionOwnedListingStatus, updateOwnedListing, type ListingRecord } from './listing.repository.js';
 import type { CreateListingBody, ListListingsQuery, UpdateListingBody } from './listing.validation.js';
 import { buildPaginationMeta } from '../../shared/utils/pagination.js';
 import type { ListingStatus } from '@motorx/shared-contracts';
@@ -20,28 +20,12 @@ export function serializeListing(listing: ListingRecord): ListingDto {
   };
 }
 
-// Returns paginated active listings for the public marketplace.
-export async function getActiveListings(query: ListListingsQuery) {
-  const { documents, total } = await listActiveListings(query);
-  return {
-    listings: documents.map(serializeListing),
-    pagination: buildPaginationMeta(query.page, query.limit, total),
-  };
-}
-
 // Creates a draft or immediately published listing for a dealer.
 export async function createDealerListing(dealerId: Types.ObjectId, input: CreateListingBody) {
   const document = await createListingRecord({
     ...input, dealerId, images: [], publishedAt: input.status === 'active' ? new Date() : undefined,
   });
   return serializeListing(document.toObject() as ListingRecord);
-}
-
-// Returns one active listing or a not-found error.
-export async function getActiveListing(listingId: string) {
-  const listing = await findActiveListingById(listingId);
-  if (!listing) throw new AppError(404, errorCodes.notFound, 'The vehicle listing was not found.');
-  return serializeListing(listing);
 }
 
 // Returns every listing owned by the authenticated dealer.

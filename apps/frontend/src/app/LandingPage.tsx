@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ListingCard } from '../features/listings/components/ListingCard';
-import { useListings } from '../features/listings/hooks/useListings';
+import { useBuyerListings } from '../features/buyers/hooks/useBuyerListings';
 
 export const LandingPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
-  const { data, isLoading, isError } = useListings({}, 6);
+  const { data, isLoading, isError } = useBuyerListings({}, 6);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

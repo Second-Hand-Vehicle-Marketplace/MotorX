@@ -1,68 +1,11 @@
-import type { FilterQuery, SortOrder, Types } from 'mongoose';
+import type { Types } from 'mongoose';
 import { ListingModel, type Listing, type ListingStatus } from './listing.model.js';
 
 export type ListingRecord = Listing & { _id: Types.ObjectId };
 
-export interface ListActiveListingsOptions {
-  page: number;
-  limit: number;
-  search?: string;
-  make?: string;
-  model?: string;
-  yearMin?: number;
-  yearMax?: number;
-  priceMin?: number;
-  priceMax?: number;
-  fuelType?: string;
-  transmission?: string;
-  sortBy?: 'newest' | 'price-asc' | 'price-desc' | 'year-desc' | 'mileage-asc';
-}
-
-function escapeRegex(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-// Returns a newest-first page of publicly visible listings.
-export async function listActiveListings(options: ListActiveListingsOptions) {
-  const { page, limit } = options;
-  const filter: FilterQuery<Listing> = { status: 'active' };
-  if (options.make) filter.make = new RegExp(`^${escapeRegex(options.make)}$`, 'i');
-  if (options.model) filter.model = new RegExp(escapeRegex(options.model), 'i');
-  if (options.fuelType) filter.fuelType = options.fuelType;
-  if (options.transmission) filter.transmission = options.transmission;
-  if (options.yearMin !== undefined || options.yearMax !== undefined)
-    filter.year = { ...(options.yearMin !== undefined ? { $gte: options.yearMin } : {}), ...(options.yearMax !== undefined ? { $lte: options.yearMax } : {}) };
-  if (options.priceMin !== undefined || options.priceMax !== undefined)
-    filter.price = { ...(options.priceMin !== undefined ? { $gte: options.priceMin } : {}), ...(options.priceMax !== undefined ? { $lte: options.priceMax } : {}) };
-  if (options.search) {
-    const search = new RegExp(escapeRegex(options.search), 'i');
-    filter.$or = [{ title: search }, { make: search }, { model: search }, { description: search }];
-  }
-  const sort: Record<string, SortOrder> = options.sortBy === 'price-asc' ? { price: 1 }
-    : options.sortBy === 'price-desc' ? { price: -1 }
-      : options.sortBy === 'year-desc' ? { year: -1 }
-        : options.sortBy === 'mileage-asc' ? { mileageKm: 1 }
-          : { publishedAt: -1, _id: -1 };
-  const [documents, total] = await Promise.all([
-    ListingModel.find(filter)
-      .sort(sort)
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean(),
-    ListingModel.countDocuments(filter),
-  ]);
-
-  return { documents: documents as unknown as ListingRecord[], total };
-}
-
 // Inserts a dealer-owned listing document.
 export async function createListingRecord(input: Omit<Listing, 'createdAt' | 'updatedAt'>) {
   return ListingModel.create(input);
-}
-
-// Finds one publicly visible listing by ID.
-export async function findActiveListingById(listingId: string) {
-  return ListingModel.findOne({ _id: listingId, status: 'active' }).lean() as unknown as Promise<ListingRecord | null>;
 }
 
 // Returns all statuses of listings owned by one dealer.

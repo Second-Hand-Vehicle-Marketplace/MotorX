@@ -19,6 +19,7 @@ export interface ListingImage {
 
 export interface Listing {
   dealerId: Types.ObjectId;
+  sourceUploadJobId?: Types.ObjectId;
   title: string;
   make: string;
   model: string;
@@ -54,6 +55,7 @@ const listingImageSchema = new Schema<ListingImage>(
 const listingSchema = new Schema<Listing>(
   {
     dealerId: { type: Schema.Types.ObjectId, required: true, ref: 'AuthUser' },
+    sourceUploadJobId: { type: Schema.Types.ObjectId, ref: 'UploadJob' },
     title: { type: String, required: true, trim: true, maxlength: 160 },
     make: { type: String, required: true, trim: true, maxlength: 80 },
     model: { type: String, required: true, trim: true, maxlength: 80 },
@@ -75,5 +77,6 @@ const listingSchema = new Schema<Listing>(
 listingSchema.index({ status: 1, publishedAt: -1, _id: -1 }, { name: 'status_publishedAt_id' });
 listingSchema.index({ dealerId: 1, status: 1, createdAt: -1 }, { name: 'dealerId_status_createdAt' });
 listingSchema.index({ make: 1, model: 1, year: -1 }, { name: 'make_model_year' });
+listingSchema.index({ sourceUploadJobId: 1 }, { sparse: true, name: 'sourceUploadJobId' });
 
 export const ListingModel = models.Listing ?? model<Listing>('Listing', listingSchema);

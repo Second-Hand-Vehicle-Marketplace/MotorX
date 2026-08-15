@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useListings } from '@/features/listings/hooks/useListings';
+import { useBuyerListings } from '@/features/buyers/hooks/useBuyerListings';
 import { ListingCard } from '@/features/listings/components/ListingCard';
-import { availableMakes, fuelTypes } from '@/shared/mockData';
+import { buyerFuelTypes, buyerVehicleMakes } from '@/features/buyers/buyer.constants';
 import type { FuelType } from '@/features/listings/types/listing.types';
 
 export const Marketplace: React.FC = () => {
-  const { data, filters, updateFilters, resetFilters, page, setPage, isLoading, isError } = useListings({}, 9);
+  const { data, filters, updateFilters, resetFilters, page, setPage, isLoading, isError } = useBuyerListings({}, 9);
 
   return (
     <div style={{ maxWidth: 1440, margin: '0 auto', padding: '2rem 1.5rem' }}>
@@ -61,7 +61,7 @@ export const Marketplace: React.FC = () => {
               onChange={(e) => updateFilters({ make: e.target.value || undefined })}
             >
               <option value="">All Makes</option>
-              {availableMakes.map(make => (
+              {buyerVehicleMakes.map(make => (
                 <option key={make} value={make}>{make}</option>
               ))}
             </select>
@@ -76,7 +76,7 @@ export const Marketplace: React.FC = () => {
               onChange={(e) => updateFilters({ fuelType: (e.target.value as FuelType) || undefined })}
             >
               <option value="">All Fuel Types</option>
-              {fuelTypes.map(ft => (
+              {buyerFuelTypes.map(ft => (
                 <option key={ft} value={ft} style={{ textTransform: 'capitalize' }}>{ft}</option>
               ))}
             </select>

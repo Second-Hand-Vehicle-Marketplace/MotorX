@@ -3,7 +3,10 @@ import express from 'express';
 import helmet from 'helmet';
 import { authUserRouter } from './modules/auth-users/authUser.routes.js';
 import { listingImageRouter, listingRouter } from './modules/marketplace/index.js';
-import { adminDealerRouter, dealerRouter } from './modules/dealers/index.js';
+import { dealerRouter } from './modules/dealers/index.js';
+import { adminRouter } from './modules/admin/index.js';
+import { buyerRouter } from './modules/buyers/index.js';
+import { inventoryRouter } from './modules/inventory/index.js';
 import { errorHandler } from './shared/middleware/errorHandler.js';
 import { sendSuccess } from './shared/responses/apiResponse.js';
 
@@ -27,8 +30,10 @@ app.get('/health/ready', (_request, response) => {
 });
 
 app.use('/api/v1/auth', authUserRouter);
+app.use('/api/v1/listings', buyerRouter);
 app.use('/api/v1/listings', listingRouter);
 app.use('/api/v1/listing-images', listingImageRouter);
 app.use('/api/v1/dealers', dealerRouter);
-app.use('/api/v1/admin/dealer-applications', adminDealerRouter);
+app.use('/api/v1/dealer/uploads', inventoryRouter);
+app.use('/api/v1/admin', adminRouter);
 app.use(errorHandler);
