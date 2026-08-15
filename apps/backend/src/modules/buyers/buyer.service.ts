@@ -19,7 +19,10 @@ export async function viewListingAsBuyer(listingId: string): Promise<BuyerListin
   const listing = await findBuyerListingById(listingId);
   if (!listing) throw new AppError(404, errorCodes.notFound, 'The vehicle listing was not found.');
   const record = listing as unknown as ListingRecord;
-  const dealer = await DealerModel.findOne({ userId: record.dealerId, status: 'approved' })
+  // Not filtered by application status: the listing itself is already the buyer-facing gate
+  // (only active listings reach this endpoint at all), so a dealer whose review is still
+  // pending shouldn't have their business identity hidden from a buyer viewing their listing.
+  const dealer = await DealerModel.findOne({ userId: record.dealerId })
     .select('businessName city province businessPhone businessEmail description website')
     .lean();
   return {
