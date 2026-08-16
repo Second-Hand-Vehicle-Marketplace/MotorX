@@ -29,7 +29,24 @@ MongoDB Atlas is the primary persistent database required by the SRS. Docker Com
 - **Inventory** — bulk CSV upload with a downloadable, category-specific template and field guide per category; registration-number-based duplicate detection; a second bulk step to attach vehicle photos from a `.zip` (one folder per registration number), matched to the listings that upload created.
 - **Marketplace** — buyer browsing with structured filters (category, make, model, year, price, fuel type, transmission, body type, condition), vehicle detail pages showing the real dealer's profile, and dealer-managed listing images.
 - **Admin** — user, dealer, and listing moderation; upload monitoring; audit logs; system health; category-aware filtering.
-- **Not yet built** — natural-language/fuzzy/semantic search (buyer search is structured-filter only for now) and the notifications module (backend is a stub; the worker already creates notification records but nothing serves or emails them yet).
+- **Notifications** — in-app notification center for dealers and admins with unread counts, polling, read state, and email delivery status. Email notifications use responsive MotorX HTML with a plain-text fallback and vehicle details where relevant.
+- **Not yet built** — natural-language/fuzzy/semantic search (buyer search is structured-filter only for now).
+
+### Notification delivery matrix
+
+| Event | Recipient | In-app | Email |
+|---|---|---:|---:|
+| CSV upload completed with no rejects | Dealer | Yes | No |
+| Image-zip processing completed cleanly | Dealer | Yes | No |
+| New dealer application submitted | Admins | Yes | No |
+| Upload has a high rejection rate | Admins | Yes | No |
+| Dealer application approved or rejected | Dealer | Yes | Yes |
+| CSV upload failed or completed with errors | Dealer | Yes | Yes |
+| Image-zip processing failed or completed with errors | Dealer | Yes | Yes |
+| Listing removed or archived by admin | Dealer | Yes | Yes |
+| Account suspended | User | No | Yes |
+
+The notification bell is available in the dealer and admin portal headers. Removal notifications identify the exact vehicle using its vehicle name, registration number, listing ID, category, upload time, and removal time. Email delivery status is stored as `not_applicable`, `pending`, `sent`, or `failed`.
 
 ## Prerequisites
 
@@ -89,6 +106,18 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
 ```
 
+Configure SMTP for email notifications. For Gmail, use an app password rather than your normal account password:
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-sender@gmail.com
+SMTP_PASS=your-16-character-app-password
+SMTP_FROM="MotorX <your-sender@gmail.com>"
+```
+
+Never commit `.env` or paste live credentials into source files. The committed `.env.example` files contain placeholders only.
+
 Docker Compose reads the root `.env`. The file at `apps/backend/.env` is only for running the backend directly outside Docker.
 
 ### 2. Validate the configuration
@@ -128,6 +157,8 @@ Press `Ctrl+C` to stop following the logs. This does not stop the containers.
 - Backend liveness: <http://localhost:3000/health/live>
 - Backend readiness: <http://localhost:3000/health/ready>
 - MinIO console: <http://localhost:9001>
+
+The Docker frontend is exposed on port `8080`. Port `5173` is used only when running the Vite frontend directly outside Docker. `CORS_ORIGIN` should match the URL used in your browser.
 
 ## Normal Daily Commands
 
@@ -221,6 +252,15 @@ Follow backend or worker logs:
 docker compose logs -f backend
 docker compose logs -f worker
 ```
+
+To verify notification delivery manually:
+
+1. Sign in as an admin and a dealer in separate browser sessions.
+2. Submit or review a dealer application, or create an upload job.
+3. Open the bell in the relevant portal header and confirm the notification appears.
+4. For events marked “Email: Yes”, check the recipient inbox and confirm the stored email status shown in the notification center.
+
+Gmail may place messages from a new Gmail SMTP sender in Spam. For production delivery, use a verified sending domain with SPF, DKIM, and DMARC records; application code cannot guarantee inbox placement.
 
 If the backend reports an Atlas connection, TLS, or `ReplicaSetNoPrimary` error, verify:
 

@@ -6,6 +6,7 @@ import { normalizeRegistrationNumber } from '@motorx/shared-contracts';
 import { workerStorageClient, workerStorageConfig } from '../config/storage.js';
 import { appendListingImages, findListingsByUploadJob, type WorkerListingImage } from '../repositories/listing.repository.js';
 import { claimPendingImageProcessing, completeImageProcessing, failImageProcessing } from '../repositories/uploadJob.repository.js';
+import { notifyImageProcessingResult } from './notification.service.js';
 
 // Downloads the private zip as one buffer. Bounded by the backend's zip size cap at upload time,
 // so buffering the whole archive here (rather than streaming) keeps the extraction logic simple.
@@ -60,7 +61,7 @@ async function uploadImage(listingId: string, order: number, entry: ZipImageEntr
 export async function processInventoryImages(uploadJobId: string) {
   const job = await claimPendingImageProcessing(uploadJobId);
   if (!job) throw new Error('The image-processing job is missing or is not pending.');
-  const claimed = job as unknown as { imageZipStorageKey: string };
+  const claimed = job as unknown as { imageZipStorageKey: string; dealerId: Types.ObjectId };
   try {
     const zipBuffer = await downloadZipBuffer(claimed.imageZipStorageKey);
     const grouped = await extractImageEntries(zipBuffer);
@@ -82,10 +83,13 @@ export async function processInventoryImages(uploadJobId: string) {
     }
 
     await completeImageProcessing(uploadJobId, { imagesAttached, matchedListings, unmatchedFolders });
+    const status = unmatchedFolders.length > 0 ? 'completedWithErrors' as const : 'completed' as const;
+    await notifyImageProcessingResult(claimed.dealerId, status, unmatchedFolders.length);
     return { uploadJobId, imagesAttached, matchedListings, unmatchedFolders, stage: 'completed' as const };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown image processing failure.';
     await failImageProcessing(uploadJobId, message);
+    await notifyImageProcessingResult(claimed.dealerId, 'failed', undefined, message);
     throw error;
   }
 }

@@ -9,6 +9,10 @@ import { detectExactDuplicates } from '../pipeline/detectDuplicates.js';
 import { persistRejectedRows, persistValidRows } from '../pipeline/persist.js';
 import { prepareInventoryBatch } from '../pipeline/transform.js';
 import { claimPendingUploadJob, completeUploadJob, failUploadJob, updateUploadProgress } from '../repositories/uploadJob.repository.js';
+import { notifyUploadHighRejectionRate, notifyUploadJobResult } from './notification.service.js';
+
+// A CSV job is flagged to admins as advisory-only once at least a fifth of its records reject.
+const HIGH_REJECTION_RATE_THRESHOLD = 0.2;
 
 // Downloads the private original CSV as a Node stream for bounded-memory parsing.
 async function downloadInventoryStream(storageKey: string) {
@@ -38,6 +42,7 @@ async function processInventoryBatch(uploadJobId: string, dealerId: Types.Object
 export async function extractInventoryUpload(uploadJobId: string) {
   const upload = await claimPendingUploadJob(uploadJobId);
   if (!upload) throw new Error('The upload job is missing or is not pending.');
+  const dealerId = (upload as unknown as { dealerId: Types.ObjectId }).dealerId;
   try {
     const claimedUpload = upload as unknown as { storageKey: string; dealerId: Types.ObjectId; category: VehicleCategory };
     const stream = await downloadInventoryStream(claimedUpload.storageKey);
@@ -45,10 +50,15 @@ export async function extractInventoryUpload(uploadJobId: string) {
     const seenKeys = new Set<string>();
     await extractCsvBatches(stream, env.ETL_BATCH_SIZE, (rows, processed) => processInventoryBatch(uploadJobId, claimedUpload.dealerId, claimedUpload.category, rows, processed, counts, seenKeys));
     await completeUploadJob(uploadJobId, counts);
+    const status = counts.rejectedRecords > 0 || counts.duplicateRecords > 0 ? 'completedWithErrors' as const : 'completed' as const;
+    await notifyUploadJobResult(dealerId, uploadJobId, status, counts);
+    const rejectionRate = counts.processedRecords > 0 ? (counts.rejectedRecords + counts.duplicateRecords) / counts.processedRecords : 0;
+    if (rejectionRate >= HIGH_REJECTION_RATE_THRESHOLD) await notifyUploadHighRejectionRate(uploadJobId, rejectionRate);
     return { uploadJobId, ...counts, stage: 'completed' as const };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown extraction failure.';
     await failUploadJob(uploadJobId, message);
+    await notifyUploadJobResult(dealerId, uploadJobId, 'failed', undefined, message);
     throw error;
   }
 }

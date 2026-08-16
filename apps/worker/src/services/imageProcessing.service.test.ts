@@ -22,6 +22,7 @@ vi.mock('../config/storage.js', () => ({
 vi.mock('../repositories/uploadJob.repository.js', () => ({ claimPendingImageProcessing: mocks.claimImage, completeImageProcessing: mocks.completeImage, failImageProcessing: mocks.failImage }));
 vi.mock('../repositories/listing.repository.js', () => ({ findListingsByUploadJob: mocks.findListings, appendListingImages: mocks.appendImages }));
 vi.mock('unzipper', () => ({ Open: { buffer: mocks.unzipperOpenBuffer } }));
+vi.mock('./notification.service.js', () => ({ notifyImageProcessingResult: vi.fn() }));
 
 import { processInventoryImages } from './imageProcessing.service.js';
 

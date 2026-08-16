@@ -14,6 +14,31 @@ export type UserStatus = (typeof userStatuses)[number];
 export const dealerApplicationStatuses = ['pending', 'approved', 'rejected'] as const;
 export type DealerApplicationStatus = (typeof dealerApplicationStatuses)[number];
 
+// One entry per trigger in the notification delivery strategy — drives both the message copy
+// and which channels a notification is sent on.
+export const notificationTypes = [
+  'upload_completed',
+  'upload_completed_with_errors',
+  'upload_failed',
+  'image_processing_completed',
+  'image_processing_completed_with_errors',
+  'image_processing_failed',
+  'dealer_application_submitted',
+  'dealer_application_approved',
+  'dealer_application_rejected',
+  'upload_high_rejection_rate',
+  'listing_removed',
+  'account_suspended',
+] as const;
+export type NotificationType = (typeof notificationTypes)[number];
+
+export const notificationChannels = ['in_app', 'email'] as const;
+export type NotificationChannel = (typeof notificationChannels)[number];
+
+// 'not_applicable' when the notification has no email channel at all.
+export const notificationEmailStatuses = ['not_applicable', 'pending', 'sent', 'failed'] as const;
+export type NotificationEmailStatus = (typeof notificationEmailStatuses)[number];
+
 // Lifecycle of a vehicle listing. Not every transition is legal — see
 // `allowedTransitions` in listing.service.ts for which moves are permitted.
 export const listingStatuses = ['draft', 'active', 'sold', 'archived'] as const;

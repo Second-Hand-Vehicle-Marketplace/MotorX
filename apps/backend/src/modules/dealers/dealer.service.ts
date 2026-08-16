@@ -2,6 +2,7 @@ import type { Types } from 'mongoose';
 import type { DealerApplicationDto } from '@motorx/shared-contracts';
 import { AppError } from '../../shared/errors/AppError.js';
 import { errorCodes } from '../../shared/errors/errorCodes.js';
+import { notifyDealerApplicationSubmitted } from '../notifications/notification.service.js';
 import type { Dealer } from './dealer.model.js';
 import { createDealer, findDealerByUserId } from './dealer.repository.js';
 import type { CreateDealerApplicationBody } from './dealer.validation.js';
@@ -28,7 +29,11 @@ function serializeDealer(dealer: Dealer & { _id: Types.ObjectId }): DealerApplic
 export async function submitDealerApplication(userId: Types.ObjectId, role: string, input: CreateDealerApplicationBody, verificationDocuments: StoredDealerDocument[]) {
   if (role !== 'buyer') throw new AppError(409, errorCodes.conflict, 'Only buyer accounts can submit a dealer application.');
   if (await findDealerByUserId(userId)) throw new AppError(409, errorCodes.conflict, 'A dealer application already exists for this account.');
-  try { return serializeDealer((await createDealer(userId, { ...input, verificationDocuments })).toObject() as Dealer & { _id: Types.ObjectId }); }
+  try {
+    const dealer = serializeDealer((await createDealer(userId, { ...input, verificationDocuments })).toObject() as Dealer & { _id: Types.ObjectId });
+    await notifyDealerApplicationSubmitted(dealer.businessName);
+    return dealer;
+  }
   catch (error: unknown) {
     if (typeof error === 'object' && error !== null && 'code' in error && error.code === 11000)
       throw new AppError(409, errorCodes.conflict, 'This account or registration number already has an application.');

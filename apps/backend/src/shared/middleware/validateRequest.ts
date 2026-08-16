@@ -1,5 +1,5 @@
 import type { RequestHandler } from 'express';
-import type { ZodType } from 'zod';
+import { ZodError, type ZodType } from 'zod';
 import { AppError } from '../errors/AppError.js';
 import { errorCodes } from '../errors/errorCodes.js';
 
@@ -17,8 +17,15 @@ export function validateRequest(schemas: RequestSchemas): RequestHandler {
       if (schemas.params) Object.assign(request.params, schemas.params.parse(request.params));
       if (schemas.query) Object.assign(request.query, schemas.query.parse(request.query));
       next();
-    } catch {
-      next(new AppError(400, errorCodes.validation, 'The request contains invalid values.'));
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const fields = error.flatten().fieldErrors as Record<string, string[]>;
+        const summary = Object.entries(fields)
+          .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
+          .join('; ');
+        return next(new AppError(400, errorCodes.validation, summary || 'The request contains invalid values.', fields));
+      }
+      next(error);
     }
   };
 }

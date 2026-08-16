@@ -13,14 +13,16 @@
     "axios": "^1.7.9",
     "dotenv": "^16.4.0",
     "zod": "^3.24.0",
-    "unzipper": "^0.12.3"
+    "unzipper": "^0.12.3",
+    "nodemailer": "^6.9.16"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
     "tsx": "^4.19.0",
     "vitest": "^4.1.10",
     "@types/node": "^22.10.0",
-    "@types/unzipper": "^0.10.11"
+    "@types/unzipper": "^0.10.11",
+    "@types/nodemailer": "^6.4.17"
   },
   "scripts": {
     "dev": "tsx watch src/worker.ts",

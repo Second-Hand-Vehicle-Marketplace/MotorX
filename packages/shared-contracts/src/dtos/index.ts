@@ -1,6 +1,9 @@
 import type {
   DealerApplicationStatus,
   ListingStatus,
+  NotificationChannel,
+  NotificationEmailStatus,
+  NotificationType,
   UserRole,
   UserStatus,
 } from '../enums/index.js';
@@ -64,6 +67,18 @@ export type CreateDealerApplicationInput = Pick<
   brands?: string[];
   inventoryCount?: number;
 };
+
+export interface NotificationDto {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  channels: NotificationChannel[];
+  emailStatus: NotificationEmailStatus;
+  read: boolean;
+  details?: Record<string, string | number | null>;
+  createdAt: string;
+}
 
 export interface ListingImageDto {
   key: string;

@@ -29,6 +29,12 @@ const envSchema = z.object({
   MAX_FILE_SIZE_MB: z.coerce.number().positive().default(20),
   ALLOWED_UPLOAD_TYPES: z.string().default('text/csv,application/csv,application/vnd.ms-excel').transform((value) => value.split(',').map((type) => type.trim())),
   MAX_IMAGE_ZIP_SIZE_MB: z.coerce.number().positive().default(50),
+
+  SMTP_HOST: z.string().trim().min(1),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_USER: z.string().trim().min(1),
+  SMTP_PASS: z.string().trim().min(1),
+  SMTP_FROM: z.string().trim().min(1).optional(),
 });
 
 export const env = envSchema.parse(process.env);

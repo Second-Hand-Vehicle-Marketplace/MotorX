@@ -7,6 +7,7 @@ import { dealerRouter } from './modules/dealers/index.js';
 import { adminRouter } from './modules/admin/index.js';
 import { buyerRouter } from './modules/buyers/index.js';
 import { inventoryRouter } from './modules/inventory/index.js';
+import { notificationRouter } from './modules/notifications/index.js';
 import { errorHandler } from './shared/middleware/errorHandler.js';
 import { sendSuccess } from './shared/responses/apiResponse.js';
 
@@ -42,4 +43,5 @@ app.use('/api/v1/listing-images', listingImageRouter);
 app.use('/api/v1/dealers', dealerRouter);
 app.use('/api/v1/dealer/uploads', inventoryRouter);
 app.use('/api/v1/admin', adminRouter);
+app.use('/api/v1/notifications', notificationRouter);
 app.use(errorHandler);

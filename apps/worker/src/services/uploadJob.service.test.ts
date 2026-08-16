@@ -12,6 +12,7 @@ vi.mock('../config/env.js', () => ({ env: { ETL_BATCH_SIZE: 250 } }));
 vi.mock('../repositories/uploadJob.repository.js', () => ({ claimPendingUploadJob: mocks.claim, updateUploadProgress: mocks.update, completeUploadJob: mocks.complete, failUploadJob: mocks.fail }));
 vi.mock('../repositories/listing.repository.js', () => ({ findActivelyListedRegistrations: mocks.findActive, insertImportedListings: mocks.insertListings }));
 vi.mock('../repositories/rejectedRecord.repository.js', () => ({ insertRejectedRecords: mocks.insertRejected }));
+vi.mock('./notification.service.js', () => ({ notifyUploadJobResult: vi.fn(), notifyUploadHighRejectionRate: vi.fn() }));
 
 import { extractInventoryUpload } from './uploadJob.service.js';
 
