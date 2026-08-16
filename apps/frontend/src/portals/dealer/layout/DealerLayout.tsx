@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { NotificationCenter } from '@/features/notifications/components/NotificationCenter';
 import { getInitials } from '@/shared/utils/formatters';
 
 export const DealerLayout: React.FC = () => {
@@ -85,6 +86,7 @@ export const DealerLayout: React.FC = () => {
 
       {/* Main Content */}
       <main className="portal-main">
+        <div className="portal-toolbar"><span className="portal-toolbar-label">Dealer workspace</span><NotificationCenter /></div>
         <Outlet />
       </main>
     </div>

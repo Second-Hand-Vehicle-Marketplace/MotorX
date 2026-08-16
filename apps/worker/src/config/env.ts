@@ -14,6 +14,12 @@ const envSchema = z.object({
   MAX_LISTING_IMAGES: z.coerce.number().int().positive().max(30).default(10),
   MAX_IMAGE_SIZE_MB: z.coerce.number().positive().default(10),
   ALLOWED_IMAGE_TYPES: z.string().default('image/jpeg,image/png,image/webp').transform((value) => value.split(',').map((type) => type.trim())),
+
+  SMTP_HOST: z.string().trim().min(1),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_USER: z.string().trim().min(1),
+  SMTP_PASS: z.string().trim().min(1),
+  SMTP_FROM: z.string().trim().min(1).optional(),
 });
 
 // Parses worker configuration once so invalid deployments fail before consuming jobs.

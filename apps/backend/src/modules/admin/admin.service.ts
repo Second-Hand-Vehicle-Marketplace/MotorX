@@ -4,6 +4,7 @@ import { AppError } from '../../shared/errors/AppError.js';
 import { errorCodes } from '../../shared/errors/errorCodes.js';
 import { buildPaginationMeta } from '../../shared/utils/pagination.js';
 import type { Dealer } from '../dealers/dealer.model.js';
+import { notifyAccountSuspended, notifyDealerApplicationDecision, notifyListingRemoved } from '../notifications/notification.service.js';
 import { archiveListingByAdmin, createAdminAuditLog, findDealerApplicationById, getAdminStats, listAdminAuditLogs, listAdminListings, listAdminUploads, listAdminUsers, listPendingDealerApplications, promoteApplicantToDealer, updateAdminUserStatus, updateDealerApplicationReview } from './admin.repository.js';
 import type { ListAdminAuditQuery, ListAdminListingsQuery, ListAdminUploadsQuery, ListAdminUsersQuery } from './admin.validation.js';
 
@@ -31,6 +32,7 @@ export async function changeUserStatusAsAdmin(userId: string, status: 'active' |
   if (!user) throw new AppError(404, errorCodes.notFound, 'The user was not found.');
   const record = user as unknown as { _id: Types.ObjectId; displayName?: string; email: string };
   await createAdminAuditLog({ eventType: status === 'suspended' ? 'user_suspended' : 'user_activated', actorId: adminId, targetId: record._id, targetName: record.displayName || record.email, details: `User account ${status}.` });
+  if (status === 'suspended') await notifyAccountSuspended(record._id);
   return serializeUser(user as unknown as Record<string, any>);
 }
 
@@ -41,8 +43,17 @@ export async function getListingsForAdmin(query: ListAdminListingsQuery) { const
 export async function removeListingAsAdmin(listingId: string, adminId: Types.ObjectId) {
   const listing = await archiveListingByAdmin(listingId);
   if (!listing) throw new AppError(404, errorCodes.notFound, 'The vehicle listing was not found.');
-  const record = listing as unknown as { _id: Types.ObjectId; title: string };
+  const record = listing as unknown as { _id: Types.ObjectId; title: string; make: string; model: string; year: number; category: string; registrationNumber: string; dealerId: Types.ObjectId | { _id: Types.ObjectId }; createdAt: Date };
+  const dealerUserId = typeof record.dealerId === 'object' && '_id' in record.dealerId ? record.dealerId._id : record.dealerId;
   await createAdminAuditLog({ eventType: 'listing_removed', actorId: adminId, targetId: record._id, targetName: record.title, details: 'Vehicle listing archived by an administrator.' });
+  await notifyListingRemoved(dealerUserId, record.title, {
+    vehicle: `${record.year} ${record.make} ${record.model}`,
+    registrationNumber: record.registrationNumber,
+    listingId: record._id.toString(),
+    category: record.category,
+    uploadedAt: record.createdAt.toISOString(),
+    removedAt: new Date().toISOString(),
+  });
   return serializeListing(listing as unknown as Record<string, any>);
 }
 
@@ -85,5 +96,8 @@ export async function reviewDealerApplicationAsAdmin(dealerId: string, adminId: 
     await createAdminAuditLog({ eventType: decision === 'approved' ? 'dealer_approved' : 'dealer_rejected', actorId: adminId, targetId: updated.userId, targetName: updated.businessName, details: decision === 'approved' ? 'Dealer application approved.' : `Dealer application rejected: ${reason}` }, session);
     result = serializeDealer(updated.toObject() as Dealer & { _id: Types.ObjectId });
   }); } finally { await session.endSession(); }
-  if (!result) throw new AppError(500, errorCodes.internal, 'The dealer review could not be completed.'); return result;
+  if (!result) throw new AppError(500, errorCodes.internal, 'The dealer review could not be completed.');
+  // Sent after the transaction commits — a delivery hiccup must never roll back the review itself.
+  await notifyDealerApplicationDecision(new mongoose.Types.ObjectId(result.userId), decision, reason);
+  return result;
 }

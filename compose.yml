@@ -2,29 +2,6 @@ name: motorx
 
 services:
   # =========================================================
-  # MongoDB
-  # =========================================================
-  mongodb:
-    image: mongo:7
-    restart: unless-stopped
-
-    ports:
-      - "27017:27017"
-
-    volumes:
-      - mongodb_data:/data/db
-
-    healthcheck:
-      test: [ "CMD-SHELL", "echo 'db.runCommand({ ping: 1 }).ok' | mongosh --quiet" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
-    networks:
-      - motorx-network
-
-  # =========================================================
   # Redis
   # Used by BullMQ for asynchronous job processing
   # =========================================================
@@ -157,9 +134,6 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
 
     depends_on:
-      mongodb:
-        condition: service_healthy
-
       redis:
         condition: service_healthy
 
@@ -213,9 +187,6 @@ services:
       HF_EMBEDDING_MODEL: ${HF_EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
 
     depends_on:
-      mongodb:
-        condition: service_healthy
-
       redis:
         condition: service_healthy
 
@@ -266,6 +237,5 @@ networks:
 # Persistent volumes
 # =========================================================
 volumes:
-  mongodb_data:
   redis_data:
   minio_data:

@@ -17,7 +17,7 @@ export interface ApiSuccessResponse<T, M = null> {
 
 export interface ApiErrorResponse {
   success: false;
-  error: { code: string; message: string };
+  error: { code: string; message: string; fields?: Record<string, string[]> };
   meta: null;
 }
 
