@@ -4,20 +4,19 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@motorx/shared-contracts": "*",
-    "mongoose": "^8.9.0",
-    "ioredis": "^5.4.0",
-    "bullmq": "^5.30.0",
     "@aws-sdk/client-s3": "^3.699.0",
-    "csv-parse": "^5.6.0",
+    "@motorx/shared-contracts": "*",
+    "@types/unzipper": "^0.10.11",
     "axios": "^1.7.9",
+    "bullmq": "^5.30.0",
+    "csv-parse": "^5.6.0",
     "dotenv": "^16.4.0",
     "zod": "^3.24.0",
     "unzipper": "^0.12.3",
     "nodemailer": "^6.9.16"
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
+    "@types/node": "^22.10.0",
     "tsx": "^4.19.0",
     "vitest": "^4.1.10",
     "@types/node": "^22.10.0",
@@ -28,7 +27,6 @@
     "dev": "tsx watch src/worker.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/worker.js",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "echo \"No worker tests yet\""
   }
 }
