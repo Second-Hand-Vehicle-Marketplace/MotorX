@@ -7,6 +7,7 @@ import {
 import { listingApi } from '@/features/listings/services/listingApi';
 import { formatEnumLabel } from '@/features/listings/utils/vehicleAttributes';
 import { availableMakes } from '@/shared/constants/vehicle';
+import { ImageCropModal } from '@/features/listings/components/ImageCropModal';
 
 const categoryLabels: Record<VehicleCategory, string> = { car: 'Car', motorcycle: 'Motorcycle', van: 'Van', truck: 'Truck', three_wheeler: 'Three-Wheeler', bus: 'Bus', other: 'Other' };
 const listableCategories = vehicleCategories.filter((category) => category !== 'other');
@@ -26,6 +27,8 @@ export const ListingForm: React.FC = () => {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [images, setImages] = useState<File[]>([]);
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
+  const [croppedSoFar, setCroppedSoFar] = useState<File[]>([]);
   const [category, setCategory] = useState<VehicleCategory>('car');
   const [common, setCommon] = useState<CommonFormState>({
     registrationNumber: '', title: '', make: availableMakes[0], model: '', year: new Date().getFullYear(),
@@ -58,6 +61,36 @@ export const ListingForm: React.FC = () => {
       default: return base; // three_wheeler has no category-specific extras
     }
   }
+
+  const handleFilesSelected = (files: File[]) => {
+    if (files.length === 0) return;
+    setCropQueue(files);
+    setCroppedSoFar([]);
+  };
+
+  const handleCropConfirm = (croppedFile: File) => {
+    const done = [...croppedSoFar, croppedFile];
+    const remaining = cropQueue.slice(1);
+    if (remaining.length === 0) {
+      setImages(done);
+      setCropQueue([]);
+      setCroppedSoFar([]);
+    } else {
+      setCroppedSoFar(done);
+      setCropQueue(remaining);
+    }
+  };
+
+  const handleCropSkip = () => {
+    const remaining = cropQueue.slice(1);
+    if (remaining.length === 0) {
+      if (croppedSoFar.length > 0) setImages(croppedSoFar);
+      setCropQueue([]);
+      setCroppedSoFar([]);
+    } else {
+      setCropQueue(remaining);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -120,9 +153,16 @@ export const ListingForm: React.FC = () => {
         </div>
         <label className="form-group"><span className="form-label">Listing Title *</span><input className="form-input" value={common.title} onChange={(e) => setCommon({ ...common, title: e.target.value })} minLength={3} required /></label>
         <label className="form-group"><span className="form-label">Description</span><textarea className="form-textarea" rows={4} value={common.description} onChange={(e) => setCommon({ ...common, description: e.target.value })} /></label>
-        <label className="form-group"><span className="form-label">Vehicle Images</span><input type="file" className="form-input" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => setImages(Array.from(e.target.files ?? []))} /><span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>{images.length} image(s) selected</span></label>
+        <label className="form-group">
+          <span className="form-label">Vehicle Images</span>
+          <input type="file" className="form-input" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => { handleFilesSelected(Array.from(e.target.files ?? [])); e.target.value = ''; }} />
+          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>
+            {cropQueue.length > 0 ? `Cropping ${croppedSoFar.length + 1} of ${croppedSoFar.length + cropQueue.length}…` : `${images.length} image(s) selected`}
+          </span>
+        </label>
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}><button type="button" onClick={() => navigate('/dealer/listings')} className="btn btn-secondary">Cancel</button><button type="submit" disabled={isSubmitting} className="btn btn-primary btn-lg">{isSubmitting ? 'Creating…' : 'Create Listing'}</button></div>
       </form>
+      {cropQueue.length > 0 && <ImageCropModal file={cropQueue[0]} onConfirm={handleCropConfirm} onCancel={handleCropSkip} />}
     </div>
   );
 };

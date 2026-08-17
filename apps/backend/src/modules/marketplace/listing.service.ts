@@ -5,6 +5,7 @@ import { AppError } from '../../shared/errors/AppError.js';
 import { errorCodes } from '../../shared/errors/errorCodes.js';
 import {
   createListingRecord,
+  deleteOwnedListing,
   findActiveListingByRegistration,
   findOwnedListing,
   listDealerListings,
@@ -14,6 +15,8 @@ import {
 } from './listing.repository.js';
 import { validateAttributesForCategory, type CreateListingBody, type ListListingsQuery, type UpdateListingBody } from './listing.validation.js';
 import { buildPaginationMeta } from '../../shared/utils/pagination.js';
+import { deleteListingImageObject } from './listingImage.storage.js';
+import type { ListingImage } from './listing.model.js';
 import type { ListingStatus } from '@motorx/shared-contracts';
 
 // Converts a listing record into the shared API DTO.
@@ -83,6 +86,14 @@ export async function updateDealerListing(listingId: string, dealerId: Types.Obj
   const listing = await updateOwnedListing(listingId, dealerId, update, unsetDescription);
   if (!listing) throw new AppError(404, errorCodes.notFound, 'The vehicle listing was not found.');
   return serializeListing(listing.toObject() as ListingRecord);
+}
+
+// Permanently removes an owned listing and best-effort cleans up its stored images.
+export async function deleteDealerListing(listingId: string, dealerId: Types.ObjectId): Promise<void> {
+  const listing = await deleteOwnedListing(listingId, dealerId);
+  if (!listing) throw new AppError(404, errorCodes.notFound, 'The vehicle listing was not found.');
+  const results = await Promise.allSettled(listing.images.map((image: ListingImage) => deleteListingImageObject(image.key)));
+  for (const result of results) if (result.status === 'rejected') console.error('Failed to delete listing image object.', result.reason);
 }
 
 const allowedTransitions: Record<ListingStatus, readonly ListingStatus[]> = {

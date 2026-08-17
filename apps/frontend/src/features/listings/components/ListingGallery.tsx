@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
+import { LISTING_IMAGE_ASPECT_RATIO } from '@motorx/shared-contracts';
 import type { VehicleImage } from '../types/listing.types';
+
+const THUMBNAIL_WIDTH = 80;
+const THUMBNAIL_HEIGHT = Math.round(THUMBNAIL_WIDTH / LISTING_IMAGE_ASPECT_RATIO);
 
 interface ListingGalleryProps {
   images: VehicleImage[];
@@ -12,7 +16,8 @@ export const ListingGallery: React.FC<ListingGalleryProps> = ({ images, title })
   if (!images || images.length === 0) {
     return (
       <div style={{
-        height: 360,
+        width: '100%',
+        aspectRatio: LISTING_IMAGE_ASPECT_RATIO,
         background: 'var(--color-bg-tertiary)',
         borderRadius: 'var(--radius-xl)',
         display: 'flex',
@@ -32,7 +37,7 @@ export const ListingGallery: React.FC<ListingGalleryProps> = ({ images, title })
       <div style={{
         position: 'relative',
         width: '100%',
-        height: 420,
+        aspectRatio: LISTING_IMAGE_ASPECT_RATIO,
         borderRadius: 'var(--radius-xl)',
         overflow: 'hidden',
         border: '1px solid var(--color-glass-border)',
@@ -67,8 +72,8 @@ export const ListingGallery: React.FC<ListingGalleryProps> = ({ images, title })
               type="button"
               onClick={() => setSelectedIndex(idx)}
               style={{
-                width: 80,
-                height: 60,
+                width: THUMBNAIL_WIDTH,
+                height: THUMBNAIL_HEIGHT,
                 borderRadius: 'var(--radius-md)',
                 overflow: 'hidden',
                 border: idx === selectedIndex ? '2px solid var(--color-accent)' : '1px solid var(--color-glass-border)',

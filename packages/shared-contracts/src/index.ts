@@ -6,3 +6,4 @@ export * from './vehicle/attributeSchemas.js';
 export * from './vehicle/listingSchemas.js';
 export * from './vehicle/csvTemplates.js';
 export * from './utils/registrationNumber.js';
+export * from './media/imageConstraints.js';

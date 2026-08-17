@@ -78,4 +78,8 @@ export const listingApi = {
     const response = await apiClient.post<ApiSuccessResponse<ListingDto>>(`/listings/${id}/images`, formData);
     return toListing(response.data.data);
   },
+
+  async deleteListing(id: string): Promise<void> {
+    await apiClient.delete(`/listings/${id}`);
+  },
 };

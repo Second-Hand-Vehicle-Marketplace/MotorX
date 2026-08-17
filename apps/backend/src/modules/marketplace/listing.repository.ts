@@ -42,6 +42,11 @@ export async function findOwnedListing(listingId: string, dealerId: Types.Object
   return ListingModel.findOne({ _id: listingId, dealerId });
 }
 
+// Permanently removes a listing only when it belongs to the authenticated dealer.
+export async function deleteOwnedListing(listingId: string, dealerId: Types.ObjectId) {
+  return ListingModel.findOneAndDelete({ _id: listingId, dealerId });
+}
+
 // Applies a status change only if the expected current status still matches.
 export async function transitionOwnedListingStatus(listingId: string, dealerId: Types.ObjectId, currentStatus: ListingStatus, update: Record<string, unknown>) {
   return ListingModel.findOneAndUpdate({ _id: listingId, dealerId, status: currentStatus }, { $set: update }, { new: true, runValidators: true });

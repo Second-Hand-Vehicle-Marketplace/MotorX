@@ -217,7 +217,7 @@ services:
       VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID}
 
     ports:
-      - "8080:5173"
+      - "4173:5173"
 
     depends_on:
       backend:

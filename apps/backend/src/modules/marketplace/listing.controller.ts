@@ -1,6 +1,6 @@
 import type { Response } from 'express';
 import { sendSuccess } from '../../shared/responses/apiResponse.js';
-import { changeDealerListingStatus, createDealerListing, getDealerListings, updateDealerListing } from './listing.service.js';
+import { changeDealerListingStatus, createDealerListing, deleteDealerListing, getDealerListings, updateDealerListing } from './listing.service.js';
 import type { CreateListingBody, ListListingsQuery, UpdateListingBody } from './listing.validation.js';
 import type { ListingStatus } from '@motorx/shared-contracts';
 import type { AuthenticatedRequest } from '../../shared/types/authenticatedRequest.js';
@@ -25,4 +25,10 @@ export async function updateListing(request: AuthenticatedRequest, response: Res
 // Moves an owned listing through its allowed lifecycle.
 export async function updateListingStatus(request: AuthenticatedRequest, response: Response): Promise<void> {
   sendSuccess(response, await changeDealerListingStatus(String(request.params.listingId), request.localUser!._id, request.body.status as ListingStatus));
+}
+
+// Permanently deletes an owned listing.
+export async function deleteListing(request: AuthenticatedRequest, response: Response): Promise<void> {
+  await deleteDealerListing(String(request.params.listingId), request.localUser!._id);
+  sendSuccess(response, null);
 }
