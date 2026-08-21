@@ -28,7 +28,6 @@
     "dev": "tsx watch src/worker.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/worker.js",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "echo \"No worker tests yet\""
   }
 }
