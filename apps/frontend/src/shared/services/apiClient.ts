@@ -28,7 +28,11 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: unknown) => {
     if (axios.isAxiosError(error)) {
-      const message = (error.response?.data as { error?: { message?: string } } | undefined)?.error?.message;
+      const apiError = (error.response?.data as { error?: { message?: string; fields?: Record<string, string[]> } } | undefined)?.error;
+      const fieldDetails = apiError?.fields
+        ? Object.entries(apiError.fields).map(([field, messages]) => `${field}: ${messages.join(', ')}`).join('; ')
+        : undefined;
+      const message = fieldDetails || apiError?.message;
       return Promise.reject(new Error(message ?? error.message));
     }
     return Promise.reject(error);

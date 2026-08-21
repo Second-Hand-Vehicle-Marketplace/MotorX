@@ -1,1 +1,1 @@
-export const adminModule = 'admin';
+export { adminRouter } from './admin.routes.js';

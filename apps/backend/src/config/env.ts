@@ -9,6 +9,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
 
   MONGODB_URI: z.string().trim().min(1),
+  REDIS_URL: z.string().url().default('redis://localhost:6379'),
+  INVENTORY_QUEUE_NAME: z.string().trim().min(1).default('inventory-processing'),
 
   FIREBASE_PROJECT_ID: z.string().trim().min(1),
   FIREBASE_CLIENT_EMAIL: z.string().trim().email(),
@@ -24,6 +26,15 @@ const envSchema = z.object({
   MAX_IMAGE_SIZE_MB: z.coerce.number().positive().default(10),
   MAX_LISTING_IMAGES: z.coerce.number().int().positive().max(30).default(10),
   ALLOWED_IMAGE_TYPES: z.string().default('image/jpeg,image/png,image/webp').transform((value) => value.split(',').map((type) => type.trim())),
+  MAX_FILE_SIZE_MB: z.coerce.number().positive().default(20),
+  ALLOWED_UPLOAD_TYPES: z.string().default('text/csv,application/csv,application/vnd.ms-excel').transform((value) => value.split(',').map((type) => type.trim())),
+  MAX_IMAGE_ZIP_SIZE_MB: z.coerce.number().positive().default(50),
+
+  SMTP_HOST: z.string().trim().min(1),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_USER: z.string().trim().min(1),
+  SMTP_PASS: z.string().trim().min(1),
+  SMTP_FROM: z.string().trim().min(1).optional(),
 });
 
 export const env = envSchema.parse(process.env);

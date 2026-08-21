@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import type { Listing } from '../types/listing.types';
-import { formatPrice, formatMileage } from '../../../shared/mockData';
+import { formatEnumLabel, getFuelType, getMileageKm, getTransmission } from '../utils/vehicleAttributes';
+import { formatPrice, formatMileage } from '../../../shared/utils/formatters';
 import { ListingStatusBadge } from './ListingStatusBadge';
 
 interface ListingCardProps {
@@ -26,7 +27,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing, showStatus = 
 
         <div className="card-body">
           <div className="card-subtitle">
-            {listing.year} · {listing.make} · {listing.fuelType.toUpperCase()}
+            {listing.year} · {listing.make} · {formatEnumLabel(getFuelType(listing))}
           </div>
           <h3 className="card-title">{listing.title}</h3>
           
@@ -40,14 +41,14 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing, showStatus = 
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              <span>{formatMileage(listing.mileage)}</span>
+              <span>{formatMileage(getMileageKm(listing) ?? 0)}</span>
             </div>
 
             <div className="meta-item">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
               </svg>
-              <span style={{ textTransform: 'capitalize' }}>{listing.transmission}</span>
+              <span>{formatEnumLabel(getTransmission(listing))}</span>
             </div>
 
             <div className="meta-item" style={{ marginLeft: 'auto' }}>

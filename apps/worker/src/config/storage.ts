@@ -1,22 +1,20 @@
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { S3Client } from '@aws-sdk/client-s3';
 import { env } from './env.js';
 
-export const storageClient = new S3Client({
-	endpoint: env.S3_ENDPOINT,
-	region: env.S3_REGION,
-	forcePathStyle: true,
-	credentials: { accessKeyId: env.S3_ACCESS_KEY, secretAccessKey: env.S3_SECRET_KEY },
-});
+// Reuses one private S3-compatible client for original inventory downloads.
+export const workerStorageClient = new S3Client({ endpoint: env.S3_ENDPOINT, region: env.S3_REGION, forcePathStyle: env.S3_FORCE_PATH_STYLE, credentials: { accessKeyId: env.S3_ACCESS_KEY, secretAccessKey: env.S3_SECRET_KEY } });
 
-export async function downloadObject(key: string): Promise<Buffer> {
-	const result = await storageClient.send(new GetObjectCommand({ Bucket: env.S3_BUCKET, Key: key }));
-	const body = result.Body;
-	if (!body) throw new Error(`Storage object is empty: ${key}`);
-	const chunks: Buffer[] = [];
-	for await (const chunk of body as AsyncIterable<Buffer | Uint8Array>) chunks.push(Buffer.from(chunk));
-	return Buffer.concat(chunks);
-}
+// Maps a zip entry's file extension to its S3 Content-Type, restricted to configured image types.
+const extensionToMimeType: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+const allowedMimeTypes = new Set(env.ALLOWED_IMAGE_TYPES);
 
-export async function uploadObject(key: string, body: Buffer, contentType: string): Promise<void> {
-	await storageClient.send(new PutObjectCommand({ Bucket: env.S3_BUCKET, Key: key, Body: body, ContentType: contentType }));
-}
+export const workerStorageConfig = {
+  bucket: env.S3_BUCKET,
+  publicUrl: env.S3_PUBLIC_URL.replace(/\/$/, ''),
+  maxListingImages: env.MAX_LISTING_IMAGES,
+  maxImageBytes: env.MAX_IMAGE_SIZE_MB * 1024 * 1024,
+  mimeTypeForExtension(extension: string): string | undefined {
+    const mimeType = extensionToMimeType[extension.toLowerCase()];
+    return mimeType && allowedMimeTypes.has(mimeType) ? mimeType : undefined;
+  },
+} as const;
