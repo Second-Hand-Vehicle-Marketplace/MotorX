@@ -8,14 +8,12 @@ import { addOwnedListingImage, findOwnedListing, removeOwnedListingImage, reorde
 import { serializeListing } from './listing.service.js';
 import { deleteListingImageObject, uploadListingImage } from './listingImage.storage.js';
 import { hasValidImageSignature } from './listingImage.signature.js';
-import { assertListingImageDimensions } from './listingImage.dimensions.js';
 
 const extensions = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' } as const;
 
 // Uploads an image and atomically attaches its metadata to an owned listing.
 export async function addDealerListingImage(listingId: string, dealerId: Types.ObjectId, file: Express.Multer.File, alt?: string) {
   if (!hasValidImageSignature(file)) throw new AppError(400, errorCodes.validation, 'The uploaded file content is not a valid JPEG, PNG, or WebP image.');
-  assertListingImageDimensions(file.buffer);
   const listing = await findOwnedListing(listingId, dealerId);
   if (!listing) throw new AppError(404, errorCodes.notFound, 'The vehicle listing was not found.');
   if (listing.images.length >= storageConfig.maxListingImages)

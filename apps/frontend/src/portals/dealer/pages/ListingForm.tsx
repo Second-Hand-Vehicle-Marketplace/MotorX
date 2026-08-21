@@ -157,6 +157,9 @@ export const ListingForm: React.FC = () => {
           <span className="form-label">Vehicle Images</span>
           <input type="file" className="form-input" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => { handleFilesSelected(Array.from(e.target.files ?? [])); e.target.value = ''; }} />
           <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>
+            For best results, use images at least 640×384 px in a 5:3 aspect ratio. Other image sizes are accepted and can be cropped before upload.
+          </span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>
             {cropQueue.length > 0 ? `Cropping ${croppedSoFar.length + 1} of ${croppedSoFar.length + cropQueue.length}…` : `${images.length} image(s) selected`}
           </span>
         </label>
