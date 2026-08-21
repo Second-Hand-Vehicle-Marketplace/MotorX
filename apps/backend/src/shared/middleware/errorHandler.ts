@@ -8,7 +8,11 @@ export const errorHandler: ErrorRequestHandler = (error, _request, response, _ne
   const known = error instanceof AppError;
   const body: ApiErrorResponse = {
     success: false,
-    error: { code: known ? error.code : errorCodes.internal, message: known ? error.message : 'An unexpected error occurred.' },
+    error: {
+      code: known ? error.code : errorCodes.internal,
+      message: known ? error.message : 'An unexpected error occurred.',
+      ...(known && error.fields ? { fields: error.fields } : {}),
+    },
     meta: null,
   };
   response.status(known ? error.statusCode : 500).json(body);

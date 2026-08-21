@@ -1,6 +1,7 @@
 import { app } from './app.js';
 import { connectDatabase, disconnectDatabase } from './config/database.js';
 import { env } from './config/env.js';
+import { closeInventoryQueue } from './config/queue.js';
 
 const port = env.PORT;
 
@@ -20,7 +21,7 @@ function shutdown(signal: string): void {
       process.exit(1);
     }
 
-    await disconnectDatabase();
+    await Promise.all([disconnectDatabase(), closeInventoryQueue()]);
     process.exit(0);
   });
 }

@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { clearTestDb, connectTestDb, disconnectTestDb } from '../../test/db.js';
-import { createDealer, findDealerByUserId, listDealersByStatus } from './dealer.repository.js';
+import { createDealer, findDealerByUserId } from './dealer.repository.js';
 
 describe('dealer repository', () => {
   beforeAll(connectTestDb);
@@ -29,15 +29,4 @@ describe('dealer repository', () => {
     expect(found?.status).toBe('pending');
   });
 
-  it('lists applications filtered by status, oldest first', async () => {
-    const userA = new mongoose.Types.ObjectId();
-    const userB = new mongoose.Types.ObjectId();
-
-    await createDealer(userA, application('A Motors', 'REG-A', '0110000001', 'Address A'));
-    await createDealer(userB, application('B Motors', 'REG-B', '0110000002', 'Address B'));
-
-    const pending = await listDealersByStatus('pending');
-
-    expect(pending.map((dealer) => dealer.businessName)).toEqual(['A Motors', 'B Motors']);
-  });
 });

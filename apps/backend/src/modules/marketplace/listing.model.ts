@@ -1,14 +1,13 @@
 import mongoose, { type HydratedDocument, type Types } from 'mongoose';
 import {
-  fuelTypes,
   listingStatuses,
-  transmissionTypes,
-  type FuelType,
+  vehicleCategories,
   type ListingStatus,
-  type TransmissionType,
+  type VehicleCategory,
+  type VehicleDetails,
 } from '@motorx/shared-contracts';
 
-export type { ListingStatus, FuelType, TransmissionType };
+export type { ListingStatus, VehicleCategory };
 
 export interface ListingImage {
   key: string;
@@ -17,17 +16,20 @@ export interface ListingImage {
   order: number;
 }
 
-export interface Listing {
+// `category` + `attributes` together form a VehicleDetails pair; Mongoose stores `attributes` as
+// Mixed (category-specific shapes don't map cleanly onto a single fixed schema), while the Zod
+// schemas in @motorx/shared-contracts are the actual validation gate before anything reaches here.
+export type Listing = {
   dealerId: Types.ObjectId;
+  sourceUploadJobId?: Types.ObjectId;
+  registrationNumber: string;
+  normalizedRegistrationNumber: string;
   title: string;
   make: string;
   model: string;
   year: number;
   price: number;
   currency: string;
-  mileageKm: number;
-  fuelType: FuelType;
-  transmission: TransmissionType;
   location: string;
   description?: string;
   images: ListingImage[];
@@ -35,7 +37,7 @@ export interface Listing {
   publishedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
-}
+} & VehicleDetails;
 
 export type ListingDocument = HydratedDocument<Listing>;
 
@@ -54,17 +56,19 @@ const listingImageSchema = new Schema<ListingImage>(
 const listingSchema = new Schema<Listing>(
   {
     dealerId: { type: Schema.Types.ObjectId, required: true, ref: 'AuthUser' },
+    sourceUploadJobId: { type: Schema.Types.ObjectId, ref: 'UploadJob' },
+    registrationNumber: { type: String, required: true, trim: true, uppercase: true, maxlength: 20 },
+    normalizedRegistrationNumber: { type: String, required: true, maxlength: 20 },
     title: { type: String, required: true, trim: true, maxlength: 160 },
     make: { type: String, required: true, trim: true, maxlength: 80 },
     model: { type: String, required: true, trim: true, maxlength: 80 },
     year: { type: Number, required: true, min: 1900, max: new Date().getFullYear() + 1 },
+    category: { type: String, enum: vehicleCategories, required: true },
     price: { type: Number, required: true, min: 0 },
     currency: { type: String, required: true, trim: true, uppercase: true, default: 'LKR', maxlength: 3 },
-    mileageKm: { type: Number, required: true, min: 0 },
-    fuelType: { type: String, enum: fuelTypes, required: true },
-    transmission: { type: String, enum: transmissionTypes, required: true },
     location: { type: String, required: true, trim: true, maxlength: 120 },
     description: { type: String, trim: true, maxlength: 5_000 },
+    attributes: { type: Schema.Types.Mixed, required: true },
     images: { type: [listingImageSchema], default: [] },
     status: { type: String, enum: listingStatuses, required: true, default: 'draft' },
     publishedAt: { type: Date },
@@ -75,5 +79,10 @@ const listingSchema = new Schema<Listing>(
 listingSchema.index({ status: 1, publishedAt: -1, _id: -1 }, { name: 'status_publishedAt_id' });
 listingSchema.index({ dealerId: 1, status: 1, createdAt: -1 }, { name: 'dealerId_status_createdAt' });
 listingSchema.index({ make: 1, model: 1, year: -1 }, { name: 'make_model_year' });
+listingSchema.index({ sourceUploadJobId: 1 }, { sparse: true, name: 'sourceUploadJobId' });
+listingSchema.index({ category: 1, status: 1 }, { name: 'category_status' });
+// Not unique: an archived/sold vehicle's registration number may legitimately be relisted later
+// (by the same or a different dealer). Duplicate checks scope this to draft/active listings only.
+listingSchema.index({ normalizedRegistrationNumber: 1 }, { name: 'normalizedRegistrationNumber' });
 
 export const ListingModel = models.Listing ?? model<Listing>('Listing', listingSchema);

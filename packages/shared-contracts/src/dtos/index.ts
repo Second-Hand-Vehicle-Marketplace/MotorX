@@ -1,11 +1,13 @@
 import type {
   DealerApplicationStatus,
-  FuelType,
   ListingStatus,
-  TransmissionType,
+  NotificationChannel,
+  NotificationEmailStatus,
+  NotificationType,
   UserRole,
   UserStatus,
 } from '../enums/index.js';
+import type { AnyVehicleAttributes, VehicleDetails } from '../vehicle/index.js';
 
 export interface AuthUserDto {
   id: string;
@@ -66,6 +68,18 @@ export type CreateDealerApplicationInput = Pick<
   inventoryCount?: number;
 };
 
+export interface NotificationDto {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  channels: NotificationChannel[];
+  emailStatus: NotificationEmailStatus;
+  read: boolean;
+  details?: Record<string, string | number | null>;
+  createdAt: string;
+}
+
 export interface ListingImageDto {
   key: string;
   url: string;
@@ -73,37 +87,51 @@ export interface ListingImageDto {
   order: number;
 }
 
-export interface ListingDto {
+// The `category`/`attributes` pair comes from VehicleDetails so `dto.category === 'car'`
+// narrows `dto.attributes` down to CarAttributes automatically.
+export type ListingDto = {
   id: string;
   dealerId: string;
+  registrationNumber: string;
   title: string;
   make: string;
   model: string;
   year: number;
   price: number;
   currency: string;
-  mileageKm: number;
-  fuelType: FuelType;
-  transmission: TransmissionType;
   location: string;
   description: string | null;
   images: ListingImageDto[];
   status: ListingStatus;
   publishedAt: string | null;
-}
+} & VehicleDetails;
 
-export type CreateListingInput = Pick<
-  ListingDto,
-  'title' | 'make' | 'model' | 'year' | 'price' | 'currency' | 'mileageKm' | 'fuelType' | 'transmission' | 'location'
-> & {
+export type CreateListingInput = {
+  registrationNumber: string;
+  title: string;
+  make: string;
+  model: string;
+  year: number;
+  price: number;
+  currency: string;
+  location: string;
   description?: string;
   status?: Extract<ListingStatus, 'draft' | 'active'>;
-};
+} & VehicleDetails;
 
-export type UpdateListingInput = Partial<Pick<
-  ListingDto,
-  'title' | 'make' | 'model' | 'year' | 'price' | 'currency' | 'mileageKm' | 'fuelType' | 'transmission' | 'location'
->> & { description?: string | null };
+// Category is immutable after creation, so updates only touch common fields and the
+// already-fixed category's attributes (typed as a loose known-field bag, not `any`).
+export type UpdateListingInput = Partial<{
+  registrationNumber: string;
+  title: string;
+  make: string;
+  model: string;
+  year: number;
+  price: number;
+  currency: string;
+  location: string;
+  attributes: AnyVehicleAttributes;
+}> & { description?: string | null };
 
 export interface UpdateListingStatusInput {
   status: Extract<ListingStatus, 'active' | 'sold' | 'archived'>;

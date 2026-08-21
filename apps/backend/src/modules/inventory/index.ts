@@ -1,1 +1,1 @@
-export const inventoryModule = 'inventory';
+export { inventoryRouter } from './inventory.routes.js';

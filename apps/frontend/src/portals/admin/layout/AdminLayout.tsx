@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { getInitials } from '@/shared/mockData';
+import { NotificationCenter } from '@/features/notifications/components/NotificationCenter';
+import { getInitials } from '@/shared/utils/formatters';
 
 export const AdminLayout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -93,7 +94,7 @@ export const AdminLayout: React.FC = () => {
             {getInitials(user?.displayName || 'Admin User')}
           </div>
           <div className="user-info">
-            <div className="user-name">{user?.displayName || 'Alex Rivera'}</div>
+            <div className="user-name">{user?.displayName || 'Admin User'}</div>
             <div className="user-role">System Administrator</div>
           </div>
           <button onClick={logout} title="Sign Out" style={{ marginLeft: 'auto', color: 'var(--color-text-tertiary)' }}>
@@ -106,6 +107,7 @@ export const AdminLayout: React.FC = () => {
 
       {/* Main Content */}
       <main className="portal-main">
+        <div className="portal-toolbar"><span className="portal-toolbar-label">Operations center</span><NotificationCenter /></div>
         <Outlet />
       </main>
     </div>
