@@ -22,6 +22,12 @@ describe('listing request validation', () => {
     expect(() => listListingsQuerySchema.parse({ limit: 101 })).toThrow();
   });
 
+  it('parses location and mileage filters and rejects inverted ranges', () => {
+    expect(listListingsQuerySchema.parse({ location: 'Colombo', mileageMin: '1000', mileageMax: '50000' })).toMatchObject({ location: 'Colombo', mileageMin: 1_000, mileageMax: 50_000 });
+    expect(() => listListingsQuerySchema.parse({ priceMin: 2_000_000, priceMax: 1_000_000 })).toThrow();
+    expect(() => listListingsQuerySchema.parse({ yearMin: 2024, yearMax: 2020 })).toThrow();
+  });
+
   it('requires at least one field when updating a listing', () => {
     expect(() => updateListingBodySchema.parse({})).toThrow();
     expect(updateListingBodySchema.parse({ price: 8_500_000 })).toEqual({ price: 8_500_000 });

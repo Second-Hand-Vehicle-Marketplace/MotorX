@@ -2,7 +2,7 @@ import mongoose, { type Types } from 'mongoose';
 import { normalizeRegistrationNumber, vehicleCategories } from '@motorx/shared-contracts';
 import type { ValidInventoryRow } from '../pipeline/validate.js';
 
-export type ImportableListing = ValidInventoryRow & { dealerId: Types.ObjectId; sourceUploadJobId: Types.ObjectId; images: []; status: 'draft' };
+export type ImportableListing = ValidInventoryRow & { dealerId: Types.ObjectId; sourceUploadJobId: Types.ObjectId; images: []; status: 'draft'; embedding?: number[] };
 export interface WorkerListingImage { key: string; url: string; alt?: string; order: number }
 
 const listingSchema = new mongoose.Schema({
@@ -13,6 +13,7 @@ const listingSchema = new mongoose.Schema({
   price: { type: Number, required: true }, currency: { type: String, required: true },
   location: { type: String, required: true }, description: String, attributes: { type: mongoose.Schema.Types.Mixed, required: true },
   images: { type: Array, default: [] }, status: { type: String, default: 'draft' },
+  embedding: { type: [Number], select: false, default: undefined },
 }, { collection: 'listings', timestamps: true, versionKey: false });
 const ListingModel = mongoose.models.Listing ?? mongoose.model('Listing', listingSchema);
 

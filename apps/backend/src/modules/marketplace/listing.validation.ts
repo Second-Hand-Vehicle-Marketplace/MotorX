@@ -22,16 +22,30 @@ export const listListingsQuerySchema = z.object({
   search: z.string().trim().max(120).optional(),
   make: z.string().trim().max(80).optional(),
   model: z.string().trim().max(80).optional(),
+  location: z.string().trim().min(2).max(120).optional(),
   yearMin: z.coerce.number().int().min(1900).optional(),
   yearMax: z.coerce.number().int().min(1900).optional(),
   priceMin: z.coerce.number().nonnegative().optional(),
   priceMax: z.coerce.number().nonnegative().optional(),
+  mileageMin: z.coerce.number().nonnegative().optional(),
+  mileageMax: z.coerce.number().nonnegative().optional(),
   category: z.enum(vehicleCategories).optional(),
   bodyType: z.enum(carBodyTypes).optional(),
   condition: z.enum(vehicleConditions).optional(),
   fuelType: z.string().trim().optional(),
   transmission: z.string().trim().optional(),
   sortBy: z.enum(['newest', 'price-asc', 'price-desc', 'year-desc', 'mileage-asc']).optional(),
+}).superRefine((query, context) => {
+  const ranges = [
+    ['yearMin', query.yearMin, 'yearMax', query.yearMax],
+    ['priceMin', query.priceMin, 'priceMax', query.priceMax],
+    ['mileageMin', query.mileageMin, 'mileageMax', query.mileageMax],
+  ] as const;
+  for (const [minimumName, minimum, maximumName, maximum] of ranges) {
+    if (minimum !== undefined && maximum !== undefined && minimum > maximum) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: [maximumName], message: `${maximumName} must be greater than or equal to ${minimumName}.` });
+    }
+  }
 });
 
 // commonListingFieldsSchema + vehicleDetailsSchema (discriminated on category) come from

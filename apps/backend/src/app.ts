@@ -8,10 +8,19 @@ import { adminRouter } from './modules/admin/index.js';
 import { buyerRouter } from './modules/buyers/index.js';
 import { inventoryRouter } from './modules/inventory/index.js';
 import { notificationRouter } from './modules/notifications/index.js';
+import { searchRouter } from './modules/search/index.js';
 import { errorHandler } from './shared/middleware/errorHandler.js';
 import { sendSuccess } from './shared/responses/apiResponse.js';
 
 export const app = express();
+
+const configuredCorsOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:4173')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const allowedCorsOrigins = process.env.NODE_ENV === 'production'
+  ? configuredCorsOrigins
+  : [...new Set([...configuredCorsOrigins, 'http://localhost:8080', 'http://localhost:5173'])];
 
 // The frontend and backend are intentionally different origins (separate SPA + API deployment,
 // e.g. localhost:8080 vs localhost:3000 in dev). Helmet's default same-origin resource policy
@@ -20,7 +29,7 @@ export const app = express();
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
+    origin: allowedCorsOrigins,
   }),
 );
 app.use(express.json());
@@ -39,6 +48,7 @@ app.use('/api/v1/auth', authUserRouter);
 // would otherwise shadow listingRouter's GET /mine (matching "mine" as a listing id).
 app.use('/api/v1/listings', listingRouter);
 app.use('/api/v1/listings', buyerRouter);
+app.use('/api/v1/search', searchRouter);
 app.use('/api/v1/listing-images', listingImageRouter);
 app.use('/api/v1/dealers', dealerRouter);
 app.use('/api/v1/dealer/uploads', inventoryRouter);

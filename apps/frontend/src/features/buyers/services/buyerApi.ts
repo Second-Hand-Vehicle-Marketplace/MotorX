@@ -3,6 +3,7 @@ import { apiClient } from '../../../shared/services/apiClient';
 import type { Listing, ListingFilters, PaginatedResponse } from '../../listings/types/listing.types';
 
 interface BuyerListingCollection { listings: ListingDto[]; pagination: PaginationMeta }
+interface BuyerSearchCollection extends BuyerListingCollection { search: { query: string; mode: 'structured' | 'hybrid' | 'lexical-fallback'; correctedTerms: Record<string, string> } }
 interface BuyerDealerDto { businessName: string; location: string; phone: string; email: string; description: string; website: string | null }
 type BuyerListingDetailDto = ListingDto & { dealer: BuyerDealerDto | null };
 
@@ -20,6 +21,11 @@ export const buyerApi = {
   // Loads active marketplace vehicles with pagination inside response data.
   async listVehicles(filters: ListingFilters = {}, page = 1, limit = 20): Promise<PaginatedResponse<Listing>> {
     const response = await apiClient.get<ApiSuccessResponse<BuyerListingCollection>>('/listings', { params: { page, limit, ...filters } });
+    const { listings, pagination } = response.data.data;
+    return { data: listings.map((listing) => toBuyerListing(listing)), total: pagination.total, page: pagination.page, pageSize: pagination.limit, totalPages: pagination.totalPages };
+  },
+  async searchVehicles(filters: ListingFilters, page = 1, limit = 20): Promise<PaginatedResponse<Listing>> {
+    const response = await apiClient.get<ApiSuccessResponse<BuyerSearchCollection>>('/search', { params: { page, limit, ...filters } });
     const { listings, pagination } = response.data.data;
     return { data: listings.map((listing) => toBuyerListing(listing)), total: pagination.total, page: pagination.page, pageSize: pagination.limit, totalPages: pagination.totalPages };
   },

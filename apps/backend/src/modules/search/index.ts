@@ -1,1 +1,1 @@
-export const searchModule = 'search';
+export { searchRouter } from './search.routes.js';

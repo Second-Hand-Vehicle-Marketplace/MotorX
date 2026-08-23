@@ -14,6 +14,9 @@ const envSchema = z.object({
   MAX_LISTING_IMAGES: z.coerce.number().int().positive().max(30).default(10),
   MAX_IMAGE_SIZE_MB: z.coerce.number().positive().default(10),
   ALLOWED_IMAGE_TYPES: z.string().default('image/jpeg,image/png,image/webp').transform((value) => value.split(',').map((type) => type.trim())),
+  HF_API_KEY: z.string().trim().optional(),
+  HF_EMBEDDING_MODEL: z.string().trim().min(1).default('sentence-transformers/all-MiniLM-L6-v2'),
+  EMBEDDING_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(30_000).default(4_000),
 
   SMTP_HOST: z.string().trim().min(1),
   SMTP_PORT: z.coerce.number().int().positive().default(587),

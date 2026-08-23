@@ -55,10 +55,13 @@ export type Listing = {
 export interface ListingFilters {
   make?: string;
   model?: string;
+  location?: string;
   yearMin?: number;
   yearMax?: number;
   priceMin?: number;
   priceMax?: number;
+  mileageMin?: number;
+  mileageMax?: number;
   category?: string;
   bodyType?: string;
   condition?: string;
@@ -66,7 +69,8 @@ export interface ListingFilters {
   transmission?: string;
   status?: ListingStatus;
   search?: string;
-  sortBy?: 'price-asc' | 'price-desc' | 'year-desc' | 'mileage-asc' | 'newest';
+  q?: string;
+  sortBy?: 'relevance' | 'price-asc' | 'price-desc' | 'year-desc' | 'mileage-asc' | 'newest';
 }
 
 export interface PaginatedResponse<T> {

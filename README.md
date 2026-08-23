@@ -30,7 +30,7 @@ MongoDB Atlas is the primary persistent database required by the SRS. Docker Com
 - **Marketplace** — buyer browsing with structured filters (category, make, model, year, price, fuel type, transmission, body type, condition), vehicle detail pages showing the real dealer's profile, and dealer-managed listing images.
 - **Admin** — user, dealer, and listing moderation; upload monitoring; audit logs; system health; category-aware filtering.
 - **Notifications** — in-app notification center for dealers and admins with unread counts, polling, read state, and email delivery status. Email notifications use responsive MotorX HTML with a plain-text fallback and vehicle details where relevant.
-- **Not yet built** — natural-language/fuzzy/semantic search (buyer search is structured-filter only for now).
+- **Search** — indexed structured filters, natural-language parsing, typo correction, bounded hybrid semantic/lexical ranking, and graceful lexical fallback. See [search operations](docs/search-operations.md).
 
 ### Notification delivery matrix
 
@@ -152,13 +152,13 @@ Press `Ctrl+C` to stop following the logs. This does not stop the containers.
 
 ### 5. Open the application
 
-- Frontend: <http://localhost:8080>
+- Frontend: <http://localhost:4173>
 - Backend API: <http://localhost:3000>
 - Backend liveness: <http://localhost:3000/health/live>
 - Backend readiness: <http://localhost:3000/health/ready>
 - MinIO console: <http://localhost:9001>
 
-The Docker frontend is exposed on port `8080`. Port `5173` is used only when running the Vite frontend directly outside Docker. `CORS_ORIGIN` should match the URL used in your browser.
+The Docker frontend is exposed on port `4173`. Port `5173` is used only when running the Vite frontend directly outside Docker. `CORS_ORIGIN` should match the URL used in your browser.
 
 ## Normal Daily Commands
 
@@ -274,7 +274,7 @@ If the backend reports an Atlas connection, TLS, or `ReplicaSetNoPrimary` error,
 
 | Service | Address |
 |---|---|
-| Frontend | `http://localhost:8080` |
+| Frontend | `http://localhost:4173` |
 | Backend API | `http://localhost:3000` |
 | Backend liveness | `http://localhost:3000/health/live` |
 | Backend readiness | `http://localhost:3000/health/ready` |

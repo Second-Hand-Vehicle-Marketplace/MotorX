@@ -29,10 +29,11 @@ export async function listDealerListings(dealerId: Types.ObjectId, page: number,
 }
 
 // Updates a listing only when it belongs to the authenticated dealer.
-export async function updateOwnedListing(listingId: string, dealerId: Types.ObjectId, update: Record<string, unknown>, unsetDescription = false) {
+export async function updateOwnedListing(listingId: string, dealerId: Types.ObjectId, update: Record<string, unknown>, unsetDescription = false, unsetEmbedding = false) {
+  const unset = { ...(unsetDescription ? { description: 1 } : {}), ...(unsetEmbedding ? { embedding: 1 } : {}) };
   return ListingModel.findOneAndUpdate(
     { _id: listingId, dealerId },
-    { $set: update, ...(unsetDescription ? { $unset: { description: 1 } } : {}) },
+    { $set: update, ...(Object.keys(unset).length ? { $unset: unset } : {}) },
     { new: true, runValidators: true },
   );
 }

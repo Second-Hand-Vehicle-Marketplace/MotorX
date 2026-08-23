@@ -37,6 +37,7 @@ export type Listing = {
   publishedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
+  embedding?: number[];
 } & VehicleDetails;
 
 export type ListingDocument = HydratedDocument<Listing>;
@@ -72,6 +73,7 @@ const listingSchema = new Schema<Listing>(
     images: { type: [listingImageSchema], default: [] },
     status: { type: String, enum: listingStatuses, required: true, default: 'draft' },
     publishedAt: { type: Date },
+    embedding: { type: [Number], select: false, default: undefined },
   },
   { timestamps: true, versionKey: false, collection: 'listings' },
 );
@@ -81,6 +83,12 @@ listingSchema.index({ dealerId: 1, status: 1, createdAt: -1 }, { name: 'dealerId
 listingSchema.index({ make: 1, model: 1, year: -1 }, { name: 'make_model_year' });
 listingSchema.index({ sourceUploadJobId: 1 }, { sparse: true, name: 'sourceUploadJobId' });
 listingSchema.index({ category: 1, status: 1 }, { name: 'category_status' });
+listingSchema.index({ status: 1, category: 1, price: 1 }, { name: 'status_category_price' });
+listingSchema.index({ status: 1, category: 1, year: -1 }, { name: 'status_category_year' });
+listingSchema.index({ status: 1, 'attributes.fuelType': 1, 'attributes.transmission': 1 }, { name: 'status_fuel_transmission' });
+listingSchema.index({ status: 1, 'attributes.bodyType': 1, 'attributes.condition': 1 }, { name: 'status_body_condition' });
+listingSchema.index({ status: 1, 'attributes.mileageKm': 1 }, { name: 'status_mileage' });
+listingSchema.index({ status: 1, location: 1 }, { name: 'status_location' });
 // Not unique: an archived/sold vehicle's registration number may legitimately be relisted later
 // (by the same or a different dealer). Duplicate checks scope this to draft/active listings only.
 listingSchema.index({ normalizedRegistrationNumber: 1 }, { name: 'normalizedRegistrationNumber' });
