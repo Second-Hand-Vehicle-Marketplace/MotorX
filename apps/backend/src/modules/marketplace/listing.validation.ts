@@ -20,6 +20,7 @@ export const listListingsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   search: z.string().trim().max(120).optional(),
+  status: z.enum(['draft', 'active', 'sold', 'archived']).optional(),
   make: z.string().trim().max(80).optional(),
   model: z.string().trim().max(80).optional(),
   location: z.string().trim().min(2).max(120).optional(),

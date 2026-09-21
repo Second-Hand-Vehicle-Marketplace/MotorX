@@ -8,7 +8,7 @@ import { extractCsvBatches, type ExtractedInventoryRow } from '../pipeline/extra
 import { detectExactDuplicates } from '../pipeline/detectDuplicates.js';
 import { persistRejectedRows, persistValidRows } from '../pipeline/persist.js';
 import { prepareInventoryBatch } from '../pipeline/transform.js';
-import { claimPendingUploadJob, completeUploadJob, failUploadJob, updateUploadProgress } from '../repositories/uploadJob.repository.js';
+import { claimPendingUploadJob, completeUploadJob, failUploadJob, retryUploadJob, updateUploadProgress } from '../repositories/uploadJob.repository.js';
 import { notifyUploadHighRejectionRate, notifyUploadJobResult } from './notification.service.js';
 
 // A CSV job is flagged to admins as advisory-only once at least a fifth of its records reject.
@@ -57,7 +57,9 @@ export async function extractInventoryUpload(uploadJobId: string) {
     return { uploadJobId, ...counts, stage: 'completed' as const };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown extraction failure.';
-    await failUploadJob(uploadJobId, message);
+    const retryable = /s3|storage|timeout|temporar|network|redis|mongo|unavailable/i.test(message);
+    if (retryable) await retryUploadJob(uploadJobId, message);
+    else await failUploadJob(uploadJobId, message);
     await notifyUploadJobResult(dealerId, uploadJobId, 'failed', undefined, message);
     throw error;
   }

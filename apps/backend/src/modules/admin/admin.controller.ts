@@ -2,8 +2,8 @@ import type { Response } from 'express';
 import { sendSuccess } from '../../shared/responses/apiResponse.js';
 import type { AuthenticatedRequest } from '../../shared/types/authenticatedRequest.js';
 import { readDealerDocument } from '../dealers/dealerDocument.storage.js';
-import { changeUserStatusAsAdmin, getAuditLogsForAdmin, getDashboardStatsForAdmin, getDealerDocumentForAdmin, getListingsForAdmin, getPendingApplicationsForAdmin, getSystemHealthForAdmin, getUploadsForAdmin, getUsersForAdmin, removeListingAsAdmin, reviewDealerApplicationAsAdmin } from './admin.service.js';
-import type { ListAdminAuditQuery, ListAdminListingsQuery, ListAdminUploadsQuery, ListAdminUsersQuery } from './admin.validation.js';
+import { changeUserStatusAsAdmin, getAuditLogsForAdmin, getDashboardStatsForAdmin, getDealerApplicationsForAdmin, getDealerDocumentForAdmin, getListingsForAdmin, getSystemHealthForAdmin, getUploadsForAdmin, getUsersForAdmin, removeListingAsAdmin, reviewDealerApplicationAsAdmin } from './admin.service.js';
+import type { ListAdminAuditQuery, ListAdminDealerApplicationsQuery, ListAdminListingsQuery, ListAdminUploadsQuery, ListAdminUsersQuery } from './admin.validation.js';
 
 // Sends the filtered user-management collection.
 export async function getAdminUsers(request: AuthenticatedRequest, response: Response) { const result = await getUsersForAdmin(request.query as unknown as ListAdminUsersQuery); sendSuccess(response, result.data, { meta: result.meta }); }
@@ -30,7 +30,7 @@ export async function getAdminUploads(request: AuthenticatedRequest, response: R
 export async function getAdminSystemHealth(_request: AuthenticatedRequest, response: Response) { sendSuccess(response, getSystemHealthForAdmin()); }
 
 // Sends the pending dealer review queue.
-export async function getAdminDealerApplications(_request: AuthenticatedRequest, response: Response) { sendSuccess(response, await getPendingApplicationsForAdmin()); }
+export async function getAdminDealerApplications(request: AuthenticatedRequest, response: Response) { sendSuccess(response, await getDealerApplicationsForAdmin(request.query as unknown as ListAdminDealerApplicationsQuery)); }
 
 // Streams one protected dealer verification document.
 export async function getAdminDealerDocument(request: AuthenticatedRequest, response: Response) { const document = await getDealerDocumentForAdmin(String(request.params.dealerId), Number(request.params.documentIndex)); const stored = await readDealerDocument(document.key); response.setHeader('Content-Type', stored.contentType); response.setHeader('Content-Disposition', `inline; filename="${document.originalName.replace(/["\r\n]/g, '_')}"`); response.send(stored.bytes); }

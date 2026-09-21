@@ -50,7 +50,7 @@ The notification bell is available in the dealer and admin portal headers. Remov
 
 ## Prerequisites
 
-For complete clone, Atlas access, and first-run instructions, see [MotorX Developer Setup](docs/DEVELOPER_SETUP.md).
+For complete clone, Atlas access, and first-run instructions, see [MotorX Developer Setup](DEVELOPER_SETUP.md).
 
 Install and start Docker Desktop. You also need:
 

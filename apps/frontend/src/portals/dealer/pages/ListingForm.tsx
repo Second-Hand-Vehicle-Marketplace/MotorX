@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   carBodyTypes, fuelTypes, motorcycleTypes, transmissionTypes, vehicleCategories, vehicleConditions,
   type CreateListingInput, type VehicleCategory,
 } from '@motorx/shared-contracts';
 import { listingApi } from '@/features/listings/services/listingApi';
+import type { Listing } from '@/features/listings/types/listing.types';
 import { formatEnumLabel } from '@/features/listings/utils/vehicleAttributes';
 import { availableMakes } from '@/shared/constants/vehicle';
 import { ImageCropModal } from '@/features/listings/components/ImageCropModal';
@@ -24,8 +25,12 @@ interface AttributesFormState { edition: string; bodyType: string; bikeType: str
 
 export const ListingForm: React.FC = () => {
   const navigate = useNavigate();
+  const { listingId } = useParams<{ listingId: string }>();
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(Boolean(listingId));
+  const [savedListingId, setSavedListingId] = useState(listingId ?? '');
+  const [existingImages, setExistingImages] = useState<Listing['images']>([]);
   const [images, setImages] = useState<File[]>([]);
   const [cropQueue, setCropQueue] = useState<File[]>([]);
   const [croppedSoFar, setCroppedSoFar] = useState<File[]>([]);
@@ -43,6 +48,17 @@ export const ListingForm: React.FC = () => {
   const showEdition = category !== 'three_wheeler' && category !== 'bus';
   const showEngine = engineRequiredFuels.has(attrs.fuelType);
   const showBattery = batteryRequiredFuels.has(attrs.fuelType);
+
+  useEffect(() => {
+    if (!listingId) return;
+    void listingApi.getMyListing(listingId).then((listing) => {
+      setSavedListingId(listing.id);
+      setCategory(listing.category);
+      setCommon({ registrationNumber: listing.registrationNumber, title: listing.title, make: listing.make, model: listing.model, year: listing.year, price: listing.price, currency: listing.currency, location: listing.location ?? '', description: listing.description ?? '', status: listing.status === 'active' ? 'active' : 'draft' });
+      setAttrs((current) => ({ ...current, ...(listing.attributes as Partial<AttributesFormState>), mileageKm: String((listing.attributes as Record<string, unknown>).mileageKm ?? ''), engineCapacityCc: String((listing.attributes as Record<string, unknown>).engineCapacityCc ?? ''), batteryCapacityKWh: String((listing.attributes as Record<string, unknown>).batteryCapacityKWh ?? ''), batteryRangeKm: String((listing.attributes as Record<string, unknown>).batteryRangeKm ?? ''), seatingCapacity: String((listing.attributes as Record<string, unknown>).seatingCapacity ?? ''), payloadCapacityKg: String((listing.attributes as Record<string, unknown>).payloadCapacityKg ?? '') }));
+      setExistingImages(listing.images);
+    }).catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Could not load this listing.')).finally(() => setIsLoading(false));
+  }, [listingId]);
 
   function buildAttributes(): Record<string, unknown> {
     const base: Record<string, unknown> = {
@@ -98,11 +114,12 @@ export const ListingForm: React.FC = () => {
     setIsSubmitting(true);
     try {
       const payload = { ...common, category, attributes: buildAttributes() } as CreateListingInput;
-      const listing = await listingApi.createListing(payload);
+      const listing = listingId ? await listingApi.updateListing(listingId, payload) : await listingApi.createListing(payload);
+      setSavedListingId(listing.id);
       for (const image of images) await listingApi.uploadImage(listing.id, image, common.title);
       navigate('/dealer/listings');
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Could not create the listing.');
+      setError(`${submitError instanceof Error ? submitError.message : 'Could not save the listing.'}${savedListingId ? ` You can retry from listing ${savedListingId}.` : ''}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -110,8 +127,11 @@ export const ListingForm: React.FC = () => {
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
-      <div className="page-header"><div><h1 className="page-title">Add New Vehicle Listing</h1><p className="page-subtitle">Select a vehicle category, then fill in its details. Fields adjust to match what that category and fuel type need.</p></div></div>
+      <div className="page-header"><div><h1 className="page-title">{listingId ? 'Edit Vehicle Listing' : 'Add New Vehicle Listing'}</h1><p className="page-subtitle">Select a vehicle category, then fill in its details. Fields adjust to match what that category and fuel type need.</p></div></div>
       {error && <div className="glass-card" style={{ padding: '1rem', color: 'var(--color-error)', marginBottom: '1rem' }}>{error}</div>}
+      {isLoading && <div role="status" className="loading-spinner" style={{ margin: '2rem auto', display: 'block' }} />}
+      {!isLoading && existingImages.length > 0 && <div className="glass-card" style={{ padding: '1rem', marginBottom: '1rem' }}><span className="form-label">Existing images</span><div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>{existingImages.map((image) => <div key={image.id} style={{ position: 'relative' }}><img src={image.url} alt={image.alt} style={{ width: 100, height: 64, objectFit: 'cover', borderRadius: 4 }} /><button type="button" className="btn btn-danger btn-sm" onClick={() => void listingApi.deleteImage(listingId!, image.id).then((updated) => setExistingImages(updated.images)).catch((imageError) => setError(imageError instanceof Error ? imageError.message : 'Could not remove the image.'))}>Remove</button></div>)}</div></div>}
+      {!isLoading &&
       <form onSubmit={handleSubmit} className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <label className="form-group">
           <span className="form-label">Vehicle Category *</span>
@@ -163,8 +183,9 @@ export const ListingForm: React.FC = () => {
             {cropQueue.length > 0 ? `Cropping ${croppedSoFar.length + 1} of ${croppedSoFar.length + cropQueue.length}…` : `${images.length} image(s) selected`}
           </span>
         </label>
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}><button type="button" onClick={() => navigate('/dealer/listings')} className="btn btn-secondary">Cancel</button><button type="submit" disabled={isSubmitting} className="btn btn-primary btn-lg">{isSubmitting ? 'Creating…' : 'Create Listing'}</button></div>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}><button type="button" onClick={() => navigate('/dealer/listings')} className="btn btn-secondary">Cancel</button>{savedListingId && error && <Link to={`/dealer/listings/${savedListingId}/edit`} className="btn btn-secondary">Retry images</Link>}<button type="submit" disabled={isSubmitting} className="btn btn-primary btn-lg">{isSubmitting ? 'Saving…' : listingId ? 'Save Listing' : 'Create Listing'}</button></div>
       </form>
+      }
       {cropQueue.length > 0 && <ImageCropModal file={cropQueue[0]} onConfirm={handleCropConfirm} onCancel={handleCropSkip} />}
     </div>
   );

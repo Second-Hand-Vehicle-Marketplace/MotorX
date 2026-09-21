@@ -37,9 +37,15 @@ export const listAdminAuditQuerySchema = z.object({
 export const listAdminUploadsQuerySchema = z.object({
   ...adminPaginationSchema,
   status: z.enum(['pending', 'processing', 'completed', 'completedWithErrors', 'failed']).optional(),
+  dealerId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
+});
+
+export const listAdminDealerApplicationsQuerySchema = z.object({
+  status: z.enum(['pending', 'approved', 'rejected']).default('pending'),
 });
 
 export type ListAdminUsersQuery = z.infer<typeof listAdminUsersQuerySchema>;
 export type ListAdminListingsQuery = z.infer<typeof listAdminListingsQuerySchema>;
 export type ListAdminAuditQuery = z.infer<typeof listAdminAuditQuerySchema>;
 export type ListAdminUploadsQuery = z.infer<typeof listAdminUploadsQuerySchema>;
+export type ListAdminDealerApplicationsQuery = z.infer<typeof listAdminDealerApplicationsQuerySchema>;

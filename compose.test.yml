@@ -1,5 +1,12 @@
 services:
   mongodb:
+    image: mongo:7
+    command:
+      - mongod
+      - --replSet
+      - rs0
+      - --bind_ip_all
+
     environment:
       MONGO_INITDB_DATABASE: motorx_test
 
@@ -7,6 +14,24 @@ services:
       - /data/db
 
     volumes: !reset []
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 }).ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+  mongodb-init:
+    image: mongo:7
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    entrypoint:
+      - mongosh
+      - --host
+      - mongodb:27017
+      - --eval
+      - 'try { rs.status() } catch (error) { rs.initiate({ _id: "rs0", members: [{ _id: 0, host: "mongodb:27017" }] }) }'
 
 
   redis:
@@ -39,11 +64,16 @@ services:
     environment:
       NODE_ENV: test
 
-      MONGODB_URI: mongodb://mongodb:27017/motorx_test
+      MONGODB_URI: mongodb://mongodb:27017/motorx_test?replicaSet=rs0
+      TEST_MONGODB_URI: mongodb://mongodb:27017/motorx_test?replicaSet=rs0
       REDIS_URL: redis://redis:6379
 
       S3_BUCKET: motorx-test
       LOG_LEVEL: error
+
+    depends_on:
+      mongodb-init:
+        condition: service_completed_successfully
 
     command: npm run test --workspace @motorx/backend
 
@@ -52,11 +82,16 @@ services:
     environment:
       NODE_ENV: test
 
-      MONGODB_URI: mongodb://mongodb:27017/motorx_test
+      MONGODB_URI: mongodb://mongodb:27017/motorx_test?replicaSet=rs0
+      TEST_MONGODB_URI: mongodb://mongodb:27017/motorx_test?replicaSet=rs0
       REDIS_URL: redis://redis:6379
 
       S3_BUCKET: motorx-test
       LOG_LEVEL: error
+
+    depends_on:
+      mongodb-init:
+        condition: service_completed_successfully
 
     command: npm run test --workspace @motorx/worker
 

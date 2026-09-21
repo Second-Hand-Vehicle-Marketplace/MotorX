@@ -13,6 +13,8 @@ const envSchema = z.object({
   S3_PUBLIC_URL: z.string().url().default('http://localhost:3000/api/v1/listing-images'),
   MAX_LISTING_IMAGES: z.coerce.number().int().positive().max(30).default(10),
   MAX_IMAGE_SIZE_MB: z.coerce.number().positive().default(10),
+  MAX_IMAGE_ZIP_ENTRIES: z.coerce.number().int().positive().max(100_000).default(2_000),
+  MAX_IMAGE_ZIP_EXPANDED_MB: z.coerce.number().positive().max(2_000).default(200),
   ALLOWED_IMAGE_TYPES: z.string().default('image/jpeg,image/png,image/webp').transform((value) => value.split(',').map((type) => type.trim())),
   HF_API_KEY: z.string().trim().optional(),
   HF_EMBEDDING_MODEL: z.string().trim().min(1).default('sentence-transformers/all-MiniLM-L6-v2'),

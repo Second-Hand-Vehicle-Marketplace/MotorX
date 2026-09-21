@@ -37,7 +37,10 @@ export async function findListingsByUploadJob(uploadJobId: Types.ObjectId) {
 }
 
 // Appends photos to one listing, capped at the configured per-listing image limit.
-export async function appendListingImages(listingId: Types.ObjectId, images: WorkerListingImage[]) {
+export async function appendListingImages(listingId: Types.ObjectId, images: WorkerListingImage[], maximum: number) {
   if (!images.length) return;
-  await ListingModel.updateOne({ _id: listingId }, { $push: { images: { $each: images } } });
+  return ListingModel.updateOne(
+    { _id: listingId, $expr: { $lte: [{ $add: [{ $size: '$images' }, images.length] }, maximum] } },
+    { $push: { images: { $each: images } } },
+  );
 }

@@ -1,6 +1,8 @@
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import mongoose from 'mongoose';
+import { logger } from './config/logger.js';
 import { authUserRouter } from './modules/auth-users/authUser.routes.js';
 import { listingImageRouter, listingRouter } from './modules/marketplace/index.js';
 import { dealerRouter } from './modules/dealers/index.js';
@@ -27,6 +29,11 @@ const allowedCorsOrigins = process.env.NODE_ENV === 'production'
 // blocks the browser from rendering anything the backend serves — most visibly, every <img>
 // pointed at /api/v1/listing-images — so it's relaxed here to match how this app is actually deployed.
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use((request, response, next) => {
+  const startedAt = Date.now();
+  response.on('finish', () => logger.info({ method: request.method, path: request.path, statusCode: response.statusCode, durationMs: Date.now() - startedAt }, 'HTTP request completed'));
+  next();
+});
 app.use(
   cors({
     origin: allowedCorsOrigins,
@@ -40,7 +47,10 @@ app.get('/health/live', (_request, response) => {
 });
 
 app.get('/health/ready', (_request, response) => {
-  sendSuccess(response, { service: 'backend', status: 'READY' });
+  const databaseReady = mongoose.connection.readyState === 1;
+  const status = databaseReady ? 'READY' : 'NOT_READY';
+  if (!databaseReady) response.status(503);
+  sendSuccess(response, { service: 'backend', status, dependencies: { database: databaseReady ? 'ready' : 'unavailable' } });
 });
 
 app.use('/api/v1/auth', authUserRouter);

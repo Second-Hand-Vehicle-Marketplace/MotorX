@@ -5,7 +5,7 @@ import { ListingModel, type Listing } from '../marketplace/listing.model.js';
 import { UploadJobModel } from '../inventory/uploadJob.model.js';
 import { AdminAuditLogModel, type AdminAuditEvent } from './admin.model.js';
 import type { ClientSession, Types } from 'mongoose';
-import type { ListAdminAuditQuery, ListAdminListingsQuery, ListAdminUploadsQuery, ListAdminUsersQuery } from './admin.validation.js';
+import type { ListAdminAuditQuery, ListAdminDealerApplicationsQuery, ListAdminListingsQuery, ListAdminUploadsQuery, ListAdminUsersQuery } from './admin.validation.js';
 
 function escapeRegex(value: string) { return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
@@ -54,13 +54,14 @@ export function archiveListingByAdmin(listingId: string) {
 
 // Independent counts run together to minimize dashboard latency.
 export async function getAdminStats() {
-  const [totalUsers, registeredDealers, totalListings, pendingDealerApplications] = await Promise.all([
+  const [totalUsers, activeDealers, totalListings, activeListings, pendingDealerApplications] = await Promise.all([
     AuthUserModel.countDocuments(),
     AuthUserModel.countDocuments({ role: 'dealer', status: 'active' }),
     ListingModel.countDocuments(),
+    ListingModel.countDocuments({ status: 'active' }),
     DealerModel.countDocuments({ status: 'pending' }),
   ]);
-  return { totalUsers, registeredDealers, totalListings, pendingDealerApplications };
+  return { totalUsers, activeDealers, registeredDealers: activeDealers, totalListings, activeListings, pendingDealerApplications };
 }
 
 export function createAdminAuditLog(input: { eventType: AdminAuditEvent; actorId: Types.ObjectId; targetId: Types.ObjectId; targetName: string; details: string }, session?: ClientSession) {
@@ -77,7 +78,7 @@ export async function listAdminAuditLogs(options: ListAdminAuditQuery) {
 }
 
 export async function listAdminUploads(options: ListAdminUploadsQuery) {
-  const filter = options.status ? { status: options.status } : {};
+  const filter = { ...(options.status ? { status: options.status } : {}), ...(options.dealerId ? { dealerId: options.dealerId } : {}) };
   const [documents, total] = await Promise.all([
     UploadJobModel.find(filter).populate('dealerId', 'displayName email').sort({ createdAt: -1, _id: -1 }).skip((options.page - 1) * options.limit).limit(options.limit).lean(),
     UploadJobModel.countDocuments(filter),
@@ -86,8 +87,13 @@ export async function listAdminUploads(options: ListAdminUploadsQuery) {
 }
 
 // Loads pending applications in submission order for the admin review queue.
+export function listDealerApplications(options: ListAdminDealerApplicationsQuery) {
+  return DealerModel.find({ status: options.status }).sort({ createdAt: options.status === 'pending' ? 1 : -1 }).lean();
+}
+
+// Backward-compatible pending queue helper for repository callers and tests.
 export function listPendingDealerApplications() {
-  return DealerModel.find({ status: 'pending' }).sort({ createdAt: 1 }).lean();
+  return listDealerApplications({ status: 'pending' });
 }
 
 // Loads one application, optionally inside the review transaction.

@@ -25,7 +25,6 @@ const DealerApprovals = React.lazy(() => import('../portals/admin/pages/DealerAp
 const ListingMonitoring = React.lazy(() => import('../portals/admin/pages/ListingMonitoring').then((module) => ({ default: module.ListingMonitoring })));
 const UploadMonitoring = React.lazy(() => import('../portals/admin/pages/UploadMonitoring').then((module) => ({ default: module.UploadMonitoring })));
 const AuditLogs = React.lazy(() => import('../portals/admin/pages/AuditLogs').then((module) => ({ default: module.AuditLogs })));
-const SystemHealth = React.lazy(() => import('../portals/admin/pages/SystemHealth').then((module) => ({ default: module.SystemHealth })));
 const LandingPage = React.lazy(() => import('./LandingPage').then((module) => ({ default: module.LandingPage })));
 
 export function App() {
@@ -56,6 +55,7 @@ export function App() {
               <Route path="/dealer" element={<DealerDashboard />} />
               <Route path="/dealer/listings" element={<ListingManager />} />
               <Route path="/dealer/listings/new" element={<ListingForm />} />
+              <Route path="/dealer/listings/:listingId/edit" element={<ListingForm />} />
               <Route path="/dealer/uploads/new" element={<InventoryUpload />} />
               <Route path="/dealer/uploads/:uploadId" element={<UploadDetails />} />
             </Route>
@@ -70,7 +70,6 @@ export function App() {
               <Route path="/admin/listings" element={<ListingMonitoring />} />
               <Route path="/admin/uploads" element={<UploadMonitoring />} />
               <Route path="/admin/audit-logs" element={<AuditLogs />} />
-              <Route path="/admin/system-health" element={<SystemHealth />} />
             </Route>
           </Route>
 

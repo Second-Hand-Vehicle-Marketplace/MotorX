@@ -9,6 +9,7 @@ import {
   findActiveListingByRegistration,
   findOwnedListing,
   listDealerListings,
+  countDealerListings,
   transitionOwnedListingStatus,
   updateOwnedListing,
   type ListingRecord,
@@ -54,8 +55,17 @@ export async function createDealerListing(dealerId: Types.ObjectId, input: Creat
 
 // Returns every listing owned by the authenticated dealer.
 export async function getDealerListings(dealerId: Types.ObjectId, query: ListListingsQuery) {
-  const { documents, total } = await listDealerListings(dealerId, query.page, query.limit);
+  const { documents, total } = await listDealerListings(dealerId, query.page, query.limit, query);
   return { listings: documents.map(serializeListing), pagination: buildPaginationMeta(query.page, query.limit, total) };
+}
+
+export function getDealerListingStats(dealerId: Types.ObjectId) { return countDealerListings(dealerId); }
+
+// Returns one listing for its owner, including drafts and archived records for dealer preview/editing.
+export async function getDealerListing(listingId: string, dealerId: Types.ObjectId) {
+  const listing = await findOwnedListing(listingId, dealerId);
+  if (!listing) throw new AppError(404, errorCodes.notFound, 'The vehicle listing was not found.');
+  return serializeListing(listing.toObject() as ListingRecord);
 }
 
 // Updates editable fields while preserving listing ownership, category, and status.
@@ -65,7 +75,7 @@ export async function updateDealerListing(listingId: string, dealerId: Types.Obj
 
   const update: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
-    if (key === 'attributes' || key === 'description' || value === undefined) continue;
+    if (key === 'attributes' || value === undefined) continue;
     update[key] = value;
   }
 
