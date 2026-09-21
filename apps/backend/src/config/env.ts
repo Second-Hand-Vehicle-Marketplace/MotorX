@@ -29,6 +29,10 @@ const envSchema = z.object({
   MAX_FILE_SIZE_MB: z.coerce.number().positive().default(20),
   ALLOWED_UPLOAD_TYPES: z.string().default('text/csv,application/csv,application/vnd.ms-excel').transform((value) => value.split(',').map((type) => type.trim())),
   MAX_IMAGE_ZIP_SIZE_MB: z.coerce.number().positive().default(50),
+  HF_API_KEY: z.string().trim().optional(),
+  HF_EMBEDDING_MODEL: z.string().trim().min(1).default('sentence-transformers/all-MiniLM-L6-v2'),
+  EMBEDDING_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(30_000).default(4_000),
+  ATLAS_VECTOR_INDEX: z.string().trim().min(1).default('listing_embedding_index'),
 
   SMTP_HOST: z.string().trim().min(1),
   SMTP_PORT: z.coerce.number().int().positive().default(587),

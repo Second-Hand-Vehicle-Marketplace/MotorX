@@ -1,6 +1,6 @@
 import type { Types } from 'mongoose';
 import type { ListingDto, VehicleCategory } from '@motorx/shared-contracts';
-import { normalizeRegistrationNumber } from '@motorx/shared-contracts';
+import { composeListingSearchText, normalizeRegistrationNumber } from '@motorx/shared-contracts';
 import { AppError } from '../../shared/errors/AppError.js';
 import { errorCodes } from '../../shared/errors/errorCodes.js';
 import {
@@ -9,6 +9,7 @@ import {
   findActiveListingByRegistration,
   findOwnedListing,
   listDealerListings,
+  countDealerListings,
   transitionOwnedListingStatus,
   updateOwnedListing,
   type ListingRecord,
@@ -18,6 +19,7 @@ import { buildPaginationMeta } from '../../shared/utils/pagination.js';
 import { deleteListingImageObject } from './listingImage.storage.js';
 import type { ListingImage } from './listing.model.js';
 import type { ListingStatus } from '@motorx/shared-contracts';
+import { generateSearchEmbedding } from '../search/search.embedding.js';
 
 // Converts a listing record into the shared API DTO.
 export function serializeListing(listing: ListingRecord): ListingDto {
@@ -42,17 +44,28 @@ async function assertRegistrationNotActivelyListed(normalizedRegistrationNumber:
 export async function createDealerListing(dealerId: Types.ObjectId, input: CreateListingBody) {
   const normalizedRegistrationNumber = normalizeRegistrationNumber(input.registrationNumber);
   await assertRegistrationNotActivelyListed(normalizedRegistrationNumber);
+  let embedding: number[] | undefined;
+  try { embedding = await generateSearchEmbedding(composeListingSearchText(input)); } catch { embedding = undefined; }
   const document = await createListingRecord({
     ...input, registrationNumber: input.registrationNumber.trim().toUpperCase(), normalizedRegistrationNumber,
-    dealerId, images: [], publishedAt: input.status === 'active' ? new Date() : undefined,
+    dealerId, images: [], embedding, publishedAt: input.status === 'active' ? new Date() : undefined,
   });
   return serializeListing(document.toObject() as ListingRecord);
 }
 
 // Returns every listing owned by the authenticated dealer.
 export async function getDealerListings(dealerId: Types.ObjectId, query: ListListingsQuery) {
-  const { documents, total } = await listDealerListings(dealerId, query.page, query.limit);
+  const { documents, total } = await listDealerListings(dealerId, query.page, query.limit, query);
   return { listings: documents.map(serializeListing), pagination: buildPaginationMeta(query.page, query.limit, total) };
+}
+
+export function getDealerListingStats(dealerId: Types.ObjectId) { return countDealerListings(dealerId); }
+
+// Returns one listing for its owner, including drafts and archived records for dealer preview/editing.
+export async function getDealerListing(listingId: string, dealerId: Types.ObjectId) {
+  const listing = await findOwnedListing(listingId, dealerId);
+  if (!listing) throw new AppError(404, errorCodes.notFound, 'The vehicle listing was not found.');
+  return serializeListing(listing.toObject() as ListingRecord);
 }
 
 // Updates editable fields while preserving listing ownership, category, and status.
@@ -62,7 +75,7 @@ export async function updateDealerListing(listingId: string, dealerId: Types.Obj
 
   const update: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
-    if (key === 'attributes' || key === 'description' || value === undefined) continue;
+    if (key === 'attributes' || value === undefined) continue;
     update[key] = value;
   }
 
@@ -82,8 +95,16 @@ export async function updateDealerListing(listingId: string, dealerId: Types.Obj
     update.attributes = result.data;
   }
 
+  const searchableFields = ['title', 'make', 'model', 'year', 'location', 'description', 'attributes'];
+  let unsetEmbedding = false;
+  if (searchableFields.some((field) => Object.prototype.hasOwnProperty.call(input, field))) {
+    const current = existing.toObject() as unknown as Record<string, unknown>;
+    try { update.embedding = await generateSearchEmbedding(composeListingSearchText({ ...current, ...update } as never)); }
+    catch { unsetEmbedding = true; }
+  }
+
   const unsetDescription = input.description === null;
-  const listing = await updateOwnedListing(listingId, dealerId, update, unsetDescription);
+  const listing = await updateOwnedListing(listingId, dealerId, update, unsetDescription, unsetEmbedding);
   if (!listing) throw new AppError(404, errorCodes.notFound, 'The vehicle listing was not found.');
   return serializeListing(listing.toObject() as ListingRecord);
 }

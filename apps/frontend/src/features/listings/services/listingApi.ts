@@ -49,9 +49,17 @@ function toPaginatedResponse(
 }
 
 export const listingApi = {
-  async getMyListings(page = 1, limit = 20): Promise<PaginatedResponse<Listing>> {
+  async getMyListingStats(): Promise<{ total: number; active: number; draft: number; sold: number; archived: number }> {
+    const response = await apiClient.get<ApiSuccessResponse<{ total: number; active: number; draft: number; sold: number; archived: number }>>('/listings/mine/stats');
+    return response.data.data;
+  },
+  async getMyListing(id: string): Promise<Listing> {
+    const response = await apiClient.get<ApiSuccessResponse<ListingDto>>(`/listings/mine/${id}`);
+    return toListing(response.data.data);
+  },
+  async getMyListings(page = 1, limit = 20, filters: { search?: string; status?: string; category?: string } = {}): Promise<PaginatedResponse<Listing>> {
     const response = await apiClient.get<ApiSuccessResponse<ListingDto[], ListResponseMeta>>('/listings/mine', {
-      params: { page, limit },
+      params: { page, limit, ...filters },
     });
     return toPaginatedResponse(response.data);
   },
@@ -76,6 +84,16 @@ export const listingApi = {
     formData.append('image', file);
     if (alt) formData.append('alt', alt);
     const response = await apiClient.post<ApiSuccessResponse<ListingDto>>(`/listings/${id}/images`, formData);
+    return toListing(response.data.data);
+  },
+
+  async deleteImage(id: string, imageKey: string): Promise<Listing> {
+    const response = await apiClient.delete<ApiSuccessResponse<ListingDto>>(`/listings/${id}/images/${encodeURIComponent(imageKey)}`);
+    return toListing(response.data.data);
+  },
+
+  async reorderImages(id: string, imageKeys: string[]): Promise<Listing> {
+    const response = await apiClient.patch<ApiSuccessResponse<ListingDto>>(`/listings/${id}/images/reorder`, { imageKeys });
     return toListing(response.data.data);
   },
 

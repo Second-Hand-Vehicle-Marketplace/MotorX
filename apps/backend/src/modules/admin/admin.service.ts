@@ -5,8 +5,8 @@ import { errorCodes } from '../../shared/errors/errorCodes.js';
 import { buildPaginationMeta } from '../../shared/utils/pagination.js';
 import type { Dealer } from '../dealers/dealer.model.js';
 import { notifyAccountSuspended, notifyDealerApplicationDecision, notifyListingRemoved } from '../notifications/notification.service.js';
-import { archiveListingByAdmin, createAdminAuditLog, findDealerApplicationById, getAdminStats, listAdminAuditLogs, listAdminListings, listAdminUploads, listAdminUsers, listPendingDealerApplications, promoteApplicantToDealer, updateAdminUserStatus, updateDealerApplicationReview } from './admin.repository.js';
-import type { ListAdminAuditQuery, ListAdminListingsQuery, ListAdminUploadsQuery, ListAdminUsersQuery } from './admin.validation.js';
+import { archiveListingByAdmin, createAdminAuditLog, findDealerApplicationById, getAdminStats, listAdminAuditLogs, listAdminListings, listAdminUploads, listAdminUsers, listDealerApplications, promoteApplicantToDealer, updateAdminUserStatus, updateDealerApplicationReview } from './admin.repository.js';
+import type { ListAdminAuditQuery, ListAdminDealerApplicationsQuery, ListAdminListingsQuery, ListAdminUploadsQuery, ListAdminUsersQuery } from './admin.validation.js';
 
 // Converts user persistence fields into the admin API representation.
 function serializeUser(user: Record<string, any>) { return { id: String(user._id), email: user.email, displayName: user.displayName ?? '', role: user.role, status: user.status, phone: user.phone, createdAt: user.createdAt, lastLoginAt: user.lastLoginAt }; }
@@ -19,7 +19,18 @@ function serializeListing(record: Record<string, any>) {
 
 // Converts dealer persistence fields into the shared administration contract.
 function serializeDealer(dealer: Dealer & { _id: Types.ObjectId }): DealerApplicationDto {
-  return { id: dealer._id.toString(), userId: dealer.userId.toString(), businessName: dealer.businessName, registrationNumber: dealer.registrationNumber, phone: dealer.phone, address: dealer.address, representativeName: dealer.representativeName, city: dealer.city, province: dealer.province, businessPhone: dealer.businessPhone, businessEmail: dealer.businessEmail, website: dealer.website ?? null, dealershipType: dealer.dealershipType, brands: dealer.brands, description: dealer.description, inventoryCount: dealer.inventoryCount ?? null, verificationDocuments: dealer.verificationDocuments, status: dealer.status, rejectionReason: dealer.rejectionReason ?? null, reviewedBy: dealer.reviewedBy?.toString() ?? null, reviewedAt: dealer.reviewedAt?.toISOString() ?? null, createdAt: dealer.createdAt.toISOString(), updatedAt: dealer.updatedAt.toISOString() };
+  return {
+    id: dealer._id.toString(), userId: dealer.userId.toString(), businessName: dealer.businessName,
+    registrationNumber: dealer.registrationNumber, phone: dealer.phone, address: dealer.address,
+    representativeName: dealer.representativeName ?? 'Not provided', city: dealer.city ?? 'Not provided',
+    province: dealer.province ?? 'Not provided', businessPhone: dealer.businessPhone ?? dealer.phone,
+    businessEmail: dealer.businessEmail ?? 'Not provided', website: dealer.website ?? null,
+    dealershipType: dealer.dealershipType ?? 'used', brands: dealer.brands ?? [],
+    description: dealer.description ?? 'No business description was provided.', inventoryCount: dealer.inventoryCount ?? null,
+    verificationDocuments: dealer.verificationDocuments ?? [], status: dealer.status,
+    rejectionReason: dealer.rejectionReason ?? null, reviewedBy: dealer.reviewedBy?.toString() ?? null,
+    reviewedAt: dealer.reviewedAt?.toISOString() ?? null, createdAt: dealer.createdAt.toISOString(), updatedAt: dealer.updatedAt.toISOString(),
+  };
 }
 
 // Returns a paginated administrative view of user accounts.
@@ -78,7 +89,7 @@ export async function getUploadsForAdmin(query: ListAdminUploadsQuery) {
 export function getSystemHealthForAdmin() { const ready = mongoose.connection.readyState === 1; return { checkedAt: new Date().toISOString(), backend: { status: 'operational', uptimeSeconds: Math.floor(process.uptime()) }, database: { status: ready ? 'operational' : 'unavailable', readyState: mongoose.connection.readyState }, queue: { status: 'not_configured' }, worker: { status: 'not_configured' } }; }
 
 // Returns the pending applications visible to administrators.
-export async function getPendingApplicationsForAdmin() { const records = await listPendingDealerApplications(); return records.map((item) => serializeDealer(item as unknown as Dealer & { _id: Types.ObjectId })); }
+export async function getDealerApplicationsForAdmin(query: ListAdminDealerApplicationsQuery) { const records = await listDealerApplications(query); return records.map((item) => serializeDealer(item as unknown as Dealer & { _id: Types.ObjectId })); }
 
 // Returns protected document metadata after validating its application and index.
 export async function getDealerDocumentForAdmin(dealerId: string, index: number) { const dealer = await findDealerApplicationById(dealerId); if (!dealer) throw new AppError(404, errorCodes.notFound, 'The dealer application was not found.'); const document = dealer.verificationDocuments[index]; if (!document) throw new AppError(404, errorCodes.notFound, 'The verification document was not found.'); return document; }
@@ -86,16 +97,18 @@ export async function getDealerDocumentForAdmin(dealerId: string, index: number)
 // Reviews an application, role assignment, and audit record as one transaction.
 export async function reviewDealerApplicationAsAdmin(dealerId: string, adminId: Types.ObjectId, decision: 'approved' | 'rejected', reason?: string) {
   const session = await mongoose.startSession(); let result: DealerApplicationDto | undefined;
-  try { await session.withTransaction(async () => {
-    const existing = await findDealerApplicationById(dealerId, session);
-    if (!existing) throw new AppError(404, errorCodes.notFound, 'The dealer application was not found.');
-    if (existing.status !== 'pending') throw new AppError(409, errorCodes.conflict, 'This dealer application has already been reviewed.');
-    const updated = await updateDealerApplicationReview(dealerId, decision, adminId, reason, session);
-    if (!updated) throw new AppError(409, errorCodes.conflict, 'This dealer application has already been reviewed.');
-    if (decision === 'approved' && !(await promoteApplicantToDealer(updated.userId, session))) throw new AppError(404, errorCodes.notFound, 'The applicant user account was not found.');
-    await createAdminAuditLog({ eventType: decision === 'approved' ? 'dealer_approved' : 'dealer_rejected', actorId: adminId, targetId: updated.userId, targetName: updated.businessName, details: decision === 'approved' ? 'Dealer application approved.' : `Dealer application rejected: ${reason}` }, session);
-    result = serializeDealer(updated.toObject() as Dealer & { _id: Types.ObjectId });
-  }); } finally { await session.endSession(); }
+  try {
+    await session.withTransaction(async () => {
+      const existing = await findDealerApplicationById(dealerId, session);
+      if (!existing) throw new AppError(404, errorCodes.notFound, 'The dealer application was not found.');
+      if (existing.status !== 'pending') throw new AppError(409, errorCodes.conflict, 'This dealer application has already been reviewed.');
+      const updated = await updateDealerApplicationReview(dealerId, decision, adminId, reason, session);
+      if (!updated) throw new AppError(409, errorCodes.conflict, 'This dealer application has already been reviewed.');
+      if (decision === 'approved' && !(await promoteApplicantToDealer(updated.userId, session))) throw new AppError(404, errorCodes.notFound, 'The applicant user account was not found.');
+      await createAdminAuditLog({ eventType: decision === 'approved' ? 'dealer_approved' : 'dealer_rejected', actorId: adminId, targetId: updated.userId, targetName: updated.businessName, details: decision === 'approved' ? 'Dealer application approved.' : `Dealer application rejected: ${reason}` }, session);
+      result = serializeDealer(updated.toObject() as Dealer & { _id: Types.ObjectId });
+    });
+  } finally { await session.endSession(); }
   if (!result) throw new AppError(500, errorCodes.internal, 'The dealer review could not be completed.');
   // Sent after the transaction commits — a delivery hiccup must never roll back the review itself.
   await notifyDealerApplicationDecision(new mongoose.Types.ObjectId(result.userId), decision, reason);

@@ -24,25 +24,29 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
-    services:
-      mongodb:
-        image: mongo:7
-        ports:
-          - 27017:27017
-        options: >-
-          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     env:
       CI: true
       NODE_ENV: test
-      MONGODB_URI: mongodb://127.0.0.1:27017/motorx_test
+      TEST_MONGODB_URI: mongodb://127.0.0.1:27017/motorx_test?replicaSet=rs0
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Start MongoDB replica set
+        run: |
+          docker run -d \
+            --name mongodb \
+            --network host \
+            mongo:7 \
+            mongod --replSet rs0 --bind_ip_all
+
+          until docker exec mongodb mongosh --quiet --eval "db.adminCommand({ ping: 1 }).ok"; do
+            sleep 2
+          done
+
+          docker exec mongodb mongosh --quiet --eval \
+            "rs.initiate({_id:'rs0',members:[{_id:0,host:'127.0.0.1:27017'}]})"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

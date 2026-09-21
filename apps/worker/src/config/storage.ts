@@ -13,6 +13,8 @@ export const workerStorageConfig = {
   publicUrl: env.S3_PUBLIC_URL.replace(/\/$/, ''),
   maxListingImages: env.MAX_LISTING_IMAGES,
   maxImageBytes: env.MAX_IMAGE_SIZE_MB * 1024 * 1024,
+  maxZipEntries: env.MAX_IMAGE_ZIP_ENTRIES,
+  maxZipExpandedBytes: env.MAX_IMAGE_ZIP_EXPANDED_MB * 1024 * 1024,
   mimeTypeForExtension(extension: string): string | undefined {
     const mimeType = extensionToMimeType[extension.toLowerCase()];
     return mimeType && allowedMimeTypes.has(mimeType) ? mimeType : undefined;

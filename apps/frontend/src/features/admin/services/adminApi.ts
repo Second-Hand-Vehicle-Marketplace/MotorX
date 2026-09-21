@@ -14,7 +14,7 @@ export interface AdminListing {
 }
 
 export interface AdminStats {
-  totalUsers: number; registeredDealers: number; totalListings: number; pendingDealerApplications: number;
+  totalUsers: number; activeDealers: number; registeredDealers: number; totalListings: number; activeListings: number; pendingDealerApplications: number;
 }
 
 export type AdminAuditEvent = 'dealer_approved' | 'dealer_rejected' | 'user_suspended' | 'user_activated' | 'listing_removed';
@@ -24,6 +24,7 @@ export interface AdminSystemHealth { checkedAt: string; backend: { status: strin
 
 export interface AdminUserFilters { search?: string; role?: UserRole; status?: AdminUser['status']; page?: number; limit?: number }
 export interface AdminListingFilters { search?: string; status?: AdminListing['status']; category?: VehicleCategory; page?: number; limit?: number }
+export interface AdminUploadFilters { status?: AdminUpload['status']; dealerId?: string; page?: number; limit?: number }
 
 // Provides one frontend entry point for every admin API operation.
 export const adminApi = {
@@ -51,8 +52,8 @@ export const adminApi = {
     const response = await apiClient.get<ApiSuccessResponse<AdminAuditLog[], PaginationMeta>>('/admin/audit-logs', { params: { eventType, limit: 100 } });
     return response.data.data;
   },
-  async listUploads() {
-    const response = await apiClient.get<ApiSuccessResponse<AdminUpload[], PaginationMeta>>('/admin/uploads', { params: { limit: 100 } });
+  async listUploads(filters: AdminUploadFilters = {}) {
+    const response = await apiClient.get<ApiSuccessResponse<AdminUpload[], PaginationMeta>>('/admin/uploads', { params: { limit: 100, ...filters } });
     return response.data.data;
   },
   async getSystemHealth() {

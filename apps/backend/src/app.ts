@@ -1,6 +1,8 @@
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import mongoose from 'mongoose';
+import { logger } from './config/logger.js';
 import { authUserRouter } from './modules/auth-users/authUser.routes.js';
 import { listingImageRouter, listingRouter } from './modules/marketplace/index.js';
 import { dealerRouter } from './modules/dealers/index.js';
@@ -8,19 +10,33 @@ import { adminRouter } from './modules/admin/index.js';
 import { buyerRouter } from './modules/buyers/index.js';
 import { inventoryRouter } from './modules/inventory/index.js';
 import { notificationRouter } from './modules/notifications/index.js';
+import { searchRouter } from './modules/search/index.js';
 import { errorHandler } from './shared/middleware/errorHandler.js';
 import { sendSuccess } from './shared/responses/apiResponse.js';
 
 export const app = express();
+
+const configuredCorsOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:4173')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const allowedCorsOrigins = process.env.NODE_ENV === 'production'
+  ? configuredCorsOrigins
+  : [...new Set([...configuredCorsOrigins, 'http://localhost:8080', 'http://localhost:5173'])];
 
 // The frontend and backend are intentionally different origins (separate SPA + API deployment,
 // e.g. localhost:8080 vs localhost:3000 in dev). Helmet's default same-origin resource policy
 // blocks the browser from rendering anything the backend serves — most visibly, every <img>
 // pointed at /api/v1/listing-images — so it's relaxed here to match how this app is actually deployed.
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use((request, response, next) => {
+  const startedAt = Date.now();
+  response.on('finish', () => logger.info({ method: request.method, path: request.path, statusCode: response.statusCode, durationMs: Date.now() - startedAt }, 'HTTP request completed'));
+  next();
+});
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
+    origin: allowedCorsOrigins,
   }),
 );
 app.use(express.json());
@@ -31,7 +47,10 @@ app.get('/health/live', (_request, response) => {
 });
 
 app.get('/health/ready', (_request, response) => {
-  sendSuccess(response, { service: 'backend', status: 'READY' });
+  const databaseReady = mongoose.connection.readyState === 1;
+  const status = databaseReady ? 'READY' : 'NOT_READY';
+  if (!databaseReady) response.status(503);
+  sendSuccess(response, { service: 'backend', status, dependencies: { database: databaseReady ? 'ready' : 'unavailable' } });
 });
 
 app.use('/api/v1/auth', authUserRouter);
@@ -39,6 +58,7 @@ app.use('/api/v1/auth', authUserRouter);
 // would otherwise shadow listingRouter's GET /mine (matching "mine" as a listing id).
 app.use('/api/v1/listings', listingRouter);
 app.use('/api/v1/listings', buyerRouter);
+app.use('/api/v1/search', searchRouter);
 app.use('/api/v1/listing-images', listingImageRouter);
 app.use('/api/v1/dealers', dealerRouter);
 app.use('/api/v1/dealer/uploads', inventoryRouter);

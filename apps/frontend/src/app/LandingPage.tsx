@@ -11,7 +11,7 @@ export const LandingPage: React.FC = () => {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/marketplace?search=${encodeURIComponent(searchQuery.trim())}`);
+      navigate(`/marketplace?q=${encodeURIComponent(searchQuery.trim())}`);
     } else {
       navigate('/marketplace');
     }
@@ -50,8 +50,10 @@ export const LandingPage: React.FC = () => {
         {/* Natural Language & Keyword Search Bar */}
         <form onSubmit={handleSearchSubmit} className="hero-search-bar" style={{ width: '100%' }}>
           <input
-            type="text"
-            placeholder="Search make, model, body type (e.g. 'Tesla Model 3', 'BMW Sedan', 'Electric')..."
+            type="search"
+            aria-label="Search vehicle inventory"
+            maxLength={200}
+            placeholder="Try “automatic SUV under 8 million near Colombo”"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
