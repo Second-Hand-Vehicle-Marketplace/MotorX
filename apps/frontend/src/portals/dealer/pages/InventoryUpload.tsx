@@ -1,18 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { formatFileSize, formatDate } from '../../../shared/utils/formatters';
-import { adminApi } from '@/features/admin/services/adminApi';
-import { apiClient } from '@/shared/services/apiClient';
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
+import { csvTemplatesByCategory, vehicleCategories, type VehicleCategory } from '@motorx/shared-contracts';
+import { inventoryApi } from '@/features/inventory/services/inventoryApi';
+import { formatFileSize, formatDate } from '@/shared/utils/formatters';
+
+const statusBadgeClass = (status: string) => status === 'completed' ? 'badge-success' : status === 'processing' || status === 'pending' ? 'badge-info' : status === 'completedWithErrors' ? 'badge-warning' : 'badge-error';
+
+// Only categories with a defined CSV template can be bulk-uploaded; 'other' is manual-form-only.
+const uploadableCategories = vehicleCategories.filter((category): category is Exclude<VehicleCategory, 'other'> => category in csvTemplatesByCategory);
 
 export const InventoryUpload: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [selectedCsvFile, setSelectedCsvFile] = useState<File | null>(null);
-  const [selectedZipFile, setSelectedZipFile] = useState<File | null>(null);
+  const [category, setCategory] = useState<VehicleCategory>('car');
+  const uploadsQuery = useQuery({ queryKey: ['my-uploads', 1, 20], queryFn: () => inventoryApi.listUploads(1, 20) });
+  const uploads = uploadsQuery.data?.data ?? [];
+  const template = csvTemplatesByCategory[category];
+
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadJobs, setUploadJobs] = useState<any[]>([]);
+  const [error, setError] = useState('');
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     void adminApi.getUploadJobs().then((jobs) => {
@@ -22,41 +32,41 @@ export const InventoryUpload: React.FC = () => {
 
   const handleFileChange = (kind: 'csv' | 'zip', e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      if (kind === 'csv') {
-        setSelectedCsvFile(e.target.files[0]);
-      } else {
-        setSelectedZipFile(e.target.files[0]);
-      }
+      setSelectedFile(e.target.files[0]);
+      setError('');
     }
   };
 
   const handleStartUpload = async () => {
-    if (!selectedCsvFile || !selectedZipFile) return;
-
+    if (!selectedFile) return;
+    setError('');
     setIsUploading(true);
-    setUploadProgress(15);
-
+    setUploadProgress(0);
     try {
-      const formData = new FormData();
-      formData.append('csv', selectedCsvFile);
-      if (selectedZipFile) formData.append('zip', selectedZipFile);
-      formData.append('dealerId', user?.id ?? '');
-      formData.append('dealerName', user?.displayName ?? '');
-
-      const response = await apiClient.post<{ data: { id: string } }>('/uploads', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      setUploadProgress(100);
-      setTimeout(() => {
-        navigate(`/dealer/uploads/${response.data.data.id}`);
-      }, 500);
-    } catch (error) {
-      console.error('Inventory upload failed', error);
+      const job = await inventoryApi.uploadCsv(category, selectedFile, setUploadProgress);
+      navigate(`/dealer/uploads/${job.id}`);
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : 'Could not upload the inventory file.');
       setIsUploading(false);
-      setUploadProgress(0);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    setIsDownloading(true);
+    try {
+      const blob = await inventoryApi.downloadTemplate(category);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `motorx-${category}-template.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (downloadError) {
+      setError(downloadError instanceof Error ? downloadError.message : 'Could not download the CSV template.');
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -64,15 +74,34 @@ export const InventoryUpload: React.FC = () => {
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">CSV / ZIP Inventory Upload</h1>
-          <p className="page-subtitle">Upload CSV batch files or image ZIP archives to add or update multiple vehicle listings at once</p>
+          <h1 className="page-title">Bulk Vehicle Upload</h1>
+          <p className="page-subtitle">Upload a category-specific CSV batch file to add multiple vehicle listings at once</p>
         </div>
       </div>
 
-      {/* Linked CSV + ZIP submission */}
-      <div className="glass-card" style={{ padding: '2.5rem', marginBottom: '1.25rem' }}>
-        <h3 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '0.75rem' }}>Inventory Batch</h3>
-        <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.25rem' }}>Choose one CSV and its matching image ZIP, then submit both together as one inventory batch.</p>
+      {/* Step 1 — Category */}
+      <div className="glass-card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem' }}>1. Select the type of vehicles you want to upload</h3>
+        <select className="form-select" style={{ maxWidth: 320 }} value={category} onChange={(e) => { setCategory(e.target.value as VehicleCategory); setSelectedFile(null); }}>
+          {uploadableCategories.map((value) => <option key={value} value={value}>{csvTemplatesByCategory[value]?.label}</option>)}
+        </select>
+      </div>
+
+      {/* Step 2 — Template */}
+      <div className="glass-card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem' }}>2. Download the MotorX CSV template</h3>
+        <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-tertiary)', marginBottom: '1rem' }}>
+          The template already has the right columns for {template?.label} listings, with one filled-in example row.
+        </p>
+        <button onClick={() => void handleDownloadTemplate()} disabled={isDownloading} className="btn btn-secondary btn-sm">
+          ↓ Download {template?.label} CSV Template
+        </button>
+      </div>
+
+      {/* Step 3 — Upload */}
+      <div className="glass-card" style={{ padding: '2.5rem', marginBottom: '1.5rem' }}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem' }}>3. Add your vehicle information, then upload the completed CSV</h3>
+        {error && <div className="glass-card" style={{ padding: '0.75rem 1rem', marginBottom: '1rem', color: 'var(--color-error)' }}>{error}</div>}
         {!isUploading ? (
           <div>
             <label className="drop-zone">
@@ -85,7 +114,7 @@ export const InventoryUpload: React.FC = () => {
                   {selectedCsvFile ? selectedCsvFile.name : 'Click or drag CSV file to upload'}
                 </p>
                 <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-tertiary)', marginTop: '0.25rem' }}>
-                  {selectedCsvFile ? `${formatFileSize(selectedCsvFile.size)} · Ready to upload` : 'Supports UTF-8 CSV files up to 10MB'}
+                  {selectedFile ? `${formatFileSize(selectedFile.size)} · Ready to upload` : `Supports UTF-8 CSV files up to 10MB, using the ${template?.label} template`}
                 </p>
               </div>
             </label>
@@ -110,75 +139,90 @@ export const InventoryUpload: React.FC = () => {
             {selectedCsvFile && selectedZipFile && (
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
                 <button onClick={() => void handleStartUpload()} className="btn btn-primary btn-lg">
-                  Submit CSV + ZIP Batch
+                  Start Upload & ETL Processing
                 </button>
               </div>
             )}
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>Uploading and processing batch...</h3>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>Uploading CSV...</h3>
             <div className="progress-bar" style={{ maxWidth: 400, margin: '0 auto 1rem' }}>
               <div className="progress-fill" style={{ width: `${uploadProgress}%` }} />
             </div>
             <p style={{ fontSize: '0.875rem', color: 'var(--color-text-tertiary)' }}>
-              {uploadProgress}% complete — validating rows and matching images...
+              {uploadProgress}% uploaded — ETL processing continues in the background after upload completes.
             </p>
           </div>
         )}
       </div>
 
-      {/* CSV / ZIP format guide */}
+      {/* Field guide */}
       <div className="glass-card" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
-        <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem' }}>CSV + ZIP Template & Format Requirements</h3>
-        <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.6, marginBottom: '1rem' }}>
-          CSV rows can include image columns such as <code>image1,image2,...,imageN</code>. ZIP uploads should contain the matching vehicle photos referenced by those columns. Required CSV fields include: <code>make, model, year, price, mileage, bodyType, fuelType, transmission, condition, vin, plateNumber, title, description</code>. Every row must include both <code>vin</code> and <code>plateNumber</code>, and both identifiers must be unique.
+        <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem' }}>{template?.label} CSV Field Guide</h3>
+        <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-tertiary)', marginBottom: '1rem' }}>
+          Leave optional or non-applicable fields blank — for example, an electric vehicle's engine capacity, or a petrol vehicle's battery fields.
         </p>
-        <button className="btn btn-secondary btn-sm">
-          ↓ Download Sample CSV Template
-        </button>
+        <div className="table-container">
+          <table className="data-table">
+            <thead><tr><th>Field</th><th>Required</th><th>Example</th></tr></thead>
+            <tbody>
+              {template?.fields.map((field) => (
+                <tr key={field.key}><td style={{ fontFamily: 'monospace' }}>{field.key}</td><td>{field.required}</td><td>{field.example || '—'}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Recent Upload History */}
       <div className="glass-card" style={{ padding: '1.5rem' }}>
         <h3 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '1rem' }}>Upload History</h3>
 
-        <div className="table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>File Name</th>
-                <th>Records</th>
-                <th>Valid / Rejected</th>
-                <th>Status</th>
-                <th>Date</th>
-                <th>Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              {uploadJobs.map(job => (
-                <tr key={job.id}>
-                  <td style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{job.fileName}</td>
-                  <td>{job.totalRecords}</td>
-                  <td>
-                    <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>{job.validRecords}</span> / <span style={{ color: job.rejectedRecords > 0 ? 'var(--color-error)' : 'inherit' }}>{job.rejectedRecords}</span>
-                  </td>
-                  <td>
-                    <span className={`badge ${job.status === 'completed' ? 'badge-success' : job.status === 'processing' ? 'badge-info' : 'badge-error'}`}>
-                      {job.status}
-                    </span>
-                  </td>
-                  <td>{formatDate(job.createdAt)}</td>
-                  <td>
-                    <Link to={`/dealer/uploads/${job.id}`} className="btn btn-ghost btn-sm">
-                      View Report
-                    </Link>
-                  </td>
+        {uploadsQuery.isLoading && <div className="loading-spinner" style={{ margin: '2rem auto', display: 'block' }} />}
+        {uploadsQuery.isError && <div className="glass-card" style={{ padding: '1rem', color: 'var(--color-error)' }}>Could not load upload history.</div>}
+        {!uploadsQuery.isLoading && !uploadsQuery.isError && uploads.length === 0 && <div className="empty-state"><p>No inventory uploads yet.</p></div>}
+
+        {!uploadsQuery.isLoading && uploads.length > 0 && (
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>File Name</th>
+                  <th>Category</th>
+                  <th>Records</th>
+                  <th>Valid / Rejected</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>Details</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {uploads.map(job => (
+                  <tr key={job.id}>
+                    <td style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{job.fileName}</td>
+                    <td>{csvTemplatesByCategory[job.category]?.label ?? job.category}</td>
+                    <td>{job.totalRecords}</td>
+                    <td>
+                      <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>{job.validRecords}</span> / <span style={{ color: job.rejectedRecords > 0 ? 'var(--color-error)' : 'inherit' }}>{job.rejectedRecords}</span>
+                    </td>
+                    <td>
+                      <span className={`badge ${statusBadgeClass(job.status)}`}>
+                        {job.status}
+                      </span>
+                    </td>
+                    <td>{formatDate(job.createdAt)}</td>
+                    <td>
+                      <Link to={`/dealer/uploads/${job.id}`} className="btn btn-ghost btn-sm">
+                        View Report
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

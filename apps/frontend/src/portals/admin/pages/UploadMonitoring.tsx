@@ -1,58 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { formatDate } from '../../../shared/utils/formatters';
-import { adminApi } from '@/features/admin/services/adminApi';
+import { adminApi, type AdminUpload, type AdminUser } from '@/features/admin/services/adminApi';
+import { formatDate } from '@/shared/utils/formatters';
 
 export const UploadMonitoring: React.FC = () => {
-  const [uploadJobs, setUploadJobs] = useState<any[]>([]);
-
-  useEffect(() => {
-    void adminApi.getUploadJobs().then(setUploadJobs).catch(() => setUploadJobs([]));
-  }, []);
-  return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">CSV Upload Monitoring</h1>
-          <p className="page-subtitle">Platform-wide overview of all dealer inventory batch upload jobs</p>
-        </div>
-      </div>
-
-      <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div className="table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Job ID</th>
-                <th>Dealership</th>
-                <th>File Name</th>
-                <th>Records</th>
-                <th>Valid / Rejected</th>
-                <th>Status</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {uploadJobs.map(job => (
-                <tr key={job.id}>
-                  <td style={{ fontFamily: 'monospace', fontSize: '0.8125rem' }}>{job.id}</td>
-                  <td style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{job.dealerName}</td>
-                  <td>{job.fileName}</td>
-                  <td>{job.totalRecords}</td>
-                  <td>
-                    <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>{job.validRecords}</span> / <span style={{ color: job.rejectedRecords > 0 ? 'var(--color-error)' : 'inherit' }}>{job.rejectedRecords}</span>
-                  </td>
-                  <td>
-                    <span className={`badge ${job.status === 'completed' ? 'badge-success' : job.status === 'processing' ? 'badge-info' : 'badge-error'}`}>
-                      {job.status}
-                    </span>
-                  </td>
-                  <td>{formatDate(job.createdAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
+  const [uploads, setUploads] = useState<AdminUpload[]>([]); const [dealers, setDealers] = useState<AdminUser[]>([]); const [dealerId, setDealerId] = useState(''); const [status, setStatus] = useState(''); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
+  useEffect(() => { void Promise.all([adminApi.listUploads({ dealerId: dealerId || undefined, status: status as AdminUpload['status'] || undefined }), adminApi.listUsers({ role: 'dealer', limit: 100 })]).then(([uploadResult, dealerResult]) => { setUploads(uploadResult); setDealers(dealerResult.users); }).catch((e: unknown) => setError(e instanceof Error ? e.message : 'Unable to load upload jobs.')).finally(() => setLoading(false)); }, [dealerId, status]);
+  return <div><div className="page-header"><div><h1 className="page-title">CSV Upload Monitoring</h1><p className="page-subtitle">Review inventory processing by dealer and status.</p></div></div>{error && <div className="alert alert-error">{error}</div>}
+    <div className="glass-card" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}><label className="form-group" style={{ flex: 1, minWidth: 220 }}><span className="form-label">Dealer</span><select className="form-select" value={dealerId} onChange={(event) => setDealerId(event.target.value)}><option value="">All dealers</option>{dealers.map((dealer) => <option key={dealer.id} value={dealer.id}>{dealer.displayName || dealer.email}</option>)}</select></label><label className="form-group" style={{ flex: 1, minWidth: 220 }}><span className="form-label">Upload status</span><select className="form-select" value={status} onChange={(event) => setStatus(event.target.value)}><option value="">All statuses</option><option value="pending">Pending</option><option value="processing">Processing</option><option value="completed">Completed</option><option value="completedWithErrors">Completed with errors</option><option value="failed">Failed</option></select></label></div>
+    <div className="glass-card" style={{ padding: 0 }}><div className="table-container"><table className="data-table"><thead><tr><th>Job ID</th><th>Dealership</th><th>File</th><th>Records</th><th>Valid / Rejected</th><th>Status</th><th>Date</th></tr></thead><tbody>
+      {loading && <tr><td colSpan={7}>Loading upload jobs...</td></tr>}{!loading && uploads.length === 0 && <tr><td colSpan={7}>No inventory uploads have been submitted.</td></tr>}
+      {!loading && uploads.map((job) => <tr key={job.id}><td style={{ fontFamily: 'monospace' }}>{job.id}</td><td>{job.dealerName}</td><td>{job.fileName}</td><td>{job.totalRecords}</td><td>{job.validRecords} / {job.rejectedRecords}</td><td><span className={`badge ${job.status === 'completed' ? 'badge-success' : job.status === 'processing' ? 'badge-info' : job.status === 'failed' ? 'badge-error' : 'badge-neutral'}`}>{job.status}</span></td><td>{formatDate(job.createdAt)}</td></tr>)}
+    </tbody></table></div></div></div>;
 };

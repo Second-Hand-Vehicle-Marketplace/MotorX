@@ -4,12 +4,13 @@ WORKDIR /app
 
 # Copy workspace manifests first for better layer caching
 COPY package.json ./
+COPY package-lock.json ./
 COPY apps/backend/package.json ./apps/backend/
 COPY apps/worker/package.json ./apps/worker/
 COPY apps/frontend/package.json ./apps/frontend/
 COPY packages/shared-contracts/package.json ./packages/shared-contracts/
 
-RUN npm install
+RUN npm ci
 
 # Copy source
 COPY packages/shared-contracts ./packages/shared-contracts
@@ -19,6 +20,8 @@ RUN npm run build --workspace @motorx/shared-contracts
 RUN npm run build --workspace @motorx/backend
 
 WORKDIR /app/apps/backend
+
+USER node
 
 EXPOSE 3000
 

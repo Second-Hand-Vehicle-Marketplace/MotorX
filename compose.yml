@@ -2,29 +2,6 @@ name: motorx
 
 services:
   # =========================================================
-  # MongoDB
-  # =========================================================
-  mongodb:
-    image: mongo:7
-    restart: unless-stopped
-
-    ports:
-      - "27017:27017"
-
-    volumes:
-      - mongodb_data:/data/db
-
-    healthcheck:
-      test: [ "CMD-SHELL", "echo 'db.runCommand({ ping: 1 }).ok' | mongosh --quiet" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
-    networks:
-      - motorx-network
-
-  # =========================================================
   # Redis
   # Used by BullMQ for asynchronous job processing
   # =========================================================
@@ -141,13 +118,14 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3000
 
-      # Real Atlas MongoDB connection (or local fallback only if .env is missing)
-      MONGODB_URI: ${MONGODB_URI:-mongodb://mongodb:27017/motorx}
+      # Internal Docker addresses
+      # Use the MongoDB Atlas connection string from the root .env file.
+      MONGODB_URI: ${MONGODB_URI:?MONGODB_URI is required}
       REDIS_URL: redis://redis:6379
 
       # Local S3-compatible storage
       S3_ENDPOINT: http://minio:9000
-      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9000}
+      S3_PUBLIC_URL: ${S3_PUBLIC_URL:-http://localhost:3000/api/v1/listing-images}
       S3_REGION: ${S3_REGION:-us-east-1}
       S3_BUCKET: ${S3_BUCKET:-motorx}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY}
@@ -155,7 +133,7 @@ services:
       S3_FORCE_PATH_STYLE: "true"
 
       # Frontend origin
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:4173}
 
     depends_on:
       redis:
@@ -193,7 +171,8 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
 
-      MONGODB_URI: ${MONGODB_URI:-mongodb://mongodb:27017/motorx}
+      # Use the MongoDB Atlas connection string from the root .env file.
+      MONGODB_URI: ${MONGODB_URI:?MONGODB_URI is required}
       REDIS_URL: redis://redis:6379
 
       S3_ENDPOINT: http://minio:9000
@@ -240,7 +219,7 @@ services:
       VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID}
 
     ports:
-      - "5173:5173"
+      - "4173:5173"
 
     depends_on:
       backend:
@@ -260,6 +239,5 @@ networks:
 # Persistent volumes
 # =========================================================
 volumes:
-  mongodb_data:
   redis_data:
   minio_data:

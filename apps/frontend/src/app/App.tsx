@@ -1,80 +1,82 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProviders } from './providers';
 
 // Auth
-import { LoginPage } from '../features/auth/pages/LoginPage';
-import { RegisterPage } from '../features/auth/pages/RegisterPage';
-import { DealerPendingPage } from '../features/auth/pages/DealerPendingPage';
 import { RoleGuard } from '../features/auth/components/RoleGuard';
 
 // Portals
-import { BuyerLayout } from '../portals/buyer/layout/BuyerLayout';
-import { Marketplace } from '../portals/buyer/pages/Marketplace';
-import { VehicleDetails } from '../portals/buyer/pages/VehicleDetails';
-
-import { DealerLayout } from '../portals/dealer/layout/DealerLayout';
-import { DealerDashboard } from '../portals/dealer/pages/DealerDashboard';
-import { ListingManager } from '../portals/dealer/pages/ListingManager';
-import { ListingForm } from '../portals/dealer/pages/ListingForm';
-import { InventoryUpload } from '../portals/dealer/pages/InventoryUpload';
-import { UploadDetails } from '../portals/dealer/pages/UploadDetails';
-
-import { AdminLayout } from '../portals/admin/layout/AdminLayout';
-import { AdminDashboard } from '../portals/admin/pages/AdminDashboard';
-import { UserManagement } from '../portals/admin/pages/UserManagement';
-import { DealerApprovals } from '../portals/admin/pages/DealerApprovals';
-import { ListingMonitoring } from '../portals/admin/pages/ListingMonitoring';
-import { UploadMonitoring } from '../portals/admin/pages/UploadMonitoring';
-import { AuditLogs } from '../portals/admin/pages/AuditLogs';
-import { SystemHealth } from '../portals/admin/pages/SystemHealth';
-
-import { LandingPage } from './LandingPage';
+const LoginPage = React.lazy(() => import('../features/auth/pages/LoginPage').then((module) => ({ default: module.LoginPage })));
+const RegisterPage = React.lazy(() => import('../features/auth/pages/RegisterPage').then((module) => ({ default: module.RegisterPage })));
+const DealerPendingPage = React.lazy(() => import('../features/auth/pages/DealerPendingPage').then((module) => ({ default: module.DealerPendingPage })));
+const BuyerLayout = React.lazy(() => import('../portals/buyer/layout/BuyerLayout').then((module) => ({ default: module.BuyerLayout })));
+const Marketplace = React.lazy(() => import('../portals/buyer/pages/Marketplace').then((module) => ({ default: module.Marketplace })));
+const VehicleDetails = React.lazy(() => import('../portals/buyer/pages/VehicleDetails').then((module) => ({ default: module.VehicleDetails })));
+const DealerLayout = React.lazy(() => import('../portals/dealer/layout/DealerLayout').then((module) => ({ default: module.DealerLayout })));
+const DealerDashboard = React.lazy(() => import('../portals/dealer/pages/DealerDashboard').then((module) => ({ default: module.DealerDashboard })));
+const ListingManager = React.lazy(() => import('../portals/dealer/pages/ListingManager').then((module) => ({ default: module.ListingManager })));
+const ListingForm = React.lazy(() => import('../portals/dealer/pages/ListingForm').then((module) => ({ default: module.ListingForm })));
+const InventoryUpload = React.lazy(() => import('../portals/dealer/pages/InventoryUpload').then((module) => ({ default: module.InventoryUpload })));
+const UploadDetails = React.lazy(() => import('../portals/dealer/pages/UploadDetails').then((module) => ({ default: module.UploadDetails })));
+const AdminLayout = React.lazy(() => import('../portals/admin/layout/AdminLayout').then((module) => ({ default: module.AdminLayout })));
+const AdminDashboard = React.lazy(() => import('../portals/admin/pages/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
+const UserManagement = React.lazy(() => import('../portals/admin/pages/UserManagement').then((module) => ({ default: module.UserManagement })));
+const DealerApprovals = React.lazy(() => import('../portals/admin/pages/DealerApprovals').then((module) => ({ default: module.DealerApprovals })));
+const ListingMonitoring = React.lazy(() => import('../portals/admin/pages/ListingMonitoring').then((module) => ({ default: module.ListingMonitoring })));
+const UploadMonitoring = React.lazy(() => import('../portals/admin/pages/UploadMonitoring').then((module) => ({ default: module.UploadMonitoring })));
+const AuditLogs = React.lazy(() => import('../portals/admin/pages/AuditLogs').then((module) => ({ default: module.AuditLogs })));
+const LandingPage = React.lazy(() => import('./LandingPage').then((module) => ({ default: module.LandingPage })));
 
 export function App() {
   return (
     <AppProviders>
       <BrowserRouter>
-        <Routes>
-          {/* Auth Route */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/dealer/register" element={<RegisterPage />} />
-          <Route path="/dealer/pending" element={<DealerPendingPage />} />
+        <Suspense fallback={<div role="status" aria-label="Loading page" className="loading-spinner" style={{ display: 'block', margin: '4rem auto' }} />}>
+          <Routes>
+            {/* Auth Route */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<RegisterPage mode="buyer" />} />
+            <Route path="/buyer/register" element={<RegisterPage mode="buyer" />} />
+            <Route path="/dealer/apply" element={<RegisterPage mode="dealer" />} />
+            <Route path="/dealer/register" element={<RegisterPage mode="dealer" />} />
+            <Route path="/dealer/pending" element={<DealerPendingPage />} />
+            <Route path="/dealer/application-status" element={<DealerPendingPage />} />
 
-          {/* Public Buyer Routes (with Buyer Header/Footer Layout) */}
-          <Route element={<BuyerLayout />}>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/marketplace" element={<Marketplace />} />
-            <Route path="/marketplace/:listingId" element={<VehicleDetails />} />
-          </Route>
-
-          {/* Protected Dealer Portal Routes */}
-          <Route element={<RoleGuard allowedRoles={['dealer', 'admin']} />}>
-            <Route element={<DealerLayout />}>
-              <Route path="/dealer" element={<DealerDashboard />} />
-              <Route path="/dealer/listings" element={<ListingManager />} />
-              <Route path="/dealer/listings/new" element={<ListingForm />} />
-              <Route path="/dealer/uploads/new" element={<InventoryUpload />} />
-              <Route path="/dealer/uploads/:uploadId" element={<UploadDetails />} />
+            {/* Public Buyer Routes (with Buyer Header/Footer Layout) */}
+            <Route element={<BuyerLayout />}>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/marketplace" element={<Marketplace />} />
+              <Route path="/marketplace/:listingId" element={<VehicleDetails />} />
             </Route>
-          </Route>
 
-          {/* Protected Admin Console Routes */}
-          <Route element={<RoleGuard allowedRoles={['admin']} />}>
-            <Route element={<AdminLayout />}>
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/users" element={<UserManagement />} />
-              <Route path="/admin/dealers" element={<DealerApprovals />} />
-              <Route path="/admin/listings" element={<ListingMonitoring />} />
-              <Route path="/admin/uploads" element={<UploadMonitoring />} />
-              <Route path="/admin/audit-logs" element={<AuditLogs />} />
-              <Route path="/admin/system-health" element={<SystemHealth />} />
+            {/* Protected Dealer Portal Routes */}
+            <Route element={<RoleGuard allowedRoles={['dealer', 'admin']} />}>
+              <Route element={<DealerLayout />}>
+                <Route path="/dealer" element={<DealerDashboard />} />
+                <Route path="/dealer/listings" element={<ListingManager />} />
+                <Route path="/dealer/listings/new" element={<ListingForm />} />
+                <Route path="/dealer/listings/:listingId/edit" element={<ListingForm />} />
+                <Route path="/dealer/uploads/new" element={<InventoryUpload />} />
+                <Route path="/dealer/uploads/:uploadId" element={<UploadDetails />} />
+              </Route>
             </Route>
-          </Route>
 
-          {/* Fallback Catch-all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Protected Admin Console Routes */}
+            <Route element={<RoleGuard allowedRoles={['admin']} />}>
+              <Route element={<AdminLayout />}>
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/users" element={<UserManagement />} />
+                <Route path="/admin/dealers" element={<DealerApprovals />} />
+                <Route path="/admin/listings" element={<ListingMonitoring />} />
+                <Route path="/admin/uploads" element={<UploadMonitoring />} />
+                <Route path="/admin/audit-logs" element={<AuditLogs />} />
+              </Route>
+            </Route>
+
+            {/* Fallback Catch-all */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </AppProviders>
   );

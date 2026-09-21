@@ -1,132 +1,50 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { formatPrice, formatMileage, formatDate } from '@/shared/utils/formatters';
-import { ListingStatusBadge } from '@/features/listings/components/ListingStatusBadge';
-import { adminApi } from '@/features/admin/services/adminApi';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { LISTING_IMAGE_ASPECT_RATIO } from '@motorx/shared-contracts';
 import { listingApi } from '@/features/listings/services/listingApi';
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import { formatMileage, formatPrice } from '@/shared/utils/formatters';
+import { getMileageKm } from '@/features/listings/utils/vehicleAttributes';
+import { ListingStatusBadge } from '@/features/listings/components/ListingStatusBadge';
+
+const TABLE_THUMB_WIDTH = 44;
+const TABLE_THUMB_HEIGHT = Math.round(TABLE_THUMB_WIDTH / LISTING_IMAGE_ASPECT_RATIO);
 
 export const ListingManager: React.FC = () => {
   const { user } = useAuth();
   const [allListings, setAllListings] = useState<any[]>([]);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [view, setView] = useState<'active' | 'archived'>('active');
+  const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
+  const statsQuery = useQuery({ queryKey: ['my-listing-stats'], queryFn: () => listingApi.getMyListingStats() });
+  const query = useQuery({ queryKey: ['my-listings', page, search, statusFilter, view], queryFn: () => listingApi.getMyListings(page, 20, { search: search.trim() || undefined, status: view === 'archived' ? 'archived' : statusFilter === 'all' ? undefined : statusFilter }) });
+  const listings = query.data?.data ?? [];
+  const totalPages = query.data?.totalPages ?? 1;
 
-  useEffect(() => {
-    void adminApi.getListings().then(setAllListings).catch(() => setAllListings([]));
-  }, []);
+  const changeStatus = async (id: string, status: 'active' | 'sold' | 'archived') => {
+    await listingApi.updateListingStatus(id, { status });
+    await queryClient.invalidateQueries({ queryKey: ['my-listings'] });
+    await queryClient.invalidateQueries({ queryKey: ['listings'] });
+  };
 
-  const dealerListings = allListings.filter((l) => l.dealerId === user?.id);
-
-  const filteredListings = dealerListings.filter(l => {
-    if (statusFilter !== 'all' && l.status !== statusFilter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      return String(l.title ?? '').toLowerCase().includes(q) || String(l.make ?? '').toLowerCase().includes(q) || String(l.model ?? '').toLowerCase().includes(q) || String(l.vin ?? '').toLowerCase().includes(q) || String(l.plateNumber ?? '').toLowerCase().includes(q);
-    }
-    return true;
-  });
-
-  const removeListing = async (id: string) => {
-    if (!window.confirm('Permanently delete this vehicle listing?')) return;
+  const deleteVehicle = async (id: string, title: string) => {
+    if (!window.confirm(`Permanently delete "${title}"? This cannot be undone.`)) return;
     await listingApi.deleteListing(id);
-    setAllListings((current) => current.filter((listing) => listing.id !== id));
+    await queryClient.invalidateQueries({ queryKey: ['my-listings'] });
+    await queryClient.invalidateQueries({ queryKey: ['listings'] });
   };
 
-  const toggleListingStatus = async (listing: any) => {
-    const nextStatus = listing.status === 'active' ? 'sold' : 'active';
-    const updated = await listingApi.updateListingStatus(listing.id, nextStatus);
-    setAllListings((current) => current.map((item) => item.id === listing.id ? { ...item, status: updated.status } : item));
-  };
-
-  return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Manage Inventory</h1>
-          <p className="page-subtitle">View, edit, and update status for all your vehicle listings</p>
-        </div>
-        <Link to="/dealer/listings/new" className="btn btn-primary">
-          + Add New Vehicle
-        </Link>
-      </div>
-
-      {/* Filter controls */}
-      <div className="glass-card" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <input
-          type="text"
-          className="form-input"
-          placeholder="Search by VIN, plate, make, model, or title..."
-          style={{ width: 280 }}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-
-        <select
-          className="form-select"
-          style={{ width: 180 }}
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="all">All Statuses</option>
-          <option value="active">Active</option>
-          <option value="pending">Pending</option>
-          <option value="sold">Sold</option>
-          <option value="draft">Draft</option>
-        </select>
-      </div>
-
-      {/* Table */}
-      <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div className="table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Vehicle Title</th>
-                <th>Year</th>
-                <th>Price</th>
-                <th>Mileage</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredListings.map(listing => (
-                <tr key={listing.id}>
-                  <td style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <img
-                        src={Array.isArray(listing.images) ? listing.images[0]?.url : undefined}
-                        alt=""
-                        style={{ width: 44, height: 32, borderRadius: 4, objectFit: 'cover' }}
-                      />
-                      <span>{listing.title || `${listing.year} ${listing.make} ${listing.model}`}</span>
-                    </div>
-                  </td>
-                  <td>{listing.year}</td>
-                  <td style={{ fontWeight: 600, color: 'var(--color-accent-light)' }}>
-                    {formatPrice(listing.price)}
-                  </td>
-                  <td>{formatMileage(listing.mileage)}</td>
-                  <td><ListingStatusBadge status={listing.status} /></td>
-                  <td>{formatDate(listing.createdAt)}</td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <Link to={`/marketplace/${listing.id}`} className="btn btn-ghost btn-sm">View</Link>
-                      <Link to={`/dealer/listings/new?edit=${listing.id}`} className="btn btn-secondary btn-sm">Edit</Link>
-                      <button type="button" onClick={() => void toggleListingStatus(listing)} className={`btn btn-sm ${listing.status === 'active' ? 'btn-warning' : 'btn-success'}`}>
-                        {listing.status === 'active' ? 'Mark Sold' : 'Mark Active'}
-                      </button>
-                      <button type="button" onClick={() => void removeListing(listing.id)} className="btn btn-danger btn-sm">Delete</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+  return <div>
+    <div className="page-header"><div><h1 className="page-title">Manage Inventory</h1><p className="page-subtitle">Review, edit, and publish your vehicle listings.</p></div><Link to="/dealer/listings/new" className="btn btn-primary">+ Add New Vehicle</Link></div>
+    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+      <button className={`btn btn-sm ${view === 'active' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => { setView('active'); setPage(1); }}>My Listings</button>
+      <button className={`btn btn-sm ${view === 'archived' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => { setView('archived'); setPage(1); }}>Archived ({statsQuery.data?.archived ?? '—'})</button>
     </div>
-  );
+    <div className="glass-card" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem' }}><input className="form-input" placeholder="Search listings…" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />{view === 'active' && <select className="form-select" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}><option value="all">All statuses</option><option value="draft">Draft</option><option value="active">Active</option><option value="sold">Sold</option></select>}</div>
+    {query.isLoading && <div className="loading-spinner" style={{ margin: '3rem auto', display: 'block' }} />}
+    {query.isError && <div className="glass-card" style={{ padding: '1rem', color: 'var(--color-error)' }}>Could not load your listings.</div>}
+    {!query.isLoading && !query.isError && <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}><div className="table-container"><table className="data-table"><thead><tr><th>Vehicle</th><th>Year</th><th>Price</th><th>Mileage</th><th>Status</th><th>Actions</th></tr></thead><tbody>{listings.map((listing) => <tr key={listing.id}><td><div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>{listing.images[0]?.url && <img src={listing.images[0].url} alt="" style={{ width: TABLE_THUMB_WIDTH, height: TABLE_THUMB_HEIGHT, borderRadius: 4, objectFit: 'cover' }} />}<strong>{listing.title}</strong></div></td><td>{listing.year}</td><td>{formatPrice(listing.price, listing.currency)}</td><td>{formatMileage(getMileageKm(listing) ?? 0)}</td><td><ListingStatusBadge status={listing.status} /></td><td><div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}><Link to={`/dealer/listings/${listing.id}/edit`} className="btn btn-ghost btn-sm">Edit</Link>{listing.status === 'active' && <Link to={`/marketplace/${listing.id}`} className="btn btn-ghost btn-sm">Preview</Link>}{listing.status === 'draft' && <button className="btn btn-success btn-sm" onClick={() => void changeStatus(listing.id, 'active')}>Publish</button>}{listing.status === 'active' && <button className="btn btn-secondary btn-sm" onClick={() => void changeStatus(listing.id, 'sold')}>Mark sold</button>}{listing.status !== 'archived' && <button className="btn btn-danger btn-sm" onClick={() => void changeStatus(listing.id, 'archived')}>Archive</button>}{listing.status === 'archived' && <button className="btn btn-danger btn-sm" onClick={() => void deleteVehicle(listing.id, listing.title)}>Delete</button>}</div></td></tr>)}</tbody></table>{listings.length === 0 && <div className="empty-state"><p>{view === 'archived' ? 'No archived listings.' : 'No listings found.'}</p></div>}<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem' }}><button className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</button><span>Page {page} of {totalPages}</span><button className="btn btn-secondary btn-sm" disabled={page >= totalPages} onClick={() => setPage((current) => current + 1)}>Next</button></div></div></div>}
+  </div>;
 };

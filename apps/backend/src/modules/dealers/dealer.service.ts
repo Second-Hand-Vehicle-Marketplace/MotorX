@@ -1,127 +1,50 @@
-import { sendMail } from '../../config/mailer.js';
-import type { DealerApplicationModel, DealerStatus } from './dealer.model.js';
-import { DealerApplicationModel as DealerApplicationCollection, type DealerApplicationDocument } from './dealer-application.model.js';
+import type { Types } from 'mongoose';
+import type { DealerApplicationDto } from '@motorx/shared-contracts';
+import { AppError } from '../../shared/errors/AppError.js';
+import { errorCodes } from '../../shared/errors/errorCodes.js';
+import { notifyDealerApplicationSubmitted } from '../notifications/notification.service.js';
+import type { Dealer } from './dealer.model.js';
+import { createDealer, findDealerByUserId } from './dealer.repository.js';
+import type { CreateDealerApplicationBody } from './dealer.validation.js';
+import type { StoredDealerDocument } from './dealerDocument.storage.js';
 
-function toDomain(document: DealerApplicationDocument | null): DealerApplicationModel | null {
-  if (!document) {
-    return null;
-  }
-
+// Converts a MongoDB dealer record into the public API contract.
+function serializeDealer(dealer: Dealer & { _id: Types.ObjectId }): DealerApplicationDto {
   return {
-    id: String(document._id),
-    firebaseUid: document.firebaseUid ?? undefined,
-    applicantName: document.applicantName,
-    email: document.email,
-    businessName: document.businessName,
-    businessLicense: document.businessLicense,
-    phone: document.phone,
-    address: document.address,
-    status: document.status,
-    appliedAt: document.appliedAt.toISOString(),
-    reviewedAt: document.reviewedAt?.toISOString(),
-    reviewNotes: document.reviewNotes ?? undefined,
+    id: dealer._id.toString(), userId: dealer.userId.toString(), businessName: dealer.businessName,
+    registrationNumber: dealer.registrationNumber, phone: dealer.phone, address: dealer.address,
+    representativeName: dealer.representativeName ?? 'Not provided', city: dealer.city ?? 'Not provided', province: dealer.province ?? 'Not provided',
+    businessPhone: dealer.businessPhone ?? dealer.phone, businessEmail: dealer.businessEmail ?? 'Not provided',
+    website: dealer.website ?? null, dealershipType: dealer.dealershipType ?? 'used', brands: dealer.brands ?? [],
+    description: dealer.description ?? 'This application was submitted before the expanded dealer profile was introduced.',
+    inventoryCount: dealer.inventoryCount ?? null,
+    verificationDocuments: dealer.verificationDocuments ?? [],
+    status: dealer.status, rejectionReason: dealer.rejectionReason ?? null,
+    reviewedBy: dealer.reviewedBy?.toString() ?? null, reviewedAt: dealer.reviewedAt?.toISOString() ?? null,
+    createdAt: dealer.createdAt.toISOString(), updatedAt: dealer.updatedAt.toISOString(),
   };
 }
 
-export const dealerService = {
-  listApplications: async (): Promise<DealerApplicationModel[]> => {
-    const applications = await DealerApplicationCollection.find().sort({ appliedAt: -1 }).lean();
-    return applications.map((application) => ({
-      id: String(application._id),
-      firebaseUid: application.firebaseUid ?? undefined,
-      applicantName: application.applicantName,
-      email: application.email,
-      businessName: application.businessName,
-      businessLicense: application.businessLicense,
-      phone: application.phone,
-      address: application.address,
-      status: application.status,
-      appliedAt: new Date(application.appliedAt).toISOString(),
-      reviewedAt: application.reviewedAt ? new Date(application.reviewedAt).toISOString() : undefined,
-      reviewNotes: application.reviewNotes ?? undefined,
-    }));
-  },
+// Creates one unique application for an eligible buyer account.
+export async function submitDealerApplication(userId: Types.ObjectId, role: string, input: CreateDealerApplicationBody, verificationDocuments: StoredDealerDocument[]) {
+  if (role !== 'buyer') throw new AppError(409, errorCodes.conflict, 'Only buyer accounts can submit a dealer application.');
+  if (await findDealerByUserId(userId)) throw new AppError(409, errorCodes.conflict, 'A dealer application already exists for this account.');
+  try {
+    const dealer = serializeDealer((await createDealer(userId, { ...input, verificationDocuments })).toObject() as Dealer & { _id: Types.ObjectId });
+    await notifyDealerApplicationSubmitted(dealer.businessName);
+    return dealer;
+  }
+  catch (error: unknown) {
+    if (typeof error === 'object' && error !== null && 'code' in error && error.code === 11000)
+      throw new AppError(409, errorCodes.conflict, 'This account or registration number already has an application.');
+    throw error;
+  }
+}
 
-  findApplicationByEmail: async (email: string): Promise<DealerApplicationModel | null> => {
-    const application = await DealerApplicationCollection.findOne({ email: email.toLowerCase() });
-    return toDomain(application);
-  },
+// Returns the current user's dealer application and review state.
+export async function getMyDealerApplication(userId: Types.ObjectId) {
+  const dealer = await findDealerByUserId(userId);
+  if (!dealer) throw new AppError(404, errorCodes.notFound, 'No dealer application was found for this account.');
+  return serializeDealer(dealer as unknown as Dealer & { _id: Types.ObjectId });
+}
 
-  findApplicationById: async (id: string): Promise<DealerApplicationModel | null> => {
-    const application = await DealerApplicationCollection.findById(id);
-    return toDomain(application);
-  },
-
-  createApplication: async (
-    payload: Omit<DealerApplicationModel, 'id' | 'status' | 'appliedAt' | 'reviewedAt' | 'reviewNotes'>,
-  ): Promise<DealerApplicationModel> => {
-    const existing = await DealerApplicationCollection.findOne({ email: payload.email.toLowerCase() });
-
-    const nextStatus: DealerStatus = existing?.status === 'approved' ? 'approved' : 'pending';
-    const updated = await DealerApplicationCollection.findOneAndUpdate(
-      { email: payload.email.toLowerCase() },
-      {
-        $set: {
-          firebaseUid: payload.firebaseUid,
-          applicantName: payload.applicantName,
-          email: payload.email.toLowerCase(),
-          businessName: payload.businessName,
-          businessLicense: payload.businessLicense,
-          phone: payload.phone,
-          address: payload.address,
-          status: nextStatus,
-          reviewNotes: undefined,
-          reviewedAt: undefined,
-        },
-        $setOnInsert: {
-          appliedAt: new Date(),
-        },
-      },
-      { upsert: true, new: true },
-    );
-
-    const app = toDomain(updated);
-    if (!app) {
-      throw new Error('Failed to persist dealer application.');
-    }
-
-    void sendMail({
-      to: app.email,
-      subject: 'MotorX dealer registration received',
-      text: `Hello ${app.applicantName}, your dealership registration for ${app.businessName} was received and is pending admin approval.`,
-      html: `<p>Hello ${app.applicantName},</p><p>Your registration for <strong>${app.businessName}</strong> has been received and is pending admin approval.</p>`,
-    });
-
-    return app;
-  },
-
-  updateStatus: async (id: string, status: DealerStatus): Promise<DealerApplicationModel | null> => {
-    const application = await DealerApplicationCollection.findByIdAndUpdate(
-      id,
-      {
-        $set: {
-          status,
-          reviewedAt: new Date(),
-          reviewNotes: status === 'approved' ? 'Approved from admin console' : 'Rejected from admin console',
-        },
-      },
-      { new: true },
-    );
-
-    const normalized = toDomain(application);
-    if (!normalized) {
-      return null;
-    }
-
-    if (status === 'approved') {
-      void sendMail({
-        to: normalized.email,
-        subject: 'MotorX dealer approval confirmed',
-        text: `Congratulations ${normalized.applicantName}, your dealership ${normalized.businessName} has been approved and you can now sign in to the dealer portal.`,
-        html: `<p>Congratulations ${normalized.applicantName},</p><p>Your dealership <strong>${normalized.businessName}</strong> has been approved and you can now sign in to the dealer portal.</p>`,
-      });
-    }
-
-    return normalized;
-  },
-};

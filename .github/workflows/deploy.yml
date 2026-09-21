@@ -1,10 +1,240 @@
-name: deploy
+name: Deploy production
 
 on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - main
   workflow_dispatch:
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
   deploy:
+    name: Publish and deploy
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL }}
+
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ROLE_TO_ASSUME: ${{ vars.AWS_ROLE_TO_ASSUME }}
+      ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+      ECS_BACKEND_SERVICE: ${{ vars.ECS_BACKEND_SERVICE }}
+      ECS_BACKEND_TASK_FAMILY: ${{ vars.ECS_BACKEND_TASK_FAMILY }}
+      ECS_BACKEND_CONTAINER: ${{ vars.ECS_BACKEND_CONTAINER }}
+      ECS_WORKER_SERVICE: ${{ vars.ECS_WORKER_SERVICE }}
+      ECS_WORKER_TASK_FAMILY: ${{ vars.ECS_WORKER_TASK_FAMILY }}
+      ECS_WORKER_CONTAINER: ${{ vars.ECS_WORKER_CONTAINER }}
+      ECS_FRONTEND_SERVICE: ${{ vars.ECS_FRONTEND_SERVICE }}
+      ECS_FRONTEND_TASK_FAMILY: ${{ vars.ECS_FRONTEND_TASK_FAMILY }}
+      ECS_FRONTEND_CONTAINER: ${{ vars.ECS_FRONTEND_CONTAINER }}
+      ECR_BACKEND_REPOSITORY: ${{ vars.ECR_BACKEND_REPOSITORY }}
+      ECR_WORKER_REPOSITORY: ${{ vars.ECR_WORKER_REPOSITORY }}
+      ECR_FRONTEND_REPOSITORY: ${{ vars.ECR_FRONTEND_REPOSITORY }}
+      PRODUCTION_HEALTH_URL: ${{ vars.PRODUCTION_HEALTH_URL }}
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+      VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
+      VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
+      VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}
+      VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+      VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Select tested commit
+        id: release
+        shell: bash
+        env:
+          AUTOMATIC_SHA: ${{ github.event.workflow_run.head_sha }}
+          MANUAL_SHA: ${{ github.sha }}
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            if [[ "${GITHUB_REF}" != "refs/heads/main" ]]; then
+              echo "Manual production deployments must run from main." >&2
+              exit 1
+            fi
+            release_sha="${MANUAL_SHA}"
+          else
+            release_sha="${AUTOMATIC_SHA}"
+          fi
+
+          echo "sha=${release_sha}" >> "${GITHUB_OUTPUT}"
+          echo "Deploying commit ${release_sha}"
+
+      - name: Check out tested commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.release.outputs.sha }}
+
+      - name: Validate deployment variables
+        shell: bash
+        run: |
+          required_variables=(
+            AWS_REGION AWS_ROLE_TO_ASSUME ECS_CLUSTER
+            ECS_BACKEND_SERVICE ECS_BACKEND_TASK_FAMILY ECS_BACKEND_CONTAINER
+            ECS_WORKER_SERVICE ECS_WORKER_TASK_FAMILY ECS_WORKER_CONTAINER
+            ECS_FRONTEND_SERVICE ECS_FRONTEND_TASK_FAMILY ECS_FRONTEND_CONTAINER
+            ECR_BACKEND_REPOSITORY ECR_WORKER_REPOSITORY ECR_FRONTEND_REPOSITORY
+            PRODUCTION_HEALTH_URL
+            VITE_API_BASE_URL VITE_FIREBASE_API_KEY VITE_FIREBASE_AUTH_DOMAIN
+            VITE_FIREBASE_PROJECT_ID VITE_FIREBASE_STORAGE_BUCKET
+            VITE_FIREBASE_MESSAGING_SENDER_ID VITE_FIREBASE_APP_ID
+          )
+
+          for variable_name in "${required_variables[@]}"; do
+            if [[ -z "${!variable_name}" ]]; then
+              echo "Missing production environment variable: ${variable_name}" >&2
+              exit 1
+            fi
+          done
+
+      - name: Configure short-lived AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.2.3
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: motorx-${{ github.run_id }}
+
+      - name: Sign in to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and publish immutable images
+        id: images
+        shell: bash
+        env:
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
+        run: |
+          backend_image="${ECR_REGISTRY}/${ECR_BACKEND_REPOSITORY}:${RELEASE_SHA}"
+          worker_image="${ECR_REGISTRY}/${ECR_WORKER_REPOSITORY}:${RELEASE_SHA}"
+          frontend_image="${ECR_REGISTRY}/${ECR_FRONTEND_REPOSITORY}:${RELEASE_SHA}"
+
+          docker build --file infrastructure/docker/backend.Dockerfile --tag "${backend_image}" .
+          docker build --file infrastructure/docker/worker.Dockerfile --tag "${worker_image}" .
+          docker build \
+            --file infrastructure/docker/frontend.production.Dockerfile \
+            --build-arg VITE_API_BASE_URL="${VITE_API_BASE_URL}" \
+            --build-arg VITE_FIREBASE_API_KEY="${VITE_FIREBASE_API_KEY}" \
+            --build-arg VITE_FIREBASE_AUTH_DOMAIN="${VITE_FIREBASE_AUTH_DOMAIN}" \
+            --build-arg VITE_FIREBASE_PROJECT_ID="${VITE_FIREBASE_PROJECT_ID}" \
+            --build-arg VITE_FIREBASE_STORAGE_BUCKET="${VITE_FIREBASE_STORAGE_BUCKET}" \
+            --build-arg VITE_FIREBASE_MESSAGING_SENDER_ID="${VITE_FIREBASE_MESSAGING_SENDER_ID}" \
+            --build-arg VITE_FIREBASE_APP_ID="${VITE_FIREBASE_APP_ID}" \
+            --tag "${frontend_image}" \
+            .
+
+          publish_if_missing() {
+            local repository="$1"
+            local image="$2"
+
+            if aws ecr describe-images \
+              --repository-name "${repository}" \
+              --image-ids imageTag="${RELEASE_SHA}" \
+              > /dev/null 2>&1; then
+              echo "${image} already exists; keeping the immutable release image."
+            else
+              docker push "${image}"
+            fi
+          }
+
+          publish_if_missing "${ECR_BACKEND_REPOSITORY}" "${backend_image}"
+          publish_if_missing "${ECR_WORKER_REPOSITORY}" "${worker_image}"
+          publish_if_missing "${ECR_FRONTEND_REPOSITORY}" "${frontend_image}"
+
+          echo "backend=${backend_image}" >> "${GITHUB_OUTPUT}"
+          echo "worker=${worker_image}" >> "${GITHUB_OUTPUT}"
+          echo "frontend=${frontend_image}" >> "${GITHUB_OUTPUT}"
+
+      - name: Download active task definitions
+        shell: bash
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition "${ECS_BACKEND_TASK_FAMILY}" \
+            --query taskDefinition > "${RUNNER_TEMP}/backend-task-definition.json"
+          aws ecs describe-task-definition \
+            --task-definition "${ECS_WORKER_TASK_FAMILY}" \
+            --query taskDefinition > "${RUNNER_TEMP}/worker-task-definition.json"
+          aws ecs describe-task-definition \
+            --task-definition "${ECS_FRONTEND_TASK_FAMILY}" \
+            --query taskDefinition > "${RUNNER_TEMP}/frontend-task-definition.json"
+
+      - name: Render backend task definition
+        id: backend-task
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ runner.temp }}/backend-task-definition.json
+          container-name: ${{ env.ECS_BACKEND_CONTAINER }}
+          image: ${{ steps.images.outputs.backend }}
+
+      - name: Render worker task definition
+        id: worker-task
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ runner.temp }}/worker-task-definition.json
+          container-name: ${{ env.ECS_WORKER_CONTAINER }}
+          image: ${{ steps.images.outputs.worker }}
+
+      - name: Render frontend task definition
+        id: frontend-task
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ runner.temp }}/frontend-task-definition.json
+          container-name: ${{ env.ECS_FRONTEND_CONTAINER }}
+          image: ${{ steps.images.outputs.frontend }}
+
+      - name: Deploy worker
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.worker-task.outputs.task-definition }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          service: ${{ env.ECS_WORKER_SERVICE }}
+          wait-for-service-stability: true
+          wait-max-delay-seconds: 15
+
+      - name: Deploy backend
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.backend-task.outputs.task-definition }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          service: ${{ env.ECS_BACKEND_SERVICE }}
+          wait-for-service-stability: true
+          wait-max-delay-seconds: 15
+
+      - name: Deploy frontend
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.frontend-task.outputs.task-definition }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          service: ${{ env.ECS_FRONTEND_SERVICE }}
+          wait-for-service-stability: true
+          wait-max-delay-seconds: 15
+
+      - name: Verify production health
+        shell: bash
+        run: |
+          for attempt in {1..12}; do
+            if curl --fail --silent --show-error "${PRODUCTION_HEALTH_URL}"; then
+              exit 0
+            fi
+            echo "Health check attempt ${attempt}/12 failed; retrying in 10 seconds."
+            sleep 10
+          done
+
+          echo "Production health check failed: ${PRODUCTION_HEALTH_URL}" >&2
+          exit 1

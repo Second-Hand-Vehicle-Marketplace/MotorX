@@ -1,18 +1,44 @@
 import 'dotenv/config';
+import { z } from 'zod';
 
-export const env = {
-  NODE_ENV: process.env.NODE_ENV ?? 'development',
-  PORT: Number(process.env.PORT ?? 3000),
-  CORS_ORIGIN: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
-  MONGODB_URI: process.env.MONGODB_URI ?? 'mongodb://localhost:27017/motorx',
-  REDIS_URL: process.env.REDIS_URL ?? 'redis://localhost:6379',
-  SMTP_HOST: process.env.SMTP_HOST ?? 'smtp.gmail.com',
-  SMTP_PORT: Number(process.env.SMTP_PORT ?? 587),
-  SMTP_USER: process.env.SMTP_USER ?? '',
-  SMTP_PASS: process.env.SMTP_PASS ?? '',
-  FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID ?? 'motorx-aece4',
-  FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL ?? '',
-  FIREBASE_PRIVATE_KEY: (process.env.FIREBASE_PRIVATE_KEY ?? '').replace(/\\n/g, '\n'),
-  OWNER_ADMIN_EMAIL: process.env.OWNER_ADMIN_EMAIL ?? 'ajanmahendra918@gmail.com',
-  API_URL: process.env.VITE_API_URL ?? process.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1',
-} as const;
+const envSchema = z.object({
+  NODE_ENV: z
+    .enum(['development', 'test', 'production'])
+    .default('development'),
+
+  PORT: z.coerce.number().default(3000),
+
+  MONGODB_URI: z.string().trim().min(1),
+  REDIS_URL: z.string().url().default('redis://localhost:6379'),
+  INVENTORY_QUEUE_NAME: z.string().trim().min(1).default('inventory-processing'),
+
+  FIREBASE_PROJECT_ID: z.string().trim().min(1),
+  FIREBASE_CLIENT_EMAIL: z.string().trim().email(),
+  FIREBASE_PRIVATE_KEY: z.string().trim().min(1),
+
+  S3_ENDPOINT: z.string().url(),
+  S3_PUBLIC_URL: z.string().url().default('http://localhost:3000/api/v1/listing-images'),
+  S3_REGION: z.string().trim().min(1).default('us-east-1'),
+  S3_BUCKET: z.string().trim().min(1),
+  S3_ACCESS_KEY: z.string().trim().min(1),
+  S3_SECRET_KEY: z.string().trim().min(1),
+  S3_FORCE_PATH_STYLE: z.string().default('true').transform((value) => value === 'true'),
+  MAX_IMAGE_SIZE_MB: z.coerce.number().positive().default(10),
+  MAX_LISTING_IMAGES: z.coerce.number().int().positive().max(30).default(10),
+  ALLOWED_IMAGE_TYPES: z.string().default('image/jpeg,image/png,image/webp').transform((value) => value.split(',').map((type) => type.trim())),
+  MAX_FILE_SIZE_MB: z.coerce.number().positive().default(20),
+  ALLOWED_UPLOAD_TYPES: z.string().default('text/csv,application/csv,application/vnd.ms-excel').transform((value) => value.split(',').map((type) => type.trim())),
+  MAX_IMAGE_ZIP_SIZE_MB: z.coerce.number().positive().default(50),
+  HF_API_KEY: z.string().trim().optional(),
+  HF_EMBEDDING_MODEL: z.string().trim().min(1).default('sentence-transformers/all-MiniLM-L6-v2'),
+  EMBEDDING_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(30_000).default(4_000),
+  ATLAS_VECTOR_INDEX: z.string().trim().min(1).default('listing_embedding_index'),
+
+  SMTP_HOST: z.string().trim().min(1),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_USER: z.string().trim().min(1),
+  SMTP_PASS: z.string().trim().min(1),
+  SMTP_FROM: z.string().trim().min(1).optional(),
+});
+
+export const env = envSchema.parse(process.env);

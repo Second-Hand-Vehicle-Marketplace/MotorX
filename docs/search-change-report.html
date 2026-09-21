@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.37">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>MotorX Search System Change Report</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="search-change-report_files/libs/clipboard/clipboard.min.js"></script>
+<script src="search-change-report_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="search-change-report_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="search-change-report_files/libs/quarto-html/popper.min.js"></script>
+<script src="search-change-report_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="search-change-report_files/libs/quarto-html/anchor.min.js"></script>
+<link href="search-change-report_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="search-change-report_files/libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="search-change-report_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="search-change-report_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="search-change-report_files/libs/bootstrap/bootstrap-efbb37e9afcc02144ebbc7afd12a776f.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">MotorX Search System Change Report</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="executive-summary" class="level2">
+<h2 class="anchored" data-anchor-id="executive-summary">1. Executive summary</h2>
+<p>The MotorX buyer search capability was changed from a basic marketplace keyword/filter implementation into a complete search subsystem. The delivered system now supports structured filtering, natural-language interpretation, typo correction, semantic embeddings, bounded hybrid ranking, graceful fallback behavior, an accessible buyer interface, and production-oriented database and frontend performance controls.</p>
+<p>The work covered the backend API, MongoDB schema and indexes, ETL worker, shared contracts, frontend application, automated tests, environment configuration, and deployment documentation.</p>
+<p>The three questions used throughout this report are:</p>
+<ul>
+<li><strong>What changed?</strong> The component, behavior, contract, or configuration that was added or modified.</li>
+<li><strong>Why was it changed?</strong> The functional requirement, quality problem, risk, or user need addressed by the change.</li>
+<li><strong>How was it implemented?</strong> The concrete technical approach used in MotorX.</li>
+</ul>
+</section>
+<section id="system-behavior-before-and-after" class="level2">
+<h2 class="anchored" data-anchor-id="system-behavior-before-and-after">2. System behavior before and after</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Area</th>
+<th>Before</th>
+<th>After</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Structured filters</td>
+<td>Make, model, category, fuel, transmission, condition, body type, year, and price</td>
+<td>Existing filters plus location and minimum/maximum mileage, with range consistency validation</td>
+</tr>
+<tr class="even">
+<td>Search ownership</td>
+<td>Search logic existed inside the buyer repository; the search module was a placeholder</td>
+<td>The search module owns reusable filtering and intelligent retrieval; buyer browsing delegates to it</td>
+</tr>
+<tr class="odd">
+<td>Natural language</td>
+<td>Not implemented</td>
+<td>Rule-based extraction of price, mileage, year, location, vehicle type, body type, fuel, transmission, condition, make, and model</td>
+</tr>
+<tr class="even">
+<td>Typo handling</td>
+<td>Exact or regex matching only</td>
+<td>Bounded edit-distance correction for known makes and models</td>
+</tr>
+<tr class="odd">
+<td>Semantic search</td>
+<td>No real semantic search route</td>
+<td>384-dimensional listing/query embeddings and Atlas Vector Search integration</td>
+</tr>
+<tr class="even">
+<td>Ranking</td>
+<td>Database sort only</td>
+<td>Structured-only execution or combined semantic and lexical relevance ranking</td>
+</tr>
+<tr class="odd">
+<td>Failure behavior</td>
+<td>Search failed when its data/API path failed</td>
+<td>Semantic failures degrade to lexical ranking; the UI provides retry and preserves previous results during refresh</td>
+</tr>
+<tr class="even">
+<td>Frontend requests</td>
+<td>One request could be generated for every input change</td>
+<td>Natural-language input is debounced by 350 milliseconds</td>
+</tr>
+<tr class="odd">
+<td>Frontend loading</td>
+<td>All route screens were included in a large initial bundle</td>
+<td>Route-level lazy loading and stable vendor chunks</td>
+</tr>
+<tr class="even">
+<td>Existing listings</td>
+<td>No embedding migration mechanism</td>
+<td>Repeatable embedding backfill command with missing-only and <code>--all</code> modes</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="structured-filtering-and-validation" class="level2">
+<h2 class="anchored" data-anchor-id="structured-filtering-and-validation">3. Structured filtering and validation</h2>
+<section id="location-and-mileage-filters" class="level3">
+<h3 class="anchored" data-anchor-id="location-and-mileage-filters">3.1 Location and mileage filters</h3>
+<p><strong>What changed</strong></p>
+<p>The listing query contract now accepts:</p>
+<ul>
+<li><code>location</code></li>
+<li><code>mileageMin</code></li>
+<li><code>mileageMax</code></li>
+</ul>
+<p>Matching frontend filter fields and TypeScript types were added.</p>
+<p><strong>Why it changed</strong></p>
+<p>Location and mileage are major buyer decision criteria and were already part of listing data, but were not searchable. Without them, the structured-search requirements were incomplete and natural-language phrases such as “near Colombo” or “under 50,000 km” could not be applied accurately.</p>
+<p><strong>How it works</strong></p>
+<p>The backend validates location as bounded trimmed text and mileage as non-negative numbers. The shared repository applies a case-insensitive location match and a MongoDB range expression against <code>attributes.mileageKm</code>. The marketplace exposes corresponding input controls and forwards them to either browse or natural-language search.</p>
+</section>
+<section id="range-consistency-checks" class="level3">
+<h3 class="anchored" data-anchor-id="range-consistency-checks">3.2 Range consistency checks</h3>
+<p><strong>What changed</strong></p>
+<p>Year, price, and mileage filters now reject an inverted range, such as <code>priceMin=2000000</code> with <code>priceMax=1000000</code>.</p>
+<p><strong>Why it changed</strong></p>
+<p>An inverted range can never return a valid result and previously caused unnecessary database work while presenting an unexplained empty result to the user.</p>
+<p><strong>How it works</strong></p>
+<p>Zod <code>superRefine</code> checks compare each minimum/maximum pair. Invalid requests return the project’s standard HTTP 400 validation envelope before reaching MongoDB.</p>
+</section>
+<section id="bounded-requests" class="level3">
+<h3 class="anchored" data-anchor-id="bounded-requests">3.3 Bounded requests</h3>
+<p><strong>What changed</strong></p>
+<p>Natural-language queries are limited to 200 characters, search pages to 50 results, and all pagination values must be positive integers.</p>
+<p><strong>Why it changed</strong></p>
+<p>Public search endpoints need predictable CPU, memory, provider, and database costs. Bounds also reduce abuse potential and prevent accidental oversized requests.</p>
+<p><strong>How it works</strong></p>
+<p>The search route runs all query parameters through <code>searchQuerySchema</code> before the controller executes. Invalid values never enter the analyzer, regular expressions, embedding provider, or database.</p>
+</section>
+</section>
+<section id="search-architecture" class="level2">
+<h2 class="anchored" data-anchor-id="search-architecture">4. Search architecture</h2>
+<section id="dedicated-search-module" class="level3">
+<h3 class="anchored" data-anchor-id="dedicated-search-module">4.1 Dedicated search module</h3>
+<p><strong>What changed</strong></p>
+<p>The one-line search placeholder was replaced with:</p>
+<ul>
+<li><code>search.routes.ts</code></li>
+<li><code>search.validation.ts</code></li>
+<li><code>search.controller.ts</code></li>
+<li><code>search.service.ts</code></li>
+<li><code>search.repository.ts</code></li>
+<li><code>search.queryAnalyzer.ts</code></li>
+<li><code>search.embedding.ts</code></li>
+</ul>
+<p>The router is mounted at <code>GET /api/v1/search</code>.</p>
+<p><strong>Why it changed</strong></p>
+<p>Search combines validation, interpretation, structured retrieval, vector retrieval, ranking, and degradation logic. Keeping all of this in the buyer repository would mix public-page behavior with retrieval infrastructure and cause duplicated filter rules.</p>
+<p><strong>How it works</strong></p>
+<p>The request flows through a standard module chain:</p>
+<pre class="text"><code>HTTP request
+  -&gt; validation
+  -&gt; controller
+  -&gt; query analyzer
+  -&gt; search service
+  -&gt; structured/vector repositories
+  -&gt; ranking and pagination
+  -&gt; standard API response</code></pre>
+<p>The buyer browse repository now delegates to <code>listStructuredListings</code>, ensuring browse and intelligent search apply the same public-listing rules.</p>
+</section>
+<section id="single-reusable-filter-builder" class="level3">
+<h3 class="anchored" data-anchor-id="single-reusable-filter-builder">4.2 Single reusable filter builder</h3>
+<p><strong>What changed</strong></p>
+<p>All marketplace retrieval now uses one <code>buildListingFilter</code> function.</p>
+<p><strong>Why it changed</strong></p>
+<p>Separate filter implementations can drift. A field might work in the sidebar but not in natural language, or one route might accidentally expose inactive listings.</p>
+<p><strong>How it works</strong></p>
+<p>The builder always begins with <code>status: active</code>, then adds validated make, model, location, category, attribute, and numeric range conditions. Both <code>/listings</code> and <code>/search</code> reuse it.</p>
+</section>
+</section>
+<section id="natural-language-query-interpretation" class="level2">
+<h2 class="anchored" data-anchor-id="natural-language-query-interpretation">5. Natural-language query interpretation</h2>
+<section id="rule-based-analyzer" class="level3">
+<h3 class="anchored" data-anchor-id="rule-based-analyzer">5.1 Rule-based analyzer</h3>
+<p><strong>What changed</strong></p>
+<p>Queries such as:</p>
+<pre class="text"><code>affordable automatic SUV under 2 million near Colombo</code></pre>
+<p>are converted into structured search constraints.</p>
+<p><strong>Why it changed</strong></p>
+<p>Buyers should not need to understand database field names or configure every sidebar input. The SRS explicitly requires natural-language extraction, and a local rules engine avoids adding another hosted AI dependency for deterministic information.</p>
+<p><strong>How it works</strong></p>
+<p>The analyzer:</p>
+<ol type="1">
+<li>Normalizes casing, whitespace, and unsupported punctuation.</li>
+<li>Extracts mileage expressions before price expressions so “under 50,000 km” cannot be mistaken for a price.</li>
+<li>Recognizes million, lakh, and thousand units.</li>
+<li>Extracts exact years and “after/before” ranges.</li>
+<li>Extracts location phrases introduced by “near,” “around,” or “in.”</li>
+<li>Maps vehicle, fuel, transmission, condition, and body-style vocabulary to stored enum values.</li>
+<li>Detects known makes and models.</li>
+<li>Returns unconsumed meaningful words as residual semantic intent.</li>
+</ol>
+<p>For example, “SUV” becomes <code>category=car</code> and <code>bodyType=suv</code>, matching the actual MotorX data model instead of inventing an invalid top-level <code>suv</code> category.</p>
+</section>
+<section id="fuzzy-make-and-model-correction" class="level3">
+<h3 class="anchored" data-anchor-id="fuzzy-make-and-model-correction">5.2 Fuzzy make and model correction</h3>
+<p><strong>What changed</strong></p>
+<p>Common errors such as <code>toyata</code>, <code>corola</code>, and <code>hyundia</code> can be corrected to known vocabulary.</p>
+<p><strong>Why it changed</strong></p>
+<p>Exact matching makes small typing mistakes appear to have no inventory. This creates false zero-result searches and makes the product feel unreliable.</p>
+<p><strong>How it works</strong></p>
+<p>A bounded Levenshtein edit-distance calculation compares eligible tokens against a controlled make/model vocabulary. Short terms permit one edit and longer terms permit up to two. The correction is returned in <code>correctedTerms</code>, allowing future UI feedback or analytics without silently losing the original query.</p>
+</section>
+</section>
+<section id="embedding-generation-and-semantic-search" class="level2">
+<h2 class="anchored" data-anchor-id="embedding-generation-and-semantic-search">6. Embedding generation and semantic search</h2>
+<section id="shared-384-dimensional-embedding-contract" class="level3">
+<h3 class="anchored" data-anchor-id="shared-384-dimensional-embedding-contract">6.1 Shared 384-dimensional embedding contract</h3>
+<p><strong>What changed</strong></p>
+<p>The earlier 32-value character-position hash was replaced with a shared 384-dimensional normalized embedding contract.</p>
+<p><strong>Why it changed</strong></p>
+<p>Character-position hashes do not represent meaning and cannot satisfy semantic search. Listing and query vectors must also have identical dimensions and normalization rules for cosine similarity to be meaningful.</p>
+<p><strong>How it works</strong></p>
+<p>The shared-contract package provides:</p>
+<ul>
+<li>The fixed dimension count (<code>384</code>).</li>
+<li>Listing text composition from title, make, model, year, category, location, description, and attributes.</li>
+<li>Provider response normalization.</li>
+<li>A deterministic normalized local token embedding when no hosted key is configured.</li>
+</ul>
+<p>When <code>HF_API_KEY</code> is configured, the backend and worker use the same <code>HF_EMBEDDING_MODEL</code>, defaulting to <code>sentence-transformers/all-MiniLM-L6-v2</code>.</p>
+</section>
+<section id="provider-timeouts-and-safe-degradation" class="level3">
+<h3 class="anchored" data-anchor-id="provider-timeouts-and-safe-degradation">6.2 Provider timeouts and safe degradation</h3>
+<p><strong>What changed</strong></p>
+<p>Embedding requests have a four-second timeout. Search continues in lexical mode if query embedding or vector retrieval fails.</p>
+<p><strong>Why it changed</strong></p>
+<p>The project target is semantic search under five seconds. An unavailable external provider must not make the marketplace search unavailable.</p>
+<p><strong>How it works</strong></p>
+<p>Embedding calls use a configured timeout. The hybrid branch catches provider or Atlas errors and returns <code>mode: lexical-fallback</code>. Manual and CSV listing creation remain available even if a listing embedding cannot be generated; the missing vector can be populated later by the backfill process.</p>
+</section>
+<section id="worker-integration" class="level3">
+<h3 class="anchored" data-anchor-id="worker-integration">6.3 Worker integration</h3>
+<p><strong>What changed</strong></p>
+<p>Valid CSV rows receive embeddings before batch persistence.</p>
+<p><strong>Why it changed</strong></p>
+<p>Semantic retrieval only works when imported inventory and manually created inventory both contain comparable vectors.</p>
+<p><strong>How it works</strong></p>
+<p>After validation and duplicate detection, the worker composes searchable text and generates an embedding. A pool of at most eight concurrent embedding operations is used per batch.</p>
+<p>This improves efficiency because it is faster than processing records strictly one by one, while avoiding hundreds of simultaneous provider calls that could exhaust sockets, memory, or provider rate limits.</p>
+</section>
+<section id="manual-listing-integration" class="level3">
+<h3 class="anchored" data-anchor-id="manual-listing-integration">6.4 Manual listing integration</h3>
+<p><strong>What changed</strong></p>
+<p>Dealer-created listings receive embeddings at creation. Changes to searchable listing fields trigger regeneration.</p>
+<p><strong>Why it changed</strong></p>
+<p>Only embedding CSV imports would create inconsistent search quality. Updated listings also require refreshed vectors or semantic ranking would use stale content.</p>
+<p><strong>How it works</strong></p>
+<p>Creation embeds the validated input. Updates recompute when title, make, model, year, location, description, or attributes change. If regeneration fails, the stale embedding is removed so an old semantic representation cannot incorrectly rank the updated listing.</p>
+</section>
+<section id="existing-listing-backfill" class="level3">
+<h3 class="anchored" data-anchor-id="existing-listing-backfill">6.5 Existing-listing backfill</h3>
+<p><strong>What changed</strong></p>
+<p>A backfill script and npm command were added.</p>
+<p><strong>Why it changed</strong></p>
+<p>Schema changes do not automatically populate old documents. Without a migration, only newly created inventory would participate in vector search.</p>
+<p><strong>How it works</strong></p>
+<p>The command below processes every listing:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run search:backfill <span class="at">--workspace</span> @motorx/backend <span class="at">--</span> <span class="at">--all</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Without <code>--all</code>, it only processes listings with missing or empty embeddings. The script uses a cursor and batch size instead of loading the entire collection into memory.</p>
+</section>
+</section>
+<section id="hybrid-ranking" class="level2">
+<h2 class="anchored" data-anchor-id="hybrid-ranking">7. Hybrid ranking</h2>
+<section id="structured-pre-filtering" class="level3">
+<h3 class="anchored" data-anchor-id="structured-pre-filtering">7.1 Structured pre-filtering</h3>
+<p><strong>What changed</strong></p>
+<p>Semantic search is restricted using extracted structured conditions before relevance is calculated.</p>
+<p><strong>Why it changed</strong></p>
+<p>A semantically similar listing is still wrong if it violates a buyer’s hard constraints. For example, a manual petrol sedan should not outrank an automatic electric SUV when those properties were requested.</p>
+<p><strong>How it works</strong></p>
+<p>The vector stage receives exact and range-compatible filters. Full make, model, and location checks are applied before vector candidates enter the merged result set. Every result remains subject to <code>status: active</code>.</p>
+</section>
+<section id="combined-relevance-score" class="level3">
+<h3 class="anchored" data-anchor-id="combined-relevance-score">7.2 Combined relevance score</h3>
+<p><strong>What changed</strong></p>
+<p>Search results can be ordered by a combined score rather than creation date alone.</p>
+<p><strong>Why it changed</strong></p>
+<p>Semantic similarity captures intent, while lexical matching rewards exact terms. Either signal alone has weaknesses.</p>
+<p><strong>How it works</strong></p>
+<p>The ranking score uses:</p>
+<ul>
+<li>65% vector similarity.</li>
+<li>35% lexical token/phrase matching.</li>
+</ul>
+<p>Structured constraints are enforced as filters instead of weak scoring signals. This prevents a high semantic score from overriding a required price, year, or vehicle type.</p>
+</section>
+<section id="bounded-candidate-sets" class="level3">
+<h3 class="anchored" data-anchor-id="bounded-candidate-sets">7.3 Bounded candidate sets</h3>
+<p><strong>What changed</strong></p>
+<p>Hybrid ranking considers at most 300 structured candidates and 200 vector candidates.</p>
+<p><strong>Why it changed</strong></p>
+<p>Application-side ranking of an unbounded collection would increase memory use and response time as inventory grows.</p>
+<p><strong>How it works</strong></p>
+<p>MongoDB returns capped candidate sets. The service merges them by listing ID, applies full filter checks, calculates scores, sorts, and then paginates. Structured and vector candidate requests run concurrently to reduce total wall-clock latency.</p>
+</section>
+<section id="database-execution-limits" class="level3">
+<h3 class="anchored" data-anchor-id="database-execution-limits">7.4 Database execution limits</h3>
+<p><strong>What changed</strong></p>
+<p>Structured operations use a 1.8-second MongoDB execution limit; vector aggregation uses a 4.5-second limit.</p>
+<p><strong>Why it changed</strong></p>
+<p>These limits align database work with the Sprint 6 response-time goals and prevent a pathological query from occupying resources indefinitely.</p>
+<p><strong>How it works</strong></p>
+<p>Mongoose <code>maxTimeMS</code> is applied to listing queries, counts, and vector aggregation. A query exceeding the limit fails explicitly instead of silently degrading the whole API under load.</p>
+</section>
+</section>
+<section id="database-indexing-and-data-model" class="level2">
+<h2 class="anchored" data-anchor-id="database-indexing-and-data-model">8. Database indexing and data model</h2>
+<section id="listing-embedding-field" class="level3">
+<h3 class="anchored" data-anchor-id="listing-embedding-field">8.1 Listing embedding field</h3>
+<p><strong>What changed</strong></p>
+<p>Listings now support an optional numeric <code>embedding</code> array.</p>
+<p><strong>Why it changed</strong></p>
+<p>Atlas Vector Search requires the vector to be stored with the searchable document.</p>
+<p><strong>How it works</strong></p>
+<p>The Mongoose field uses <code>[Number]</code>, is optional, and is excluded from normal query projections through <code>select: false</code>. Buyers therefore do not download 384 floating-point values with every listing card.</p>
+</section>
+<section id="compound-indexes" class="level3">
+<h3 class="anchored" data-anchor-id="compound-indexes">8.2 Compound indexes</h3>
+<p><strong>What changed</strong></p>
+<p>Indexes were added for the real marketplace filter patterns:</p>
+<ul>
+<li>Status, category, and price.</li>
+<li>Status, category, and year.</li>
+<li>Status, fuel type, and transmission.</li>
+<li>Status, body type, and condition.</li>
+<li>Status and mileage.</li>
+<li>Status and location.</li>
+</ul>
+<p><strong>Why it changed</strong></p>
+<p>Filtering without suitable indexes forces MongoDB to inspect more documents as inventory grows. Since every public query includes active status, leading indexes with status makes them align with actual access patterns.</p>
+<p><strong>How it works</strong></p>
+<p>Indexes are declared on the listing schema with stable names. Atlas vector index configuration is documented separately because it is managed by Atlas rather than ordinary Mongoose index creation.</p>
+</section>
+</section>
+<section id="frontend-search-experience" class="level2">
+<h2 class="anchored" data-anchor-id="frontend-search-experience">9. Frontend search experience</h2>
+<section id="dedicated-search-api-use" class="level3">
+<h3 class="anchored" data-anchor-id="dedicated-search-api-use">9.1 Dedicated search API use</h3>
+<p><strong>What changed</strong></p>
+<p>The marketplace uses <code>/search</code> when a <code>q</code> value exists and <code>/listings</code> for filter-only browsing.</p>
+<p><strong>Why it changed</strong></p>
+<p>Natural-language interpretation and relevance ranking should not add cost to ordinary browse requests.</p>
+<p><strong>How it works</strong></p>
+<p>The React Query hook selects the correct API method from filter state. Search requests default to relevance; browse requests retain newest-first behavior.</p>
+</section>
+<section id="debounced-input" class="level3">
+<h3 class="anchored" data-anchor-id="debounced-input">9.2 Debounced input</h3>
+<p><strong>What changed</strong></p>
+<p>The smart-search input waits 350 milliseconds after typing stops before changing the query.</p>
+<p><strong>Why it changed</strong></p>
+<p>Sending a request for every keystroke wastes browser, network, backend, database, and embedding-provider capacity. It also causes visible result flicker.</p>
+<p><strong>How it works</strong></p>
+<p>A React effect starts a timer after input changes and cancels the previous timer during cleanup. React Query keeps the previous result set visible while the replacement request is being fetched.</p>
+</section>
+<section id="url-compatible-search" class="level3">
+<h3 class="anchored" data-anchor-id="url-compatible-search">9.3 URL-compatible search</h3>
+<p><strong>What changed</strong></p>
+<p>Landing-page searches navigate to <code>/marketplace?q=...</code>, and the marketplace initializes itself from <code>q</code>. The previous <code>search</code> query parameter is still recognized for compatibility.</p>
+<p><strong>Why it changed</strong></p>
+<p>Searches should survive navigation and support direct links. Compatibility avoids breaking older links.</p>
+<p><strong>How it works</strong></p>
+<p>React Router reads and replaces the search parameter. Clearing all filters also clears the URL query.</p>
+</section>
+<section id="user-feedback-states" class="level3">
+<h3 class="anchored" data-anchor-id="user-feedback-states">9.4 User feedback states</h3>
+<p><strong>What changed</strong></p>
+<p>The page provides:</p>
+<ul>
+<li>Initial loading status.</li>
+<li>Background “Updating…” status.</li>
+<li>Explicit error message and retry control.</li>
+<li>Result counts.</li>
+<li>Search-specific empty state and clear action.</li>
+<li>Relevance sorting when natural-language search is active.</li>
+</ul>
+<p><strong>Why it changed</strong></p>
+<p>Users need to distinguish “still loading,” “no matching inventory,” and “the system failed.” Treating all three as an empty grid makes the interface confusing.</p>
+<p><strong>How it works</strong></p>
+<p>React Query state drives mutually exclusive UI states. Live regions and alert roles expose asynchronous changes to assistive technology.</p>
+</section>
+<section id="accessibility" class="level3">
+<h3 class="anchored" data-anchor-id="accessibility">9.5 Accessibility</h3>
+<p><strong>What changed</strong></p>
+<p>Search controls now include explicit labels or accessible names, pagination announces the current page, loading/error states have semantic roles, keyboard focus is visible, and reduced-motion preferences are honored.</p>
+<p><strong>Why it changed</strong></p>
+<p>Search is a core public workflow and must remain usable without a mouse, with a screen reader, or by users sensitive to animation.</p>
+<p><strong>How it works</strong></p>
+<p>The implementation uses <code>label</code>, <code>aria-label</code>, <code>aria-live</code>, <code>aria-current</code>, semantic <code>nav</code>, <code>role=status</code>, <code>role=alert</code>, <code>:focus-visible</code>, and <code>prefers-reduced-motion</code> CSS.</p>
+</section>
+<section id="responsive-layout" class="level3">
+<h3 class="anchored" data-anchor-id="responsive-layout">9.6 Responsive layout</h3>
+<p><strong>What changed</strong></p>
+<p>The filter/results layout, result toolbar, range inputs, and error controls adapt to tablet and mobile widths.</p>
+<p><strong>Why it changed</strong></p>
+<p>Fixed-width sidebars and toolbars can overflow or become difficult to operate on small screens.</p>
+<p><strong>How it works</strong></p>
+<p>CSS switches the desktop row layout to a column, uses <code>minmax(0, 1fr)</code> for range inputs, prevents result-grid overflow, and stacks controls at narrow breakpoints.</p>
+</section>
+</section>
+<section id="frontend-delivery-efficiency" class="level2">
+<h2 class="anchored" data-anchor-id="frontend-delivery-efficiency">10. Frontend delivery efficiency</h2>
+<section id="route-level-code-splitting" class="level3">
+<h3 class="anchored" data-anchor-id="route-level-code-splitting">10.1 Route-level code splitting</h3>
+<p><strong>What changed</strong></p>
+<p>Authentication, buyer, dealer, and admin screens are loaded through <code>React.lazy</code> and <code>Suspense</code>.</p>
+<p><strong>Why it changed</strong></p>
+<p>Marketplace buyers should not download dealer upload forms and admin dashboards before they are needed. The first production build reported a 648.69 kB JavaScript entry chunk.</p>
+<p><strong>How it works</strong></p>
+<p>Each route screen is emitted as a separate Vite chunk and loaded on navigation. A small accessible loading indicator is rendered while a route chunk downloads.</p>
+</section>
+<section id="vendor-chunking" class="level3">
+<h3 class="anchored" data-anchor-id="vendor-chunking">10.2 Vendor chunking</h3>
+<p><strong>What changed</strong></p>
+<p>React, Firebase, React Query, and Axios are emitted as stable vendor chunks.</p>
+<p><strong>Why it changed</strong></p>
+<p>Large third-party libraries change less frequently than application code. Separating them improves browser caching and removed the Vite oversized-chunk warning.</p>
+<p><strong>How it works</strong></p>
+<p>Vite/Rollup <code>manualChunks</code> groups dependencies by package. The final build produced:</p>
+<ul>
+<li>Main application chunk: approximately 74.37 kB, 19.46 kB gzip.</li>
+<li>Marketplace route: approximately 10.55 kB, 2.96 kB gzip.</li>
+<li>Separate React, Firebase, Query, and HTTP vendor chunks.</li>
+</ul>
+<p>This is a substantial improvement over the original 648.69 kB single entry bundle.</p>
+</section>
+</section>
+<section id="security-reliability-and-maintainability" class="level2">
+<h2 class="anchored" data-anchor-id="security-reliability-and-maintainability">11. Security, reliability, and maintainability</h2>
+<section id="regex-safety" class="level3">
+<h3 class="anchored" data-anchor-id="regex-safety">11.1 Regex safety</h3>
+<p><strong>What changed</strong></p>
+<p>All user-provided text is escaped before constructing MongoDB regular expressions.</p>
+<p><strong>Why it changed</strong></p>
+<p>Raw regex syntax could alter matching behavior or create expensive patterns.</p>
+<p><strong>How it works</strong></p>
+<p><code>escapeSearchRegex</code> treats special characters as literal input. Query length limits provide another bound.</p>
+</section>
+<section id="public-data-boundary" class="level3">
+<h3 class="anchored" data-anchor-id="public-data-boundary">11.2 Public-data boundary</h3>
+<p><strong>What changed</strong></p>
+<p>Every search path centrally enforces active-listing status.</p>
+<p><strong>Why it changed</strong></p>
+<p>Draft, sold, or archived dealer inventory must not appear in buyer search, regardless of whether the request is structured, fuzzy, semantic, or fallback.</p>
+<p><strong>How it works</strong></p>
+<p>Both ordinary and vector filter builders start with <code>status: active</code>; full candidate checks run again before ranking vector candidates.</p>
+</section>
+<section id="graceful-semantic-fallback" class="level3">
+<h3 class="anchored" data-anchor-id="graceful-semantic-fallback">11.3 Graceful semantic fallback</h3>
+<p><strong>What changed</strong></p>
+<p>Semantic search is an enhancement rather than a single point of failure.</p>
+<p><strong>Why it changed</strong></p>
+<p>Atlas Vector Search may be unavailable in local MongoDB, and hosted embedding services can time out or rate-limit requests.</p>
+<p><strong>How it works</strong></p>
+<p>The service catches semantic-path errors and uses lexical ranking. The response reports the actual mode so operations teams can monitor degradation.</p>
+</section>
+<section id="configuration-validation" class="level3">
+<h3 class="anchored" data-anchor-id="configuration-validation">11.4 Configuration validation</h3>
+<p><strong>What changed</strong></p>
+<p>Embedding model, timeout, and Atlas index name are typed environment settings with defaults.</p>
+<p><strong>Why it changed</strong></p>
+<p>Hardcoded infrastructure names make deployment changes risky, while unvalidated numeric settings can cause unexpected behavior.</p>
+<p><strong>How it works</strong></p>
+<p>Backend and worker Zod environment schemas parse the values at startup. Example environment files document every setting.</p>
+</section>
+<section id="maintainable-api-contract" class="level3">
+<h3 class="anchored" data-anchor-id="maintainable-api-contract">11.5 Maintainable API contract</h3>
+<p><strong>What changed</strong></p>
+<p>The API documentation now describes <code>/search</code>, accepted filters, response metadata, modes, and bounds.</p>
+<p><strong>Why it changed</strong></p>
+<p>Frontend, backend, testing, and deployment work need one explicit integration contract.</p>
+<p><strong>How it works</strong></p>
+<p>The endpoint returns the standard MotorX success envelope containing listings, pagination, and search metadata including query interpretation, corrections, mode, and duration.</p>
+</section>
+</section>
+<section id="testing-and-verification" class="level2">
+<h2 class="anchored" data-anchor-id="testing-and-verification">12. Testing and verification</h2>
+<section id="automated-tests-added" class="level3">
+<h3 class="anchored" data-anchor-id="automated-tests-added">12.1 Automated tests added</h3>
+<p><strong>What changed</strong></p>
+<p>Tests now cover:</p>
+<ul>
+<li>The SRS-style natural-language example.</li>
+<li>Make/model typo correction.</li>
+<li>Mileage-versus-price interpretation.</li>
+<li>Year extraction.</li>
+<li>Query length and pagination bounds.</li>
+<li>Location/mileage parsing.</li>
+<li>Inverted range rejection.</li>
+<li>384-dimensional normalized embedding behavior.</li>
+<li>Provider matrix normalization.</li>
+</ul>
+<p><strong>Why it changed</strong></p>
+<p>Search parsing contains interacting rules where a small ordering change can silently alter results. Tests protect the agreed interpretation.</p>
+<p><strong>How it works</strong></p>
+<p>Vitest executes deterministic unit tests without requiring the embedding provider or Atlas.</p>
+</section>
+<section id="verification-results" class="level3">
+<h3 class="anchored" data-anchor-id="verification-results">12.2 Verification results</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Shared-contract TypeScript build</td>
+<td>Passed</td>
+</tr>
+<tr class="even">
+<td>Backend TypeScript build</td>
+<td>Passed</td>
+</tr>
+<tr class="odd">
+<td>Worker TypeScript build</td>
+<td>Passed</td>
+</tr>
+<tr class="even">
+<td>Frontend TypeScript and production Vite build</td>
+<td>Passed</td>
+</tr>
+<tr class="odd">
+<td>Search and listing validation tests</td>
+<td>17 passed</td>
+</tr>
+<tr class="even">
+<td>Backfill script syntax check</td>
+<td>Passed</td>
+</tr>
+<tr class="odd">
+<td>Git whitespace/error check</td>
+<td>Passed</td>
+</tr>
+<tr class="even">
+<td>Full backend test attempt</td>
+<td>32 tests passed; three existing repository suites could not connect to MongoDB at <code>127.0.0.1:27017</code></td>
+</tr>
+</tbody>
+</table>
+<p>The MongoDB failure was environmental rather than a failed assertion. Those database-backed suites must be rerun with the test database available.</p>
+</section>
+</section>
+<section id="operational-work-required-before-production-activation" class="level2">
+<h2 class="anchored" data-anchor-id="operational-work-required-before-production-activation">13. Operational work required before production activation</h2>
+<p>The implementation is complete in source code, but production semantic retrieval depends on infrastructure configuration.</p>
+<section id="create-the-atlas-vector-search-index" class="level3">
+<h3 class="anchored" data-anchor-id="create-the-atlas-vector-search-index">13.1 Create the Atlas Vector Search index</h3>
+<p>Follow <code>docs/search-operations.md</code> to create <code>listing_embedding_index</code> with:</p>
+<ul>
+<li>384 dimensions.</li>
+<li>Cosine similarity.</li>
+<li><code>embedding</code> as the vector field.</li>
+<li>Filter mappings for status, category, price, year, mileage, fuel, transmission, body type, and condition.</li>
+</ul>
+</section>
+<section id="configure-environment-values" class="level3">
+<h3 class="anchored" data-anchor-id="configure-environment-values">13.2 Configure environment values</h3>
+<p>Set:</p>
+<pre class="text"><code>HF_API_KEY=&lt;production key, if hosted embeddings are required&gt;
+HF_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+EMBEDDING_TIMEOUT_MS=4000
+ATLAS_VECTOR_INDEX=listing_embedding_index</code></pre>
+</section>
+<section id="backfill-existing-inventory" class="level3">
+<h3 class="anchored" data-anchor-id="backfill-existing-inventory">13.3 Backfill existing inventory</h3>
+<p>Run:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run search:backfill <span class="at">--workspace</span> @motorx/backend <span class="at">--</span> <span class="at">--all</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This is mandatory when first enabling semantic search or changing models.</p>
+</section>
+<section id="production-measurements" class="level3">
+<h3 class="anchored" data-anchor-id="production-measurements">13.4 Production measurements</h3>
+<p>The code introduces bounds and timeouts, but performance targets must be proven against production-like data and infrastructure. Monitor:</p>
+<ul>
+<li>Structured search p50/p95/p99 latency.</li>
+<li>Semantic search p50/p95/p99 latency.</li>
+<li>Atlas vector aggregation time.</li>
+<li>Embedding-provider latency and error rate.</li>
+<li>Percentage of requests using <code>lexical-fallback</code>.</li>
+<li>Zero-result rate by interpreted filter.</li>
+<li>Search endpoint request volume and HTTP error rate.</li>
+<li>Frontend Core Web Vitals and route-chunk download time.</li>
+</ul>
+<p>Recommended acceptance targets from the project plan are structured search below two seconds, semantic search below five seconds, and 95% of API calls below two seconds where semantic provider work is not required.</p>
+</section>
+</section>
+<section id="efficiency-improvements-summary" class="level2">
+<h2 class="anchored" data-anchor-id="efficiency-improvements-summary">14. Efficiency improvements summary</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Efficiency action</th>
+<th>Why it improves the system</th>
+<th>Implementation mechanism</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Debounced input</td>
+<td>Reduces duplicate API, database, and provider calls</td>
+<td>350 ms cancellable timer</td>
+</tr>
+<tr class="even">
+<td>Central filter builder</td>
+<td>Prevents duplicate logic and maintenance effort</td>
+<td>Shared search repository function</td>
+</tr>
+<tr class="odd">
+<td>Compound indexes</td>
+<td>Reduces document scans</td>
+<td>Indexes matching active marketplace access patterns</td>
+</tr>
+<tr class="even">
+<td>Structured pre-filtering</td>
+<td>Avoids scoring irrelevant vectors</td>
+<td>Atlas filter plus full candidate verification</td>
+</tr>
+<tr class="odd">
+<td>Bounded candidate pools</td>
+<td>Caps memory and ranking CPU</td>
+<td>300 structured and 200 vector candidates</td>
+</tr>
+<tr class="even">
+<td>Concurrent retrieval</td>
+<td>Reduces hybrid wall-clock latency</td>
+<td>Structured and vector promises run together</td>
+</tr>
+<tr class="odd">
+<td>Database time limits</td>
+<td>Prevents runaway operations</td>
+<td>1.8-second structured and 4.5-second vector <code>maxTimeMS</code></td>
+</tr>
+<tr class="even">
+<td>Provider timeout</td>
+<td>Protects the five-second semantic target</td>
+<td>Four-second abort/timeout</td>
+</tr>
+<tr class="odd">
+<td>Embedding concurrency pool</td>
+<td>Balances throughput and provider pressure</td>
+<td>Maximum eight rows at once</td>
+</tr>
+<tr class="even">
+<td>Hidden embedding projection</td>
+<td>Reduces API payload and serialization cost</td>
+<td>Mongoose <code>select: false</code></td>
+</tr>
+<tr class="odd">
+<td>Previous-result retention</td>
+<td>Reduces UI flicker and perceived wait</td>
+<td>React Query placeholder data</td>
+</tr>
+<tr class="even">
+<td>Route lazy loading</td>
+<td>Avoids downloading unused portals</td>
+<td>Dynamic imports and <code>Suspense</code></td>
+</tr>
+<tr class="odd">
+<td>Vendor chunking</td>
+<td>Improves caching and removes oversized bundle</td>
+<td>Vite manual chunks</td>
+</tr>
+<tr class="even">
+<td>Cursor-based backfill</td>
+<td>Avoids loading the collection into memory</td>
+<td>MongoDB cursor with batch size 50</td>
+</tr>
+<tr class="odd">
+<td>Semantic fallback</td>
+<td>Maintains search availability</td>
+<td>Lexical ranking when provider/vector search fails</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="files-affected" class="level2">
+<h2 class="anchored" data-anchor-id="files-affected">15. Files affected</h2>
+<section id="backend" class="level3">
+<h3 class="anchored" data-anchor-id="backend">Backend</h3>
+<ul>
+<li><code>apps/backend/src/modules/search/*</code></li>
+<li><code>apps/backend/src/modules/marketplace/listing.model.ts</code></li>
+<li><code>apps/backend/src/modules/marketplace/listing.validation.ts</code></li>
+<li><code>apps/backend/src/modules/marketplace/listing.service.ts</code></li>
+<li><code>apps/backend/src/modules/marketplace/listing.repository.ts</code></li>
+<li><code>apps/backend/src/modules/buyers/buyer.repository.ts</code></li>
+<li><code>apps/backend/src/app.ts</code></li>
+<li><code>apps/backend/src/config/env.ts</code></li>
+<li><code>apps/backend/scripts/backfill-search-embeddings.mjs</code></li>
+</ul>
+</section>
+<section id="worker-and-shared-contracts" class="level3">
+<h3 class="anchored" data-anchor-id="worker-and-shared-contracts">Worker and shared contracts</h3>
+<ul>
+<li><code>apps/worker/src/pipeline/generateEmbedding.ts</code></li>
+<li><code>apps/worker/src/pipeline/persist.ts</code></li>
+<li><code>apps/worker/src/repositories/listing.repository.ts</code></li>
+<li><code>apps/worker/src/config/env.ts</code></li>
+<li><code>packages/shared-contracts/src/search/embedding.ts</code></li>
+</ul>
+</section>
+<section id="frontend" class="level3">
+<h3 class="anchored" data-anchor-id="frontend">Frontend</h3>
+<ul>
+<li><code>apps/frontend/src/portals/buyer/pages/Marketplace.tsx</code></li>
+<li><code>apps/frontend/src/features/buyers/hooks/useBuyerListings.ts</code></li>
+<li><code>apps/frontend/src/features/buyers/services/buyerApi.ts</code></li>
+<li><code>apps/frontend/src/features/listings/types/listing.types.ts</code></li>
+<li><code>apps/frontend/src/app/LandingPage.tsx</code></li>
+<li><code>apps/frontend/src/app/App.tsx</code></li>
+<li><code>apps/frontend/src/index.css</code></li>
+<li><code>apps/frontend/vite.config.ts</code></li>
+</ul>
+</section>
+<section id="configuration-and-documentation" class="level3">
+<h3 class="anchored" data-anchor-id="configuration-and-documentation">Configuration and documentation</h3>
+<ul>
+<li><code>.env.example</code></li>
+<li><code>apps/backend/.env.example</code></li>
+<li><code>docs/api-contract.md</code></li>
+<li><code>docs/search-operations.md</code></li>
+<li><code>README.md</code></li>
+</ul>
+</section>
+</section>
+<section id="conclusion" class="level2">
+<h2 class="anchored" data-anchor-id="conclusion">16. Conclusion</h2>
+<p>The search work was not limited to adding another endpoint. It reorganized retrieval around a dedicated module, completed structured filtering, added deterministic natural-language interpretation and typo correction, integrated consistent embeddings into both inventory entry paths, introduced bounded hybrid ranking, and improved the buyer experience and frontend delivery performance.</p>
+<p>The main efficiency gains come from fewer requests, indexed filters, bounded and concurrent retrieval, controlled provider concurrency, strict execution time limits, smaller application chunks, and graceful fallback. The result is a search subsystem designed to remain understandable, testable, and operational as MotorX inventory grows.</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

@@ -1,31 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ListingCard } from '../features/listings/components/ListingCard';
-import { useListings } from '@/features/listings/hooks/useListings';
-import { listingApi } from '@/features/listings/services/listingApi';
+import { useBuyerListings } from '../features/buyers/hooks/useBuyerListings';
 
 export const LandingPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
-  const { data } = useListings({}, 6);
-  const [marketplaceStats, setMarketplaceStats] = useState({ activeVehicles: 0, soldVehicles: 0, registeredDealers: 0 });
-
-  useEffect(() => {
-    void listingApi.getMarketplaceStats().then(setMarketplaceStats).catch(() => setMarketplaceStats({ activeVehicles: 0, soldVehicles: 0, registeredDealers: 0 }));
-  }, []);
+  const { data, isLoading, isError } = useBuyerListings({}, 6);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/marketplace?search=${encodeURIComponent(searchQuery.trim())}`);
+      navigate(`/marketplace?q=${encodeURIComponent(searchQuery.trim())}`);
     } else {
       navigate('/marketplace');
     }
   };
 
-  const listings = Array.isArray(data?.data) ? data.data : [];
-  const featuredListings = listings.slice(0, 6);
-  const totalListings = typeof data?.total === 'number' ? data.total : listings.length;
+  const featuredListings = data.data;
 
   return (
     <div>
@@ -58,8 +50,10 @@ export const LandingPage: React.FC = () => {
         {/* Natural Language & Keyword Search Bar */}
         <form onSubmit={handleSearchSubmit} className="hero-search-bar" style={{ width: '100%' }}>
           <input
-            type="text"
-            placeholder="Search make, model, body type (e.g. 'Tesla Model 3', 'BMW Sedan', 'Electric')..."
+            type="search"
+            aria-label="Search vehicle inventory"
+            maxLength={200}
+            placeholder="Try “automatic SUV under 8 million near Colombo”"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -103,10 +97,12 @@ export const LandingPage: React.FC = () => {
             <p style={{ color: 'var(--color-text-tertiary)', marginTop: '0.25rem' }}>Hand-picked top quality pre-owned vehicles available now</p>
           </div>
           <Link to="/marketplace" className="btn btn-secondary">
-            View All ({totalListings}) →
+            View All ({data.total}) →
           </Link>
         </div>
 
+        {isLoading && <div className="loading-spinner" style={{ margin: '3rem auto', display: 'block' }} />}
+        {isError && <div className="glass-card" style={{ padding: '1rem', color: 'var(--color-error)' }}>Could not load featured vehicles.</div>}
         <div className="listings-grid">
           {featuredListings.map(listing => (
             <ListingCard key={listing.id} listing={listing} />
@@ -172,8 +168,8 @@ export const LandingPage: React.FC = () => {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '1rem' }}>
-            <Link to="/dealer" className="btn btn-primary btn-lg">
-              Explore Dealer Portal
+            <Link to="/dealer/apply" className="btn btn-primary btn-lg">
+              Apply as Dealer
             </Link>
             <Link to="/login" className="btn btn-secondary btn-lg">
               Sign In

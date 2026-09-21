@@ -1,11 +1,14 @@
 export const routes = {
   home: '/',
   login: '/login',
+  signup: '/signup',
   marketplace: '/marketplace',
   vehicleDetails: (id: string) => `/marketplace/${id}`,
   
   // Dealer portal
   dealerDashboard: '/dealer',
+  dealerApply: '/dealer/apply',
+  dealerApplicationStatus: '/dealer/application-status',
   dealerListings: '/dealer/listings',
   dealerNewListing: '/dealer/listings/new',
   dealerUploads: '/dealer/uploads/new',

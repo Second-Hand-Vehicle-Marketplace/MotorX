@@ -1,153 +1,63 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { formatDateTime } from '../../../shared/utils/formatters';
-import { adminApi } from '@/features/admin/services/adminApi';
+import { adminApi, type AdminAuditLog, type AdminStats, type AdminUpload } from '@/features/admin/services/adminApi';
+import { getPendingDealerApplications } from '@/features/dealers/services/dealerApi';
+import type { DealerApplication } from '@/features/dealers/types/dealer.types';
+
+const emptyStats: AdminStats = { totalUsers: 0, activeDealers: 0, registeredDealers: 0, totalListings: 0, activeListings: 0, pendingDealerApplications: 0 };
 
 export const AdminDashboard: React.FC = () => {
-  const [users, setUsers] = useState<any[]>([]);
-  const [listings, setListings] = useState<any[]>([]);
-  const [uploadJobs, setUploadJobs] = useState<any[]>([]);
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [stats, setStats] = useState(emptyStats);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [uploads, setUploads] = useState<AdminUpload[]>([]);
+  const [activity, setActivity] = useState<AdminAuditLog[]>([]);
+  const [applications, setApplications] = useState<DealerApplication[]>([]);
+  const [expanded, setExpanded] = useState<'attention' | 'inventory' | 'activity' | null>(null);
+
+  const attentionUploads = uploads.filter((upload) => upload.status === 'failed' || upload.rejectedRecords > 0);
+  const attentionItems = [
+    ...applications.map((application) => ({ id: `application-${application.id}`, title: application.businessName, detail: `Application waiting ${formatWaitingTime(application.createdAt)}`, href: `/admin/dealers?status=pending`, tone: 'warning' })),
+    ...attentionUploads.map((upload) => ({ id: `upload-${upload.id}`, title: upload.fileName, detail: upload.status === 'failed' ? 'Upload failed and needs review' : `${upload.rejectedRecords} rejected records need review`, href: `/admin/uploads?uploadId=${upload.id}`, tone: upload.status === 'failed' ? 'danger' : 'warning' })),
+  ];
+  const visibleAttention = expanded === 'attention' ? attentionItems : attentionItems.slice(0, 4);
+  const visibleUploads = expanded === 'inventory' ? uploads : uploads.slice(0, 4);
+  const visibleActivity = expanded === 'activity' ? activity : activity.slice(0, 4);
+  const toggleExpanded = (section: 'attention' | 'inventory' | 'activity') => setExpanded((current) => current === section ? null : section);
 
   useEffect(() => {
-    void Promise.all([
-      adminApi.getUsers(),
-      adminApi.getListings(),
-      adminApi.getUploadJobs(),
-      adminApi.getAuditLogs(),
-    ]).then(([nextUsers, nextListings, nextUploadJobs, nextAuditLogs]) => {
-      setUsers(nextUsers);
-      setListings(nextListings);
-      setUploadJobs(nextUploadJobs);
-      setAuditLogs(nextAuditLogs);
-    });
+    let active = true;
+    // Ignore late responses after navigation away from the dashboard.
+    void Promise.allSettled([adminApi.getStats(), adminApi.listUploads(), adminApi.listAuditLogs(), getPendingDealerApplications()]).then(([statsResult, uploadsResult, activityResult, applicationsResult]) => {
+      if (!active) return;
+      if (statsResult.status === 'fulfilled') setStats(statsResult.value); else setError('Some marketplace totals are unavailable.');
+      if (uploadsResult.status === 'fulfilled') setUploads(uploadsResult.value); else setError('Some inventory activity is unavailable.');
+      if (activityResult.status === 'fulfilled') setActivity(activityResult.value); else setError('Some administrative activity is unavailable.');
+      if (applicationsResult.status === 'fulfilled') setApplications(applicationsResult.value); else setError('Dealer review tasks are unavailable.');
+    })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
 
-  const totalUsers = users.length;
-  const dealers = users.filter(u => u.role === 'dealer');
-  const activeListings = listings.filter(l => l.status === 'active').length;
-  const soldListings = listings.filter(l => l.status === 'sold').length;
-  const pendingJobs = uploadJobs.filter(j => j.status === 'pending' || j.status === 'processing').length;
-
-  return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Admin Dashboard</h1>
-          <p className="page-subtitle">Platform overview, system health status, and administrative logs</p>
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="stats-grid" style={{ marginBottom: '2rem' }}>
-        <div className="stat-card">
-          <span className="stat-label">Total Users</span>
-          <div className="stat-value">{totalUsers}</div>
-          <span className="stat-change positive">↑ {dealers.length} registered dealers</span>
-        </div>
-
-        <div className="stat-card">
-          <span className="stat-label">Active Listings</span>
-          <div className="stat-value">{activeListings}</div>
-          <span className="stat-change positive">{soldListings} sold across {dealers.length} dealerships</span>
-        </div>
-
-        <div className="stat-card">
-          <span className="stat-label">ETL Upload Jobs</span>
-          <div className="stat-value">{uploadJobs.length}</div>
-          <span className="stat-change" style={{ color: 'var(--color-info)' }}>{pendingJobs} in queue/processing</span>
-        </div>
-
-        <div className="stat-card">
-          <span className="stat-label">System Status</span>
-          <div className="stat-value" style={{ color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span className="status-dot online" /> Operational
-          </div>
-          <span className="stat-change positive">All services operational</span>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-        {/* Recent Audit Events */}
-        <div className="glass-card" style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Recent Audit Activity</h3>
-            <Link to="/admin/audit-logs" style={{ fontSize: '0.8125rem', color: 'var(--color-amber)' }}>
-              View All Logs →
-            </Link>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {auditLogs.slice(0, 5).map(log => (
-              <div
-                key={log.id}
-                style={{
-                  padding: '0.75rem 1rem',
-                  background: 'var(--color-bg-tertiary)',
-                  borderRadius: 'var(--radius-lg)',
-                  border: '1px solid var(--color-glass-border)',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-amber)' }}>
-                    {log.eventType.replace('_', ' ').toUpperCase()}
-                  </span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>
-                    {formatDateTime(log.timestamp)}
-                  </span>
-                </div>
-                <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem' }}>
-                  {log.details}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* System Health Quick Status */}
-        <div className="glass-card" style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Service Health</h3>
-            <Link to="/admin/system-health" style={{ fontSize: '0.8125rem', color: 'var(--color-amber)' }}>
-              Detailed Metrics →
-            </Link>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-lg)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span className="status-dot online" />
-                <span style={{ fontWeight: 600 }}>API Gateway</span>
-              </div>
-              <span className="badge badge-success">Live (12ms)</span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-lg)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span className="status-dot online" />
-                <span style={{ fontWeight: 600 }}>MongoDB Database</span>
-              </div>
-              <span className="badge badge-success">Ready (5ms)</span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-lg)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span className="status-dot online" />
-                <span style={{ fontWeight: 600 }}>Redis Queue (BullMQ)</span>
-              </div>
-              <span className="badge badge-success">Active</span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-lg)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span className="status-dot online" />
-                <span style={{ fontWeight: 600 }}>ETL Worker Engine</span>
-              </div>
-              <span className="badge badge-success">Running</span>
-            </div>
-          </div>
-        </div>
-      </div>
+  return <div className="admin-dashboard">
+    <div className="admin-dashboard-hero"><div><span className="admin-dashboard-kicker">Marketplace operations</span><h1 className="page-title">Good evening, {stats.activeDealers ? 'team' : 'administrator'}</h1><p className="page-subtitle">A focused view of the work that needs a decision today.</p></div><Link to="/admin/dealers" className="admin-primary-action">Review applications</Link></div>
+    {error && <div className="alert alert-error" role="alert" style={{ marginBottom: '1rem' }}>{error}</div>}
+    <div className="admin-metric-grid">
+      <Link to="/admin/dealers?status=pending" className="admin-metric admin-metric-amber"><span>Needs review</span><strong>{loading ? '—' : stats.pendingDealerApplications}</strong><small>Pending applications</small></Link>
+      <Link to="/admin/listings?status=active" className="admin-metric admin-metric-blue"><span>Marketplace</span><strong>{loading ? '—' : stats.activeListings}</strong><small>Active listings</small></Link>
+      <Link to="/admin/dealers?status=approved" className="admin-metric admin-metric-green"><span>Dealers</span><strong>{loading ? '—' : stats.activeDealers}</strong><small>Currently active</small></Link>
+      <Link to="/admin/users" className="admin-metric admin-metric-slate"><span>Community</span><strong>{loading ? '—' : stats.totalUsers}</strong><small>Registered users</small></Link>
     </div>
-  );
+    <div className="admin-dashboard-grid">
+      <section className="admin-section admin-section-attention"><SectionHeader title="Needs attention" count={attentionItems.length} expanded={expanded === 'attention'} onToggle={() => toggleExpanded('attention')} /><div className="admin-feed">{visibleAttention.map((item) => <Link key={item.id} to={item.href} className="admin-feed-item"><span className={`admin-feed-dot ${item.tone}`} /><span className="admin-feed-copy"><strong>{item.title}</strong><small>{item.detail}</small></span><span className="admin-feed-arrow">→</span></Link>)}{!visibleAttention.length && <EmptyMessage text="Everything is up to date." />}</div></section>
+      <section className="admin-section"><SectionHeader title="Inventory activity" count={uploads.length} expanded={expanded === 'inventory'} onToggle={() => toggleExpanded('inventory')} /><div className="admin-feed">{visibleUploads.map((upload) => <Link key={upload.id} to={`/admin/uploads?uploadId=${upload.id}`} className="admin-feed-item"><span className={`admin-status-pill ${upload.status === 'failed' ? 'danger' : upload.status === 'completedWithErrors' ? 'warning' : upload.status === 'completed' ? 'success' : 'info'}`}>{formatUploadStatus(upload.status)}</span><span className="admin-feed-copy"><strong>{upload.fileName}</strong><small>{upload.dealerName} · {upload.validRecords} accepted · {upload.rejectedRecords} rejected</small></span><span className="admin-feed-arrow">→</span></Link>)}{!visibleUploads.length && <EmptyMessage text="No inventory uploads yet." />}</div></section>
+    </div>
+    <section className="admin-section admin-section-wide"><SectionHeader title="Recent administrative activity" count={activity.length} expanded={expanded === 'activity'} onToggle={() => toggleExpanded('activity')} /><div className="admin-audit-list">{visibleActivity.map((record) => <div key={record.id} className="admin-audit-item"><span className="admin-audit-icon">{record.eventType === 'listing_removed' ? 'L' : record.eventType.startsWith('dealer_') ? 'D' : 'U'}</span><span className="admin-feed-copy"><strong>{formatAuditEvent(record.eventType, record.targetName)}</strong><small>{record.details} · by {record.actorName} · {new Date(record.timestamp).toLocaleString()}</small></span></div>)}{!visibleActivity.length && <EmptyMessage text="No administrative activity yet." />}</div></section>
+  </div>;
 };
+
+function formatWaitingTime(createdAt: string) { const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000); return days > 0 ? `${days}d` : `${Math.max(1, Math.floor((Date.now() - new Date(createdAt).getTime()) / 3_600_000))}h`; }
+function formatUploadStatus(status: AdminUpload['status']) { return status === 'pending' ? 'Waiting' : status === 'processing' ? 'Processing' : status === 'completedWithErrors' ? 'Needs review' : status === 'completed' ? 'Completed' : status === 'failed' ? 'Failed' : status; }
+function formatAuditEvent(event: AdminAuditLog['eventType'], target: string) { return event === 'dealer_approved' ? `Dealer approved · ${target}` : event === 'dealer_rejected' ? `Dealer rejected · ${target}` : event === 'user_suspended' ? `Account suspended · ${target}` : event === 'user_activated' ? `Account reactivated · ${target}` : `Listing removed · ${target}`; }
+function SectionHeader({ title, count, expanded, onToggle }: { title: string; count: number; expanded: boolean; onToggle: () => void }) { return <div className="admin-section-header"><div><h2>{title}</h2><span>{count} {count === 1 ? 'item' : 'items'}</span></div>{count > 4 && <button type="button" className="admin-expand-button" onClick={onToggle}>{expanded ? 'Show less' : 'View all'} <span>{expanded ? '↑' : '↓'}</span></button>}</div>; }
+function EmptyMessage({ text }: { text: string }) { return <p className="admin-empty-message">{text}</p>; }

@@ -1,5 +1,52 @@
-import type { Listing, ListingFilters, PaginatedResponse } from '../types/listing.types';
+import type {
+  ApiSuccessResponse,
+  CreateListingInput,
+  ListingDto,
+  ListResponseMeta,
+  UpdateListingInput,
+  UpdateListingStatusInput,
+} from '@motorx/shared-contracts';
 import { apiClient } from '../../../shared/services/apiClient';
+import type { Listing, PaginatedResponse } from '../types/listing.types';
+
+function toListing(dto: ListingDto): Listing {
+  return {
+    id: dto.id,
+    dealerId: dto.dealerId,
+    registrationNumber: dto.registrationNumber,
+    title: dto.title,
+    make: dto.make,
+    model: dto.model,
+    year: dto.year,
+    price: dto.price,
+    currency: dto.currency,
+    location: dto.location,
+    description: dto.description ?? '',
+    images: dto.images.map((image, index) => ({
+      id: image.key,
+      url: image.url,
+      alt: image.alt ?? dto.title,
+      isPrimary: index === 0,
+    })),
+    status: dto.status,
+    publishedAt: dto.publishedAt,
+    category: dto.category,
+    attributes: dto.attributes,
+  } as Listing;
+}
+
+function toPaginatedResponse(
+  response: ApiSuccessResponse<ListingDto[], ListResponseMeta>,
+): PaginatedResponse<Listing> {
+  const { pagination } = response.meta;
+  return {
+    data: response.data.map(toListing),
+    total: pagination.total,
+    page: pagination.page,
+    pageSize: pagination.limit,
+    totalPages: pagination.totalPages,
+  };
+}
 
 type ApiEnvelope<T> = {
   success: boolean;
@@ -17,61 +64,55 @@ const emptyPage = (pageSize = 9): PaginatedResponse<Listing> => ({
 });
 
 export const listingApi = {
-  getMarketplaceStats: async (): Promise<{ activeVehicles: number; soldVehicles: number; registeredDealers: number }> => {
-    const response = await apiClient.get<ApiEnvelope<{ activeVehicles: number; soldVehicles: number; registeredDealers: number }>>('/listings/stats');
+  async getMyListingStats(): Promise<{ total: number; active: number; draft: number; sold: number; archived: number }> {
+    const response = await apiClient.get<ApiSuccessResponse<{ total: number; active: number; draft: number; sold: number; archived: number }>>('/listings/mine/stats');
     return response.data.data;
   },
-  getListings: async (filters: ListingFilters = {}): Promise<PaginatedResponse<Listing>> => {
-    const response = await apiClient.get<ApiEnvelope<PaginatedResponse<Listing> | Listing[]>>('/listings', {
-      params: filters,
+  async getMyListing(id: string): Promise<Listing> {
+    const response = await apiClient.get<ApiSuccessResponse<ListingDto>>(`/listings/mine/${id}`);
+    return toListing(response.data.data);
+  },
+  async getMyListings(page = 1, limit = 20, filters: { search?: string; status?: string; category?: string } = {}): Promise<PaginatedResponse<Listing>> {
+    const response = await apiClient.get<ApiSuccessResponse<ListingDto[], ListResponseMeta>>('/listings/mine', {
+      params: { page, limit, ...filters },
     });
-
-    const payload = response.data?.data;
-    if (Array.isArray(payload)) {
-      const pageSize = Number(filters.pageSize ?? (payload.length || 9));
-      return {
-        data: payload,
-        total: payload.length,
-        page: Number(filters.page ?? 1),
-        pageSize,
-        totalPages: 1,
-      };
-    }
-
-    if (payload && Array.isArray((payload as PaginatedResponse<Listing>).data)) {
-      return payload as PaginatedResponse<Listing>;
-    }
-
-    return emptyPage(Number(filters.pageSize ?? 9));
+    return toPaginatedResponse(response.data);
   },
-  getListingById: async (id: string): Promise<Listing | null> => {
-    const response = await apiClient.get<ApiEnvelope<Listing | null>>(`/listings/${id}`);
-    return response.data?.data ?? null;
+
+  async createListing(input: CreateListingInput): Promise<Listing> {
+    const response = await apiClient.post<ApiSuccessResponse<ListingDto>>('/listings', input);
+    return toListing(response.data.data);
   },
-  createListing: async (data: Partial<Listing>, images: File[] = []): Promise<Listing> => {
+
+  async updateListing(id: string, input: UpdateListingInput): Promise<Listing> {
+    const response = await apiClient.patch<ApiSuccessResponse<ListingDto>>(`/listings/${id}`, input);
+    return toListing(response.data.data);
+  },
+
+  async updateListingStatus(id: string, input: UpdateListingStatusInput): Promise<Listing> {
+    const response = await apiClient.patch<ApiSuccessResponse<ListingDto>>(`/listings/${id}/status`, input);
+    return toListing(response.data.data);
+  },
+
+  async uploadImage(id: string, file: File, alt?: string): Promise<Listing> {
     const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) formData.append(key, String(value));
-    });
-    images.forEach((image) => formData.append('images', image));
-    const response = await apiClient.post<ApiEnvelope<Listing>>('/dealer/listings', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return response.data.data;
+    formData.append('image', file);
+    if (alt) formData.append('alt', alt);
+    const response = await apiClient.post<ApiSuccessResponse<ListingDto>>(`/listings/${id}/images`, formData);
+    return toListing(response.data.data);
   },
-  updateListing: async (id: string, data: Partial<Listing>): Promise<Listing> => {
-    const response = await apiClient.put<ApiEnvelope<Listing>>(`/listings/${id}`, data);
-    return response.data.data;
+
+  async deleteImage(id: string, imageKey: string): Promise<Listing> {
+    const response = await apiClient.delete<ApiSuccessResponse<ListingDto>>(`/listings/${id}/images/${encodeURIComponent(imageKey)}`);
+    return toListing(response.data.data);
   },
-  updateListingStatus: async (id: string, status: string): Promise<Listing> => {
-    const response = await apiClient.patch<ApiEnvelope<Listing>>(`/dealer/listings/${id}/status`, { status });
-    return response.data.data;
+
+  async reorderImages(id: string, imageKeys: string[]): Promise<Listing> {
+    const response = await apiClient.patch<ApiSuccessResponse<ListingDto>>(`/listings/${id}/images/reorder`, { imageKeys });
+    return toListing(response.data.data);
   },
-  deleteListing: async (id: string): Promise<void> => {
-    await apiClient.delete(`/dealer/listings/${id}`);
-  },
-  createInquiry: async (id: string, data: { type: 'contact' | 'test_drive'; buyerName: string; buyerEmail: string; buyerPhone?: string; message?: string; preferredDate?: string }) => {
-    const response = await apiClient.post<ApiEnvelope<{ id: string; status: string }>>(`/listings/${id}/inquiries`, data);
-    return response.data.data;
+
+  async deleteListing(id: string): Promise<void> {
+    await apiClient.delete(`/listings/${id}`);
   },
 };

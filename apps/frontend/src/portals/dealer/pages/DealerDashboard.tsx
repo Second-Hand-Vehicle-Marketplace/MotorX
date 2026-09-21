@@ -1,159 +1,37 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { formatPrice, formatDate } from '@/shared/utils/formatters';
+import { useQuery } from '@tanstack/react-query';
+import { listingApi } from '@/features/listings/services/listingApi';
+import { inventoryApi } from '@/features/inventory/services/inventoryApi';
 import { ListingStatusBadge } from '@/features/listings/components/ListingStatusBadge';
-import { adminApi } from '@/features/admin/services/adminApi';
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import { getMileageKm } from '@/features/listings/utils/vehicleAttributes';
+import { formatMileage, formatPrice } from '@/shared/utils/formatters';
+
+const uploadStatusBadge = (status: string) => status === 'completed' ? 'badge-success' : status === 'processing' || status === 'pending' ? 'badge-info' : status === 'completedWithErrors' ? 'badge-warning' : 'badge-error';
 
 export const DealerDashboard: React.FC = () => {
-  const { user } = useAuth();
-  const [dealerListings, setDealerListings] = useState<any[]>([]);
-  const [uploadJobs, setUploadJobs] = useState<any[]>([]);
+  const listingsQuery = useQuery({ queryKey: ['my-listing-stats'], queryFn: () => listingApi.getMyListingStats() });
+  const recentListingsQuery = useQuery({ queryKey: ['my-listings', 'recent'], queryFn: () => listingApi.getMyListings(1, 5) });
+  const uploadsQuery = useQuery({ queryKey: ['my-uploads', 1, 4], queryFn: () => inventoryApi.listUploads(1, 4) });
+  const listings = recentListingsQuery.data?.data ?? [];
+  const uploads = uploadsQuery.data?.data ?? [];
 
-  useEffect(() => {
-    void Promise.all([
-      adminApi.getListings(),
-      adminApi.getUploadJobs(),
-    ]).then(([listings, jobs]) => {
-      const myListings = listings.filter((l: any) => l.dealerId === user?.id);
-      setDealerListings(myListings);
-      setUploadJobs(jobs.filter((job: any) => job.dealerId === user?.id));
-    });
-  }, [user?.id]);
-
-  const activeCount = dealerListings.filter(l => l.status === 'active').length;
-  const soldCount = dealerListings.filter(l => l.status === 'sold').length;
-  const pendingCount = dealerListings.filter(l => l.status === 'pending').length;
-  const totalViews = dealerListings.reduce((sum, l) => sum + (l.views ?? 0), 0);
-  const totalLeads = dealerListings.reduce((sum, l) => sum + (l.leads ?? 0), 0);
-
-  return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Dealer Dashboard</h1>
-          <p className="page-subtitle">Overview of your inventory, vehicle performance, and bulk uploads</p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <Link to="/dealer/uploads/new" className="btn btn-secondary">
-            Upload CSV
-          </Link>
-          <Link to="/dealer/listings/new" className="btn btn-primary">
-            + Add Listing
-          </Link>
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="stats-grid" style={{ marginBottom: '2rem' }}>
-        <div className="stat-card">
-          <span className="stat-label">Total Listings</span>
-          <div className="stat-value">{dealerListings.length}</div>
-          <span className="stat-change" style={{ color: 'var(--color-info)' }}>{activeCount} active on marketplace</span>
-        </div>
-
-        <div className="stat-card">
-          <span className="stat-label">Pending Approval</span>
-          <div className="stat-value">{pendingCount}</div>
-          <span className="stat-change" style={{ color: 'var(--color-warning)' }}>{pendingCount > 0 ? 'Under review' : 'No pending listings'}</span>
-        </div>
-
-        <div className="stat-card">
-          <span className="stat-label">Total Listing Views</span>
-          <div className="stat-value">{totalViews.toLocaleString()}</div>
-          <span className="stat-change" style={{ color: 'var(--color-info)' }}>{dealerListings.length > 0 ? 'From all active inventory' : 'No listing views yet'}</span>
-        </div>
-
-        <div className="stat-card">
-          <span className="stat-label">Buyer Leads Generated</span>
-          <div className="stat-value">{totalLeads}</div>
-          <span className="stat-change" style={{ color: 'var(--color-info)' }}>{totalLeads > 0 ? 'Captured from listing activity' : 'No leads yet'}</span>
-        </div>
-
-        <div className="stat-card">
-          <span className="stat-label">Sold Vehicles</span>
-          <div className="stat-value">{soldCount}</div>
-          <span className="stat-change" style={{ color: 'var(--color-success)' }}>Marked sold in your inventory</span>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
-        {/* Recent Listings */}
-        <div className="glass-card" style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Recent Inventory</h3>
-            <Link to="/dealer/listings" style={{ fontSize: '0.8125rem', color: 'var(--color-accent-light)' }}>
-              View All ({dealerListings.length}) →
-            </Link>
-          </div>
-
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Vehicle</th>
-                  <th>Price</th>
-                  <th>Status</th>
-                  <th>Views</th>
-                  <th>Leads</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dealerListings.slice(0, 5).map(listing => (
-                  <tr key={listing.id}>
-                    <td style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                      {listing.year} {listing.make} {listing.model}
-                    </td>
-                    <td style={{ fontWeight: 600, color: 'var(--color-accent-light)' }}>
-                      {formatPrice(listing.price)}
-                    </td>
-                    <td><ListingStatusBadge status={listing.status} /></td>
-                    <td>{listing.views}</td>
-                    <td style={{ fontWeight: 600, color: 'var(--color-success)' }}>{listing.leads}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Recent Bulk Upload Jobs */}
-        <div className="glass-card" style={{ padding: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Upload Activity</h3>
-            <Link to="/dealer/uploads/new" style={{ fontSize: '0.8125rem', color: 'var(--color-accent-light)' }}>
-              Upload New →
-            </Link>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {uploadJobs.slice(0, 4).map(job => (
-              <div
-                key={job.id}
-                style={{
-                  padding: '0.75rem 1rem',
-                  background: 'var(--color-bg-tertiary)',
-                  borderRadius: 'var(--radius-lg)',
-                  border: '1px solid var(--color-glass-border)',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.8125rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160 }}>
-                    {job.fileName}
-                  </span>
-                  <span className={`badge ${job.status === 'completed' ? 'badge-success' : job.status === 'processing' ? 'badge-info' : 'badge-error'}`}>
-                    {job.status}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-text-tertiary)', marginTop: '0.375rem' }}>
-                  <span>{job.validRecords} valid / {job.totalRecords} total</span>
-                  <span>{formatDate(job.createdAt)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+  return <div>
+    <div className="page-header"><div><h1 className="page-title">Dealer Dashboard</h1><p className="page-subtitle">Live inventory overview from MongoDB Atlas</p></div><div style={{ display: 'flex', gap: '0.75rem' }}><Link to="/dealer/uploads/new" className="btn btn-secondary">Upload CSV</Link><Link to="/dealer/listings/new" className="btn btn-primary">+ Add Listing</Link></div></div>
+    {listingsQuery.isLoading && <div className="loading-spinner" style={{ margin: '2rem auto', display: 'block' }} />}
+    {listingsQuery.isError && <div className="glass-card" style={{ padding: '1rem', color: 'var(--color-error)', marginBottom: '1rem' }}>Could not load dealer inventory.</div>}
+    <div className="stats-grid" style={{ marginBottom: '2rem' }}>
+      {[['Total Listings', listingsQuery.data?.total ?? 0], ['Active', listingsQuery.data?.active ?? 0], ['Draft', listingsQuery.data?.draft ?? 0], ['Sold', listingsQuery.data?.sold ?? 0]].map(([label, value]) => <div className="stat-card" key={label}><span className="stat-label">{label}</span><div className="stat-value">{listingsQuery.isLoading ? '—' : value}</div></div>)}
+    </div>
+    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
+      <div className="glass-card" style={{ padding: '1.5rem' }}><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}><h3>Recent Inventory</h3><Link to="/dealer/listings">View all ({listings.length})</Link></div><div className="table-container"><table className="data-table"><thead><tr><th>Vehicle</th><th>Price</th><th>Status</th><th>Mileage</th><th>Location</th></tr></thead><tbody>{listings.slice(0, 5).map((listing) => <tr key={listing.id}><td>{listing.year} {listing.make} {listing.model}</td><td>{formatPrice(listing.price, listing.currency)}</td><td><ListingStatusBadge status={listing.status} /></td><td>{formatMileage(getMileageKm(listing) ?? 0)}</td><td>{listing.location}</td></tr>)}</tbody></table></div></div>
+      <div className="glass-card" style={{ padding: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}><h3>Upload Activity</h3><Link to="/dealer/uploads/new">View all</Link></div>
+        {uploadsQuery.isLoading && <div className="loading-spinner" style={{ margin: '1rem auto', display: 'block' }} />}
+        {uploadsQuery.isError && <p style={{ fontSize: '0.8125rem', color: 'var(--color-error)' }}>Could not load upload activity.</p>}
+        {!uploadsQuery.isLoading && !uploadsQuery.isError && uploads.length === 0 && <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-tertiary)' }}>No inventory uploads yet.</p>}
+        {uploads.map((job) => <Link key={job.id} to={`/dealer/uploads/${job.id}`} style={{ display: 'block', padding: '0.75rem', borderBottom: '1px solid var(--color-glass-border)', color: 'inherit', textDecoration: 'none' }}><strong>{job.fileName}</strong><div><span className={`badge ${uploadStatusBadge(job.status)}`}>{job.status}</span></div></Link>)}
       </div>
     </div>
-  );
+  </div>;
 };

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { firebaseAuthClient } from '../../config/firebase';
 import { env } from '../../config/env';
 
 export const apiClient = axios.create({
@@ -7,3 +8,33 @@ export const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+apiClient.interceptors.request.use(async (config) => {
+  if (config.data instanceof FormData) {
+    config.headers.delete('Content-Type');
+  }
+
+  const firebaseUser = firebaseAuthClient.currentUser;
+
+  if (firebaseUser) {
+    const token = await firebaseUser.getIdToken();
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: unknown) => {
+    if (axios.isAxiosError(error)) {
+      const apiError = (error.response?.data as { error?: { message?: string; fields?: Record<string, string[]> } } | undefined)?.error;
+      const fieldDetails = apiError?.fields
+        ? Object.entries(apiError.fields).map(([field, messages]) => `${field}: ${messages.join(', ')}`).join('; ')
+        : undefined;
+      const message = fieldDetails || apiError?.message;
+      return Promise.reject(new Error(message ?? error.message));
+    }
+    return Promise.reject(error);
+  },
+);

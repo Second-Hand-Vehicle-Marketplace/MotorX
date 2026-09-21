@@ -30,17 +30,21 @@ export const BuyerLayout: React.FC = () => {
 
         <nav className="nav-links">
           <Link to="/" className="nav-link">Home</Link>
-          <Link to="/marketplace" className="nav-link">Explore Marketplace</Link>
+          <Link to="/marketplace" className="nav-link">Browse Vehicles</Link>
+          <Link to="/dealer/apply" className="nav-link">Dealers</Link>
         </nav>
 
-        <div className="nav-actions">
+        <div className="nav-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           {isAuthenticated ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>{user?.displayName}</span>
               <button onClick={logout} className="btn btn-ghost btn-sm">Sign Out</button>
             </div>
           ) : (
-            <Link to="/login" className="btn btn-primary btn-sm">Sign In</Link>
+            <>
+              <Link to="/login" className="btn btn-ghost btn-sm">Sign In</Link>
+              <Link to="/signup" className="btn btn-primary btn-sm">Sign Up</Link>
+            </>
           )}
         </div>
       </header>
@@ -75,7 +79,8 @@ export const BuyerLayout: React.FC = () => {
 
           <div className="footer-column">
             <h4>Account</h4>
-            <Link to="/login">Sign In / Register</Link>
+            <Link to="/login">Sign In</Link>
+            <Link to="/signup">Sign Up</Link>
             <Link to="/marketplace">Browse Cars</Link>
           </div>
         </div>

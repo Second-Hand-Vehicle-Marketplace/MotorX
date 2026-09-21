@@ -1,1 +1,1 @@
-export const dealersModule = 'dealers';
+export { dealerRouter } from './dealer.routes.js';

@@ -3,15 +3,34 @@ export type UserRole = 'buyer' | 'dealer' | 'admin';
 
 export type DealerStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 
+export interface BuyerRegistrationInput {
+  fullName: string;
+  email: string;
+  phone: string;
+  password: string;
+}
+
 export interface DealerApplicationInput {
   applicantName: string;
   email: string;
+  phone: string;
   password: string;
   idToken?: string;
   businessName: string;
   businessLicense: string;
-  phone: string;
   address: string;
+  city?: string;
+  province?: string;
+  businessContact?: string;
+  businessEmail?: string;
+  website?: string;
+  dealershipType?: 'new' | 'used' | 'both';
+  brandFocus?: string;
+  businessDescription?: string;
+  inventoryCount?: string;
+  businessRegistration: File;
+  identityProof: File;
+  additionalDocument?: File;
 }
 
 export interface DealerApplication extends DealerApplicationInput {
@@ -57,6 +76,8 @@ export interface AuthState {
 
 export interface AuthContextValue extends AuthState {
   login: (email: string, password: string) => Promise<User>;
-  registerDealerApplication: (data: DealerApplicationInput) => Promise<DealerApplication>;
-  logout: () => void;
+  registerBuyer: (data: BuyerRegistrationInput) => Promise<void>;
+  registerDealerApplication: (data: DealerApplicationInput) => Promise<DealerApplicationDto>;
+  logout: () => Promise<void>;
 }
+import type { DealerApplicationDto } from '@motorx/shared-contracts';

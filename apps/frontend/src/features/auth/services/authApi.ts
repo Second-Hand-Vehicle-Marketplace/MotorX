@@ -1,24 +1,30 @@
+import type { ApiSuccessResponse, AuthUserDto } from '@motorx/shared-contracts';
 import type { User } from '../types/auth.types';
 import { apiClient } from '../../../shared/services/apiClient';
 import { firebaseAuth } from '../../../config/firebase';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 
+function toFrontendUser(user: AuthUserDto): User {
+  return {
+    id: user.id,
+    email: user.email,
+    displayName: user.displayName ?? user.email.split('@')[0],
+    phone: user.phone ?? undefined,
+    role: user.role,
+    ...(user.role === 'dealer' ? { dealerStatus: 'approved' as const } : {}),
+    createdAt: '',
+    lastLoginAt: '',
+    isActive: user.status === 'active',
+  };
+}
+
 export const authApi = {
   getCurrentUser: async (): Promise<User> => {
-    const idToken = await firebaseAuth.currentUser?.getIdToken();
-    const response = await apiClient.get<{ data: User }>('/auth/me', {
-      headers: idToken ? { Authorization: `Bearer ${idToken}` } : undefined,
-    });
-    return response.data.data;
+    const response = await apiClient.get<ApiSuccessResponse<AuthUserDto>>('/auth/me');
+    return toFrontendUser(response.data.data);
   },
-  login: async (email: string, password: string): Promise<User> => {
-    const credential = await signInWithEmailAndPassword(firebaseAuth, email, password);
-    const idToken = await credential.user.getIdToken();
-    const response = await apiClient.post<{ data: User }>('/auth/login', { idToken });
-    return response.data.data;
-  },
-  logout: async (): Promise<void> => {
-    await apiClient.post('/auth/logout');
-    await signOut(firebaseAuth);
+  updateProfile: async (displayName: string, phone: string): Promise<User> => {
+    const response = await apiClient.patch<ApiSuccessResponse<AuthUserDto>>('/auth/me', { displayName, phone });
+    return toFrontendUser(response.data.data);
   },
 };
