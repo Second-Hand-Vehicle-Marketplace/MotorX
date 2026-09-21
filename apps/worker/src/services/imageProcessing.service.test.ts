@@ -39,10 +39,12 @@ describe('inventory image processing', () => {
   });
 
   it('matches a zip folder to a listing by normalized registration number and attaches images', async () => {
-    mocks.unzipperOpenBuffer.mockResolvedValue({ files: [
-      fakeEntry('CAX-1234/photo1.jpg', 'File', jpeg),
-      fakeEntry('CAX-1234/photo2.jpg', 'File', jpeg),
-    ] });
+    mocks.unzipperOpenBuffer.mockResolvedValue({
+      files: [
+        fakeEntry('CAX-1234/photo1.jpg', 'File', jpeg),
+        fakeEntry('CAX-1234/photo2.jpg', 'File', jpeg),
+      ]
+    });
     const listingId = new Types.ObjectId();
     mocks.findListings.mockResolvedValue([{ _id: listingId, normalizedRegistrationNumber: 'CAX1234', images: [] }]);
 
@@ -74,11 +76,13 @@ describe('inventory image processing', () => {
   });
 
   it('skips root-level files with no folder and non-image files', async () => {
-    mocks.unzipperOpenBuffer.mockResolvedValue({ files: [
-      fakeEntry('readme.txt', 'File', Buffer.from('hello')),
-      fakeEntry('CAX-1234/notes.txt', 'File', Buffer.from('hello')),
-      fakeEntry('CAX-1234/photo.jpg', 'File', jpeg),
-    ] });
+    mocks.unzipperOpenBuffer.mockResolvedValue({
+      files: [
+        fakeEntry('readme.txt', 'File', Buffer.from('hello')),
+        fakeEntry('CAX-1234/notes.txt', 'File', Buffer.from('hello')),
+        fakeEntry('CAX-1234/photo.jpg', 'File', jpeg),
+      ]
+    });
     const listingId = new Types.ObjectId();
     mocks.findListings.mockResolvedValue([{ _id: listingId, normalizedRegistrationNumber: 'CAX1234', images: [] }]);
 
@@ -88,9 +92,11 @@ describe('inventory image processing', () => {
   });
 
   it('caps attached images at the configured per-listing limit, accounting for existing images', async () => {
-    mocks.unzipperOpenBuffer.mockResolvedValue({ files: [
-      fakeEntry('CAX-1234/a.jpg', 'File', jpeg), fakeEntry('CAX-1234/b.jpg', 'File', jpeg), fakeEntry('CAX-1234/c.jpg', 'File', jpeg),
-    ] });
+    mocks.unzipperOpenBuffer.mockResolvedValue({
+      files: [
+        fakeEntry('CAX-1234/a.jpg', 'File', jpeg), fakeEntry('CAX-1234/b.jpg', 'File', jpeg), fakeEntry('CAX-1234/c.jpg', 'File', jpeg),
+      ]
+    });
     const listingId = new Types.ObjectId();
     // maxListingImages is 3 (mocked above) and this listing already has 2 images.
     mocks.findListings.mockResolvedValue([{ _id: listingId, normalizedRegistrationNumber: 'CAX1234', images: [{ key: 'a' }, { key: 'b' }] }]);

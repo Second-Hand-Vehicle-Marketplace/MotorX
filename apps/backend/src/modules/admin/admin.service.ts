@@ -97,16 +97,18 @@ export async function getDealerDocumentForAdmin(dealerId: string, index: number)
 // Reviews an application, role assignment, and audit record as one transaction.
 export async function reviewDealerApplicationAsAdmin(dealerId: string, adminId: Types.ObjectId, decision: 'approved' | 'rejected', reason?: string) {
   const session = await mongoose.startSession(); let result: DealerApplicationDto | undefined;
-  try { await session.withTransaction(async () => {
-    const existing = await findDealerApplicationById(dealerId, session);
-    if (!existing) throw new AppError(404, errorCodes.notFound, 'The dealer application was not found.');
-    if (existing.status !== 'pending') throw new AppError(409, errorCodes.conflict, 'This dealer application has already been reviewed.');
-    const updated = await updateDealerApplicationReview(dealerId, decision, adminId, reason, session);
-    if (!updated) throw new AppError(409, errorCodes.conflict, 'This dealer application has already been reviewed.');
-    if (decision === 'approved' && !(await promoteApplicantToDealer(updated.userId, session))) throw new AppError(404, errorCodes.notFound, 'The applicant user account was not found.');
-    await createAdminAuditLog({ eventType: decision === 'approved' ? 'dealer_approved' : 'dealer_rejected', actorId: adminId, targetId: updated.userId, targetName: updated.businessName, details: decision === 'approved' ? 'Dealer application approved.' : `Dealer application rejected: ${reason}` }, session);
-    result = serializeDealer(updated.toObject() as Dealer & { _id: Types.ObjectId });
-  }); } finally { await session.endSession(); }
+  try {
+    await session.withTransaction(async () => {
+      const existing = await findDealerApplicationById(dealerId, session);
+      if (!existing) throw new AppError(404, errorCodes.notFound, 'The dealer application was not found.');
+      if (existing.status !== 'pending') throw new AppError(409, errorCodes.conflict, 'This dealer application has already been reviewed.');
+      const updated = await updateDealerApplicationReview(dealerId, decision, adminId, reason, session);
+      if (!updated) throw new AppError(409, errorCodes.conflict, 'This dealer application has already been reviewed.');
+      if (decision === 'approved' && !(await promoteApplicantToDealer(updated.userId, session))) throw new AppError(404, errorCodes.notFound, 'The applicant user account was not found.');
+      await createAdminAuditLog({ eventType: decision === 'approved' ? 'dealer_approved' : 'dealer_rejected', actorId: adminId, targetId: updated.userId, targetName: updated.businessName, details: decision === 'approved' ? 'Dealer application approved.' : `Dealer application rejected: ${reason}` }, session);
+      result = serializeDealer(updated.toObject() as Dealer & { _id: Types.ObjectId });
+    });
+  } finally { await session.endSession(); }
   if (!result) throw new AppError(500, errorCodes.internal, 'The dealer review could not be completed.');
   // Sent after the transaction commits — a delivery hiccup must never roll back the review itself.
   await notifyDealerApplicationDecision(new mongoose.Types.ObjectId(result.userId), decision, reason);

@@ -32,50 +32,50 @@ export function App() {
     <AppProviders>
       <BrowserRouter>
         <Suspense fallback={<div role="status" aria-label="Loading page" className="loading-spinner" style={{ display: 'block', margin: '4rem auto' }} />}>
-        <Routes>
-          {/* Auth Route */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<RegisterPage mode="buyer" />} />
-          <Route path="/buyer/register" element={<RegisterPage mode="buyer" />} />
-          <Route path="/dealer/apply" element={<RegisterPage mode="dealer" />} />
-          <Route path="/dealer/register" element={<RegisterPage mode="dealer" />} />
-          <Route path="/dealer/pending" element={<DealerPendingPage />} />
-          <Route path="/dealer/application-status" element={<DealerPendingPage />} />
+          <Routes>
+            {/* Auth Route */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<RegisterPage mode="buyer" />} />
+            <Route path="/buyer/register" element={<RegisterPage mode="buyer" />} />
+            <Route path="/dealer/apply" element={<RegisterPage mode="dealer" />} />
+            <Route path="/dealer/register" element={<RegisterPage mode="dealer" />} />
+            <Route path="/dealer/pending" element={<DealerPendingPage />} />
+            <Route path="/dealer/application-status" element={<DealerPendingPage />} />
 
-          {/* Public Buyer Routes (with Buyer Header/Footer Layout) */}
-          <Route element={<BuyerLayout />}>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/marketplace" element={<Marketplace />} />
-            <Route path="/marketplace/:listingId" element={<VehicleDetails />} />
-          </Route>
-
-          {/* Protected Dealer Portal Routes */}
-          <Route element={<RoleGuard allowedRoles={['dealer', 'admin']} />}>
-            <Route element={<DealerLayout />}>
-              <Route path="/dealer" element={<DealerDashboard />} />
-              <Route path="/dealer/listings" element={<ListingManager />} />
-              <Route path="/dealer/listings/new" element={<ListingForm />} />
-              <Route path="/dealer/listings/:listingId/edit" element={<ListingForm />} />
-              <Route path="/dealer/uploads/new" element={<InventoryUpload />} />
-              <Route path="/dealer/uploads/:uploadId" element={<UploadDetails />} />
+            {/* Public Buyer Routes (with Buyer Header/Footer Layout) */}
+            <Route element={<BuyerLayout />}>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/marketplace" element={<Marketplace />} />
+              <Route path="/marketplace/:listingId" element={<VehicleDetails />} />
             </Route>
-          </Route>
 
-          {/* Protected Admin Console Routes */}
-          <Route element={<RoleGuard allowedRoles={['admin']} />}>
-            <Route element={<AdminLayout />}>
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/users" element={<UserManagement />} />
-              <Route path="/admin/dealers" element={<DealerApprovals />} />
-              <Route path="/admin/listings" element={<ListingMonitoring />} />
-              <Route path="/admin/uploads" element={<UploadMonitoring />} />
-              <Route path="/admin/audit-logs" element={<AuditLogs />} />
+            {/* Protected Dealer Portal Routes */}
+            <Route element={<RoleGuard allowedRoles={['dealer', 'admin']} />}>
+              <Route element={<DealerLayout />}>
+                <Route path="/dealer" element={<DealerDashboard />} />
+                <Route path="/dealer/listings" element={<ListingManager />} />
+                <Route path="/dealer/listings/new" element={<ListingForm />} />
+                <Route path="/dealer/listings/:listingId/edit" element={<ListingForm />} />
+                <Route path="/dealer/uploads/new" element={<InventoryUpload />} />
+                <Route path="/dealer/uploads/:uploadId" element={<UploadDetails />} />
+              </Route>
             </Route>
-          </Route>
 
-          {/* Fallback Catch-all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Protected Admin Console Routes */}
+            <Route element={<RoleGuard allowedRoles={['admin']} />}>
+              <Route element={<AdminLayout />}>
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/users" element={<UserManagement />} />
+                <Route path="/admin/dealers" element={<DealerApprovals />} />
+                <Route path="/admin/listings" element={<ListingMonitoring />} />
+                <Route path="/admin/uploads" element={<UploadMonitoring />} />
+                <Route path="/admin/audit-logs" element={<AuditLogs />} />
+              </Route>
+            </Route>
+
+            {/* Fallback Catch-all */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </Suspense>
       </BrowserRouter>
     </AppProviders>

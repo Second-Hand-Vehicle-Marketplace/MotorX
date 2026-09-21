@@ -50,7 +50,7 @@ export const AdminLayout: React.FC = () => {
             User Accounts
           </NavLink>
 
-            <span className="sidebar-section-label">System</span>
+          <span className="sidebar-section-label">System</span>
 
           <NavLink to="/admin/dealers" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
