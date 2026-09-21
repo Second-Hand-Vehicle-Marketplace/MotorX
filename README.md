@@ -238,6 +238,20 @@ node apps/backend/scripts/migrate-vehicle-categories.mjs --dry-run
 
 Drop `--dry-run` to apply the changes once the output looks right.
 
+### Search embedding backfill
+
+After configuring MongoDB and the embedding provider, backfill embeddings for all eligible listings:
+
+```powershell
+npm.cmd run search:backfill --workspace @motorx/backend -- --all
+```
+
+To process only listings that do not already have embeddings, run:
+
+```powershell
+npm.cmd run search:backfill --workspace @motorx/backend
+```
+
 ## Logs and Troubleshooting
 
 Follow logs for all services:
