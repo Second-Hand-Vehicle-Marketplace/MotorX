@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ListingCard } from '../features/listings/components/ListingCard';
 import { useBuyerListings } from '../features/buyers/hooks/useBuyerListings';
@@ -11,7 +11,7 @@ export const LandingPage: React.FC = () => {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/marketplace?search=${encodeURIComponent(searchQuery.trim())}`);
+      navigate(`/marketplace?q=${encodeURIComponent(searchQuery.trim())}`);
     } else {
       navigate('/marketplace');
     }
@@ -50,8 +50,10 @@ export const LandingPage: React.FC = () => {
         {/* Natural Language & Keyword Search Bar */}
         <form onSubmit={handleSearchSubmit} className="hero-search-bar" style={{ width: '100%' }}>
           <input
-            type="text"
-            placeholder="Search make, model, body type (e.g. 'Tesla Model 3', 'BMW Sedan', 'Electric')..."
+            type="search"
+            aria-label="Search vehicle inventory"
+            maxLength={200}
+            placeholder="Try “automatic SUV under 8 million near Colombo”"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -64,6 +66,26 @@ export const LandingPage: React.FC = () => {
           <span>✓ 100% Verified Dealers</span>
           <span>✓ Real-time Inventory</span>
           <span>✓ Automated ETL Batch Sync</span>
+        </div>
+      </section>
+
+      <section style={{ maxWidth: 1280, margin: '0 auto', padding: '2rem 1.5rem 0' }}>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <span className="stat-label">Active Vehicles</span>
+            <div className="stat-value">{marketplaceStats.activeVehicles.toLocaleString()}</div>
+            <span className="stat-change" style={{ color: 'var(--color-success)' }}>Available on marketplace</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-label">Vehicles Sold</span>
+            <div className="stat-value">{marketplaceStats.soldVehicles.toLocaleString()}</div>
+            <span className="stat-change" style={{ color: 'var(--color-info)' }}>Successfully sold through MotorX</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-label">Registered Dealers</span>
+            <div className="stat-value">{marketplaceStats.registeredDealers.toLocaleString()}</div>
+            <span className="stat-change" style={{ color: 'var(--color-amber)' }}>Verified dealership network</span>
+          </div>
         </div>
       </section>
 

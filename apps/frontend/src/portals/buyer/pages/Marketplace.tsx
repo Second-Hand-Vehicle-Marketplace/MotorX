@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { carBodyTypes, transmissionTypes, vehicleConditions } from '@motorx/shared-contracts';
 import { useBuyerListings } from '@/features/buyers/hooks/useBuyerListings';
 import { ListingCard } from '@/features/listings/components/ListingCard';
@@ -8,7 +8,21 @@ import { formatEnumLabel } from '@/features/listings/utils/vehicleAttributes';
 import type { FuelType, VehicleCategory } from '@/features/listings/types/listing.types';
 
 export const Marketplace: React.FC = () => {
-  const { data, filters, updateFilters, resetFilters, page, setPage, isLoading, isError } = useBuyerListings({}, 9);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialQuery = (searchParams.get('q') ?? searchParams.get('search') ?? '').trim();
+  const { data, filters, updateFilters, resetFilters, page, setPage, isLoading, isFetching, isError, refetch } = useBuyerListings(initialQuery ? { q: initialQuery, sortBy: 'relevance' } : {}, 9);
+  const [searchInput, setSearchInput] = useState(initialQuery);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const q = searchInput.trim() || undefined;
+      updateFilters({ q, search: undefined, sortBy: q ? (filters.sortBy || 'relevance') : filters.sortBy === 'relevance' ? 'newest' : filters.sortBy });
+      setSearchParams(q ? { q } : {}, { replace: true });
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [searchInput, setSearchParams, updateFilters]);
+
+  const clearAll = () => { setSearchInput(''); setSearchParams({}, { replace: true }); resetFilters(); };
 
   return (
     <div style={{ maxWidth: 1440, margin: '0 auto', padding: '2rem 1.5rem' }}>
@@ -32,32 +46,41 @@ export const Marketplace: React.FC = () => {
       </div>
 
       {/* Main Container */}
-      <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+      <div className="marketplace-search-layout">
         {/* Filter Sidebar */}
         <aside className="glass-card filter-sidebar" style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Filters</h3>
-            <button type="button" onClick={resetFilters} className="btn btn-ghost btn-sm" style={{ color: 'var(--color-accent-light)' }}>
+            <button type="button" onClick={clearAll} className="btn btn-ghost btn-sm" style={{ color: 'var(--color-accent-light)' }}>
               Reset All
             </button>
           </div>
 
           {/* Search input */}
           <div className="filter-section">
-            <label className="filter-title">Search Keywords</label>
+            <label className="filter-title" htmlFor="marketplace-search">Smart Search</label>
             <input
-              type="text"
+              id="marketplace-search"
+              type="search"
               className="form-input"
-              placeholder="e.g. BMW 3 Series..."
-              value={filters.search || ''}
-              onChange={(e) => updateFilters({ search: e.target.value })}
+              maxLength={200}
+              placeholder="e.g. automatic SUV under 8m near Colombo"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
             />
+            <small className="search-help">Use everyday language, a make/model, or both.</small>
+          </div>
+
+          <div className="filter-section">
+            <label className="filter-title" htmlFor="location-filter">Location</label>
+            <input id="location-filter" type="search" className="form-input" maxLength={120} placeholder="e.g. Colombo" value={filters.location || ''} onChange={(e) => updateFilters({ location: e.target.value || undefined })} />
           </div>
 
           {/* Category Filter */}
           <div className="filter-section">
             <label className="filter-title">Vehicle Type</label>
             <select
+              aria-label="Vehicle type"
               className="form-select"
               value={filters.category || ''}
               onChange={(e) => updateFilters({ category: (e.target.value as VehicleCategory) || undefined })}
@@ -73,6 +96,7 @@ export const Marketplace: React.FC = () => {
           <div className="filter-section">
             <label className="filter-title">Make</label>
             <select
+              aria-label="Vehicle make"
               className="form-select"
               value={filters.make || ''}
               onChange={(e) => updateFilters({ make: e.target.value || undefined })}
@@ -88,6 +112,7 @@ export const Marketplace: React.FC = () => {
           <div className="filter-section">
             <label className="filter-title">Fuel Type</label>
             <select
+              aria-label="Fuel type"
               className="form-select"
               value={filters.fuelType || ''}
               onChange={(e) => updateFilters({ fuelType: (e.target.value as FuelType) || undefined })}
@@ -103,6 +128,7 @@ export const Marketplace: React.FC = () => {
           <div className="filter-section">
             <label className="filter-title">Transmission</label>
             <select
+              aria-label="Transmission"
               className="form-select"
               value={filters.transmission || ''}
               onChange={(e) => updateFilters({ transmission: e.target.value || undefined })}
@@ -118,6 +144,7 @@ export const Marketplace: React.FC = () => {
           <div className="filter-section">
             <label className="filter-title">Condition</label>
             <select
+              aria-label="Vehicle condition"
               className="form-select"
               value={filters.condition || ''}
               onChange={(e) => updateFilters({ condition: e.target.value || undefined })}
@@ -134,6 +161,7 @@ export const Marketplace: React.FC = () => {
             <div className="filter-section">
               <label className="filter-title">Body Type</label>
               <select
+                aria-label="Body type"
                 className="form-select"
                 value={filters.bodyType || ''}
                 onChange={(e) => updateFilters({ bodyType: e.target.value || undefined })}
@@ -152,6 +180,7 @@ export const Marketplace: React.FC = () => {
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <input
                 type="number"
+                aria-label="Minimum year"
                 className="form-input"
                 placeholder="From"
                 value={filters.yearMin || ''}
@@ -159,6 +188,7 @@ export const Marketplace: React.FC = () => {
               />
               <input
                 type="number"
+                aria-label="Maximum year"
                 className="form-input"
                 placeholder="To"
                 value={filters.yearMax || ''}
@@ -173,6 +203,7 @@ export const Marketplace: React.FC = () => {
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <input
                 type="number"
+                aria-label="Minimum price"
                 className="form-input"
                 placeholder="Min"
                 value={filters.priceMin || ''}
@@ -180,6 +211,7 @@ export const Marketplace: React.FC = () => {
               />
               <input
                 type="number"
+                aria-label="Maximum price"
                 className="form-input"
                 placeholder="Max"
                 value={filters.priceMax || ''}
@@ -187,33 +219,35 @@ export const Marketplace: React.FC = () => {
               />
             </div>
           </div>
+
+          <div className="filter-section">
+            <label className="filter-title">Mileage (km)</label>
+            <div className="filter-range">
+              <input type="number" min="0" inputMode="numeric" aria-label="Minimum mileage" className="form-input" placeholder="Min" value={filters.mileageMin || ''} onChange={(e) => updateFilters({ mileageMin: e.target.value ? Number(e.target.value) : undefined })} />
+              <input type="number" min="0" inputMode="numeric" aria-label="Maximum mileage" className="form-input" placeholder="Max" value={filters.mileageMax || ''} onChange={(e) => updateFilters({ mileageMax: e.target.value ? Number(e.target.value) : undefined })} />
+            </div>
+          </div>
         </aside>
 
         {/* Listings Section */}
         <div style={{ flex: 1 }}>
           {/* Top Bar: Count + Sort */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '1.5rem',
-            padding: '0.75rem 1.25rem',
-            background: 'var(--color-bg-secondary)',
-            borderRadius: 'var(--radius-lg)',
-            border: '1px solid var(--color-glass-border)',
-          }}>
-            <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
+          <div className="marketplace-results-bar">
+            <span aria-live="polite" style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
               Showing <strong style={{ color: 'var(--color-text-primary)' }}>{data.data.length}</strong> of {data.total} vehicles
+              {isFetching && !isLoading ? ' · Updating…' : ''}
             </span>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-tertiary)' }}>Sort by:</span>
               <select
+                aria-label="Sort search results"
                 className="form-select"
                 style={{ width: 'auto', padding: '0.375rem 2rem 0.375rem 0.75rem', fontSize: '0.8125rem' }}
-                value={filters.sortBy || 'newest'}
-                onChange={(e) => updateFilters({ sortBy: e.target.value as any })}
+                value={filters.sortBy || (filters.q ? 'relevance' : 'newest')}
+                onChange={(e) => updateFilters({ sortBy: e.target.value as NonNullable<typeof filters.sortBy> })}
               >
+                {filters.q && <option value="relevance">Most Relevant</option>}
                 <option value="newest">Newest First</option>
                 <option value="price-asc">Price: Low to High</option>
                 <option value="price-desc">Price: High to Low</option>
@@ -224,12 +258,12 @@ export const Marketplace: React.FC = () => {
           </div>
 
           {/* Grid */}
-          {isLoading && <div className="loading-spinner" style={{ margin: '3rem auto', display: 'block' }} />}
-          {isError && <div className="glass-card" style={{ padding: '1rem', color: 'var(--color-error)' }}>Could not load marketplace listings.</div>}
+          {isLoading && <div role="status" aria-label="Loading vehicle results" className="loading-spinner" style={{ margin: '3rem auto', display: 'block' }} />}
+          {isError && <div role="alert" className="glass-card search-error">Could not load marketplace listings. <button type="button" className="btn btn-secondary btn-sm" onClick={() => refetch()}>Try again</button></div>}
           {!isLoading && !isError && (data.data.length > 0 ? (
             <div className="listings-grid">
               {data.data.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
+                <ListingCard key={listing.id} listing={listing} showStatus={listing.status === 'sold'} />
               ))}
             </div>
           ) : (
@@ -239,7 +273,7 @@ export const Marketplace: React.FC = () => {
               </svg>
               <h3>No Vehicles Found</h3>
               <p>Try adjusting your search criteria or clearing filters to see more results.</p>
-              <button onClick={resetFilters} className="btn btn-secondary btn-sm" style={{ marginTop: '1rem' }}>
+              <button onClick={clearAll} className="btn btn-secondary btn-sm" style={{ marginTop: '1rem' }}>
                 Clear Filters
               </button>
             </div>
@@ -247,19 +281,22 @@ export const Marketplace: React.FC = () => {
 
           {/* Pagination */}
           {data.totalPages > 1 && (
-            <div className="pagination">
+            <nav className="pagination" aria-label="Search result pages">
               <button
                 className="page-btn"
                 disabled={page === 1}
                 onClick={() => setPage((currentPage) => currentPage - 1)}
+                aria-label="Previous result page"
               >
                 Previous
               </button>
-              {Array.from({ length: data.totalPages }, (_, i) => i + 1).map(p => (
+              {Array.from({ length: data.totalPages }, (_, i) => i + 1).filter((value) => value === 1 || value === data.totalPages || Math.abs(value - page) <= 2).map(p => (
                 <button
                   key={p}
                   className={`page-btn ${p === page ? 'active' : ''}`}
                   onClick={() => setPage(p)}
+                  aria-current={p === page ? 'page' : undefined}
+                  aria-label={`Result page ${p}`}
                 >
                   {p}
                 </button>
@@ -268,10 +305,11 @@ export const Marketplace: React.FC = () => {
                 className="page-btn"
                 disabled={page === data.totalPages}
                 onClick={() => setPage((currentPage) => currentPage + 1)}
+                aria-label="Next result page"
               >
                 Next
               </button>
-            </div>
+            </nav>
           )}
         </div>
       </div>

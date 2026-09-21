@@ -30,7 +30,7 @@ MongoDB Atlas is the primary persistent database required by the SRS. Docker Com
 - **Marketplace** — buyer browsing with structured filters (category, make, model, year, price, fuel type, transmission, body type, condition), vehicle detail pages showing the real dealer's profile, and dealer-managed listing images.
 - **Admin** — user, dealer, and listing moderation; upload monitoring; audit logs; system health; category-aware filtering.
 - **Notifications** — in-app notification center for dealers and admins with unread counts, polling, read state, and email delivery status. Email notifications use responsive MotorX HTML with a plain-text fallback and vehicle details where relevant.
-- **Not yet built** — natural-language/fuzzy/semantic search (buyer search is structured-filter only for now).
+- **Search** — indexed structured filters, natural-language parsing, typo correction, bounded hybrid semantic/lexical ranking, and graceful lexical fallback. See [search operations](docs/search-operations.md).
 
 ### Notification delivery matrix
 
@@ -50,7 +50,7 @@ The notification bell is available in the dealer and admin portal headers. Remov
 
 ## Prerequisites
 
-For complete clone, Atlas access, and first-run instructions, see [MotorX Developer Setup](docs/DEVELOPER_SETUP.md).
+For complete clone, Atlas access, and first-run instructions, see [MotorX Developer Setup](DEVELOPER_SETUP.md).
 
 Install and start Docker Desktop. You also need:
 
@@ -72,13 +72,21 @@ Run every command below from the repository root—the directory containing `com
 
 ### 1. Create the root environment file
 
-Windows PowerShell:
+## Prerequisites
+
+Install Docker Desktop with Docker Compose, Node.js 20 or newer, and Git.
+
+## Configuration
+
+Copy the safe template:
+
+### Windows PowerShell
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Linux or macOS:
+### Linux/macOS
 
 ```bash
 cp .env.example .env
@@ -152,13 +160,13 @@ Press `Ctrl+C` to stop following the logs. This does not stop the containers.
 
 ### 5. Open the application
 
-- Frontend: <http://localhost:8080>
+- Frontend: <http://localhost:4173>
 - Backend API: <http://localhost:3000>
 - Backend liveness: <http://localhost:3000/health/live>
 - Backend readiness: <http://localhost:3000/health/ready>
 - MinIO console: <http://localhost:9001>
 
-The Docker frontend is exposed on port `8080`. Port `5173` is used only when running the Vite frontend directly outside Docker. `CORS_ORIGIN` should match the URL used in your browser.
+The Docker frontend is exposed on port `4173`. Port `5173` is used only when running the Vite frontend directly outside Docker. `CORS_ORIGIN` should match the URL used in your browser.
 
 ## Normal Daily Commands
 
@@ -238,6 +246,20 @@ node apps/backend/scripts/migrate-vehicle-categories.mjs --dry-run
 
 Drop `--dry-run` to apply the changes once the output looks right.
 
+### Search embedding backfill
+
+After configuring MongoDB and the embedding provider, backfill embeddings for all eligible listings:
+
+```powershell
+npm.cmd run search:backfill --workspace @motorx/backend -- --all
+```
+
+To process only listings that do not already have embeddings, run:
+
+```powershell
+npm.cmd run search:backfill --workspace @motorx/backend
+```
+
 ## Logs and Troubleshooting
 
 Follow logs for all services:
@@ -272,9 +294,23 @@ If the backend reports an Atlas connection, TLS, or `ReplicaSetNoPrimary` error,
 
 ## Local Service Addresses
 
-| Service | Address |
+```text
+ETL job <id> completed.
+```
+
+Inspect BullMQ keys:
+
+```powershell
+docker compose exec redis redis-cli KEYS "bull:inventory-processing:*"
+```
+
+BullMQ stores job metadata in Redis keys such as `completed`, `failed`, `events`, and individual job IDs. Old failed jobs may remain as history; check worker logs and MongoDB `uploadjobs` status for the latest upload.
+
+## MongoDB Collections
+
+| Collection | Purpose |
 |---|---|
-| Frontend | `http://localhost:8080` |
+| Frontend | `http://localhost:4173` |
 | Backend API | `http://localhost:3000` |
 | Backend liveness | `http://localhost:3000/health/live` |
 | Backend readiness | `http://localhost:3000/health/ready` |

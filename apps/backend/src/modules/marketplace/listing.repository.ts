@@ -19,8 +19,11 @@ export async function findActiveListingByRegistration(normalizedRegistrationNumb
 }
 
 // Returns all statuses of listings owned by one dealer.
-export async function listDealerListings(dealerId: Types.ObjectId, page: number, limit: number) {
-  const filter = { dealerId };
+export async function listDealerListings(dealerId: Types.ObjectId, page: number, limit: number, options: { search?: string; status?: ListingStatus; category?: string } = {}) {
+  const filter: Record<string, unknown> = { dealerId };
+  if (options.status) filter.status = options.status;
+  if (options.category) filter.category = options.category;
+  if (options.search) { const search = new RegExp(options.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'); filter.$or = [{ title: search }, { make: search }, { model: search }, { registrationNumber: search }]; }
   const [documents, total] = await Promise.all([
     ListingModel.find(filter).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * limit).limit(limit).lean(),
     ListingModel.countDocuments(filter),
@@ -28,11 +31,21 @@ export async function listDealerListings(dealerId: Types.ObjectId, page: number,
   return { documents: documents as unknown as ListingRecord[], total };
 }
 
+export async function countDealerListings(dealerId: Types.ObjectId) {
+  const [total, active, draft, sold, archived] = await Promise.all([
+    ListingModel.countDocuments({ dealerId }), ListingModel.countDocuments({ dealerId, status: 'active' }),
+    ListingModel.countDocuments({ dealerId, status: 'draft' }), ListingModel.countDocuments({ dealerId, status: 'sold' }),
+    ListingModel.countDocuments({ dealerId, status: 'archived' }),
+  ]);
+  return { total, active, draft, sold, archived };
+}
+
 // Updates a listing only when it belongs to the authenticated dealer.
-export async function updateOwnedListing(listingId: string, dealerId: Types.ObjectId, update: Record<string, unknown>, unsetDescription = false) {
+export async function updateOwnedListing(listingId: string, dealerId: Types.ObjectId, update: Record<string, unknown>, unsetDescription = false, unsetEmbedding = false) {
+  const unset = { ...(unsetDescription ? { description: 1 } : {}), ...(unsetEmbedding ? { embedding: 1 } : {}) };
   return ListingModel.findOneAndUpdate(
     { _id: listingId, dealerId },
-    { $set: update, ...(unsetDescription ? { $unset: { description: 1 } } : {}) },
+    { $set: update, ...(Object.keys(unset).length ? { $unset: unset } : {}) },
     { new: true, runValidators: true },
   );
 }

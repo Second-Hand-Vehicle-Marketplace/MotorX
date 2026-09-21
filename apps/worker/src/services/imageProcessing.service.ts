@@ -18,6 +18,13 @@ async function downloadZipBuffer(storageKey: string): Promise<Buffer> {
 
 interface ZipImageEntry { fileName: string; buffer: Buffer; mimeType: string }
 
+function imageMimeType(buffer: Buffer): string | undefined {
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'image/jpeg';
+  if (buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'image/png';
+  if (buffer.length >= 12 && buffer.subarray(0, 4).toString() === 'RIFF' && buffer.subarray(8, 12).toString() === 'WEBP') return 'image/webp';
+  return undefined;
+}
+
 // Extracts image entries from the zip, grouped by their top-level folder name (the dealer's
 // registration number for that vehicle, per apps/frontend's upload instructions). Root-level
 // files (no folder), non-image files, and oversized images are silently skipped — a hand-built
@@ -25,8 +32,12 @@ interface ZipImageEntry { fileName: string; buffer: Buffer; mimeType: string }
 async function extractImageEntries(zipBuffer: Buffer): Promise<Map<string, ZipImageEntry[]>> {
   const directory = await unzipper.Open.buffer(zipBuffer);
   const grouped = new Map<string, ZipImageEntry[]>();
+  let entryCount = 0;
+  let expandedBytes = 0;
   for (const entry of directory.files) {
     if (entry.type !== 'File') continue;
+    entryCount += 1;
+    if (entryCount > workerStorageConfig.maxZipEntries) throw new Error('The vehicle photos archive contains too many files.');
     // The ZIP spec mandates '/' as the internal path separator, but PowerShell's
     // Compress-Archive (a common way for Windows-based dealers to build this zip) writes '\'
     // instead — normalize both so folder/file grouping works regardless of how the zip was made.
@@ -37,8 +48,13 @@ async function extractImageEntries(zipBuffer: Buffer): Promise<Map<string, ZipIm
     const extension = fileName.split('.').pop() ?? '';
     const mimeType = workerStorageConfig.mimeTypeForExtension(extension);
     if (!mimeType) continue;
+    const declaredSize = Number((entry as unknown as { vars?: { uncompressedSize?: number } }).vars?.uncompressedSize ?? 0);
+    if (declaredSize > workerStorageConfig.maxImageBytes || expandedBytes + declaredSize > workerStorageConfig.maxZipExpandedBytes) throw new Error('The vehicle photos archive exceeds its expanded size limit.');
     const buffer = await entry.buffer();
-    if (buffer.length > workerStorageConfig.maxImageBytes) continue;
+    expandedBytes += buffer.length;
+    if (buffer.length > workerStorageConfig.maxImageBytes || expandedBytes > workerStorageConfig.maxZipExpandedBytes) throw new Error('The vehicle photos archive exceeds its expanded size limit.');
+    const actualMimeType = imageMimeType(buffer);
+    if (!actualMimeType || actualMimeType !== mimeType) continue;
     const folder = normalizeRegistrationNumber(folderRaw);
     const list = grouped.get(folder) ?? [];
     list.push({ fileName, buffer, mimeType });
@@ -78,7 +94,8 @@ export async function processInventoryImages(uploadJobId: string) {
       const accepted = entries.slice(0, capacity);
       if (!accepted.length) continue;
       const images = await Promise.all(accepted.map((entry, index) => uploadImage(String((listing as any)._id), existingCount + index, entry)));
-      await appendListingImages((listing as any)._id, images);
+      const result = await appendListingImages((listing as any)._id, images, workerStorageConfig.maxListingImages);
+      if (!result || result.modifiedCount !== 1) continue;
       imagesAttached += images.length;
     }
 

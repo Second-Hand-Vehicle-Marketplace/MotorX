@@ -34,8 +34,8 @@ export async function openDealerDocument(dealerId: string, documentIndex: number
 export async function getMyDealerApplication(): Promise<DealerApplication> {
   return dealerResponseSchema.parse((await apiClient.get('/dealers/me')).data).data;
 }
-export async function getPendingDealerApplications(): Promise<DealerApplication[]> {
-  return dealerListResponseSchema.parse((await apiClient.get('/admin/dealer-applications')).data).data;
+export async function getPendingDealerApplications(status: 'pending' | 'approved' | 'rejected' = 'pending'): Promise<DealerApplication[]> {
+  return dealerListResponseSchema.parse((await apiClient.get('/admin/dealer-applications', { params: { status } })).data).data;
 }
 export async function approveDealerApplication(dealerId: string): Promise<DealerApplication> {
   return dealerResponseSchema.parse((await apiClient.patch(`/admin/dealer-applications/${dealerId}/approve`)).data).data;

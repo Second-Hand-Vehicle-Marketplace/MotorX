@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { csvTemplatesByCategory, vehicleCategories, type VehicleCategory } from '@motorx/shared-contracts';
@@ -11,6 +11,7 @@ const statusBadgeClass = (status: string) => status === 'completed' ? 'badge-suc
 const uploadableCategories = vehicleCategories.filter((category): category is Exclude<VehicleCategory, 'other'> => category in csvTemplatesByCategory);
 
 export const InventoryUpload: React.FC = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [category, setCategory] = useState<VehicleCategory>('car');
   const uploadsQuery = useQuery({ queryKey: ['my-uploads', 1, 20], queryFn: () => inventoryApi.listUploads(1, 20) });
@@ -23,7 +24,13 @@ export const InventoryUpload: React.FC = () => {
   const [error, setError] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    void adminApi.getUploadJobs().then((jobs) => {
+      setUploadJobs(jobs.filter((job: any) => job.dealerId === user?.id));
+    }).catch(() => setUploadJobs([]));
+  }, [user?.id]);
+
+  const handleFileChange = (kind: 'csv' | 'zip', e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
       setError('');
@@ -98,13 +105,13 @@ export const InventoryUpload: React.FC = () => {
         {!isUploading ? (
           <div>
             <label className="drop-zone">
-              <input type="file" accept=".csv" onChange={handleFileChange} style={{ display: 'none' }} />
+              <input type="file" accept=".csv" onChange={(event) => handleFileChange('csv', event)} style={{ display: 'none' }} />
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
               <div>
                 <p style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                  {selectedFile ? selectedFile.name : 'Click or drag CSV file to upload'}
+                  {selectedCsvFile ? selectedCsvFile.name : 'Click or drag CSV file to upload'}
                 </p>
                 <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-tertiary)', marginTop: '0.25rem' }}>
                   {selectedFile ? `${formatFileSize(selectedFile.size)} · Ready to upload` : `Supports UTF-8 CSV files up to 10MB, using the ${template?.label} template`}
@@ -112,7 +119,24 @@ export const InventoryUpload: React.FC = () => {
               </div>
             </label>
 
-            {selectedFile && (
+            <div style={{ marginTop: '1.5rem' }}>
+            <label className="drop-zone">
+              <input type="file" accept=".zip" onChange={(event) => handleFileChange('zip', event)} style={{ display: 'none' }} />
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <div>
+                <p style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                  {selectedZipFile ? selectedZipFile.name : 'Click or drag ZIP image bundle to upload'}
+                </p>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-tertiary)', marginTop: '0.25rem' }}>
+                  {selectedZipFile ? `${formatFileSize(selectedZipFile.size)} · Ready to upload` : 'Supports ZIP bundles up to 10MB'}
+                </p>
+              </div>
+            </label>
+            </div>
+
+            {selectedCsvFile && selectedZipFile && (
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
                 <button onClick={() => void handleStartUpload()} className="btn btn-primary btn-lg">
                   Start Upload & ETL Processing

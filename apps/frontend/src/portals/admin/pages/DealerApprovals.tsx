@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { DealerApplication } from '@/features/dealers/types/dealer.types';
 import { approveDealerApplication, getPendingDealerApplications, openDealerDocument, rejectDealerApplication } from '@/features/dealers/services/dealerApi';
+type ApplicationStatus = 'pending' | 'approved' | 'rejected';
 
 export const DealerApprovals: React.FC = () => {
   const [dealers, setDealers] = useState<DealerApplication[]>([]);
@@ -9,13 +10,14 @@ export const DealerApprovals: React.FC = () => {
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [error, setError] = useState('');
+  const [status, setStatus] = useState<ApplicationStatus>('pending');
 
   const loadApplications = async () => {
-    try { setError(''); setDealers(await getPendingDealerApplications()); }
+    try { setError(''); setDealers(await getPendingDealerApplications(status)); }
     catch (loadError) { setError(loadError instanceof Error ? loadError.message : 'Could not load dealer applications.'); }
     finally { setIsLoading(false); }
   };
-  useEffect(() => { void loadApplications(); }, []);
+  useEffect(() => { setIsLoading(true); void loadApplications(); }, [status]);
 
   const decide = async (dealerId: string, decision: 'approve' | 'reject') => {
     if (decision === 'reject' && rejectionReason.trim().length < 3) {
@@ -34,12 +36,13 @@ export const DealerApprovals: React.FC = () => {
 
   return (
     <div>
-      <div className="page-header"><div><h1 className="page-title">Dealer Applications</h1><p className="page-subtitle">Review business details and verification documents before granting dealer access.</p></div></div>
+      <div className="page-header"><div><h1 className="page-title">Dealer Applications</h1><p className="page-subtitle">Review applications by their current decision status.</p></div></div>
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>{(['pending', 'approved', 'rejected'] as const).map((value) => <button key={value} className={`btn btn-sm ${status === value ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setStatus(value)}>{value === 'pending' ? 'Pending applications' : value === 'approved' ? 'Approved applications' : 'Rejected applications'}</button>)}</div>
       {error && <div className="auth-message auth-message-error" role="alert">{error}</div>}
       {isLoading && <div className="loading-spinner" style={{ margin: '3rem auto', display: 'block' }} />}
       {!isLoading && dealers.map((dealer) => (
         <article key={dealer.id} className="glass-card dealer-review-card">
-          <div className="dealer-review-header"><div><span className="badge badge-warning">Pending approval</span><h2>{dealer.businessName}</h2><p>{dealer.representativeName} &bull; submitted {new Date(dealer.createdAt).toLocaleDateString()}</p></div></div>
+          <div className="dealer-review-header"><div><span className={`badge ${status === 'pending' ? 'badge-warning' : status === 'approved' ? 'badge-success' : 'badge-error'}`}>{status} application</span><h2>{dealer.businessName}</h2><p>{dealer.representativeName} &bull; submitted {new Date(dealer.createdAt).toLocaleDateString()}</p></div></div>
           <div className="dealer-review-grid">
             <div><span>Registration</span><strong>{dealer.registrationNumber}</strong></div>
             <div><span>Dealership type</span><strong>{dealer.dealershipType}</strong></div>
@@ -51,12 +54,12 @@ export const DealerApprovals: React.FC = () => {
           <div className="dealer-description"><span>Business description</span><p>{dealer.description}</p>{dealer.website && <a href={dealer.website} target="_blank" rel="noreferrer">Open dealership website</a>}</div>
           <div className="dealer-documents"><span>Verification documents</span><div>{dealer.verificationDocuments.map((document, index) => <button key={document.key} className="btn btn-secondary btn-sm" onClick={() => void openDealerDocument(dealer.id, index)}>{document.category.replace(/([A-Z])/g, ' $1')} &mdash; {document.originalName}</button>)}</div></div>
           {rejectingId === dealer.id && <div className="rejection-editor"><label className="form-label" htmlFor={`reason-${dealer.id}`}>Rejection reason</label><textarea id={`reason-${dealer.id}`} className="form-textarea" value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)} maxLength={500} placeholder="Explain what information is missing or why the application cannot be approved." /></div>}
-          <div className="dealer-review-actions">
+          {status === 'pending' && <div className="dealer-review-actions">
             {rejectingId === dealer.id ? <><button className="btn btn-secondary" onClick={() => { setRejectingId(null); setRejectionReason(''); }}>Cancel</button><button className="btn btn-danger" disabled={processingId === dealer.id} onClick={() => void decide(dealer.id, 'reject')}>{processingId === dealer.id ? 'Rejecting...' : 'Confirm rejection'}</button></> : <><button className="btn btn-danger" disabled={Boolean(processingId)} onClick={() => setRejectingId(dealer.id)}>Reject</button><button className="btn btn-success" disabled={Boolean(processingId)} onClick={() => void decide(dealer.id, 'approve')}>{processingId === dealer.id ? 'Approving...' : 'Approve dealer'}</button></>}
-          </div>
+          </div>}
         </article>
       ))}
-      {!isLoading && dealers.length === 0 && <div className="glass-card empty-state"><h3>All caught up</h3><p>There are no pending dealership applications.</p></div>}
+      {!isLoading && dealers.length === 0 && <div className="glass-card empty-state"><h3>No {status} applications</h3><p>There are no {status} dealership applications.</p></div>}
     </div>
   );
 };

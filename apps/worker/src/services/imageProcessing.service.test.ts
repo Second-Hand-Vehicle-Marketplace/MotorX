@@ -15,7 +15,7 @@ function fakeEntry(path: string, type: 'File' | 'Directory', content: Buffer) {
 vi.mock('../config/storage.js', () => ({
   workerStorageClient: { send: mocks.storageSend },
   workerStorageConfig: {
-    bucket: 'test-bucket', publicUrl: 'http://localhost/images', maxListingImages: 3, maxImageBytes: 1_000_000,
+    bucket: 'test-bucket', publicUrl: 'http://localhost/images', maxListingImages: 3, maxImageBytes: 1_000_000, maxZipEntries: 2_000, maxZipExpandedBytes: 10_000_000,
     mimeTypeForExtension: (extension: string) => ({ jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' } as Record<string, string>)[extension.toLowerCase()],
   },
 }));
@@ -27,7 +27,7 @@ vi.mock('./notification.service.js', () => ({ notifyImageProcessingResult: vi.fn
 import { processInventoryImages } from './imageProcessing.service.js';
 
 const uploadJobId = new Types.ObjectId().toString();
-const jpeg = Buffer.from([0xff, 0xd8, 0xff]);
+const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
 
 describe('inventory image processing', () => {
   beforeEach(() => {
@@ -35,21 +35,23 @@ describe('inventory image processing', () => {
     mocks.claimImage.mockResolvedValue({ imageZipStorageKey: 'inventory/dealer/upload/photos.zip' });
     mocks.storageSend.mockResolvedValue({ Body: { transformToByteArray: async () => new Uint8Array([1, 2, 3]) } });
     mocks.completeImage.mockResolvedValue(undefined);
-    mocks.appendImages.mockResolvedValue(undefined);
+    mocks.appendImages.mockResolvedValue({ modifiedCount: 1 });
   });
 
   it('matches a zip folder to a listing by normalized registration number and attaches images', async () => {
-    mocks.unzipperOpenBuffer.mockResolvedValue({ files: [
-      fakeEntry('CAX-1234/photo1.jpg', 'File', jpeg),
-      fakeEntry('CAX-1234/photo2.jpg', 'File', jpeg),
-    ] });
+    mocks.unzipperOpenBuffer.mockResolvedValue({
+      files: [
+        fakeEntry('CAX-1234/photo1.jpg', 'File', jpeg),
+        fakeEntry('CAX-1234/photo2.jpg', 'File', jpeg),
+      ]
+    });
     const listingId = new Types.ObjectId();
     mocks.findListings.mockResolvedValue([{ _id: listingId, normalizedRegistrationNumber: 'CAX1234', images: [] }]);
 
     const result = await processInventoryImages(uploadJobId);
 
     expect(result).toMatchObject({ imagesAttached: 2, matchedListings: 1, unmatchedFolders: [] });
-    expect(mocks.appendImages).toHaveBeenCalledWith(listingId, expect.arrayContaining([expect.objectContaining({ order: 0 }), expect.objectContaining({ order: 1 })]));
+    expect(mocks.appendImages).toHaveBeenCalledWith(listingId, expect.arrayContaining([expect.objectContaining({ order: 0 }), expect.objectContaining({ order: 1 })]), 3);
     expect(mocks.completeImage).toHaveBeenCalledWith(uploadJobId, { imagesAttached: 2, matchedListings: 1, unmatchedFolders: [] });
   });
 
@@ -74,11 +76,13 @@ describe('inventory image processing', () => {
   });
 
   it('skips root-level files with no folder and non-image files', async () => {
-    mocks.unzipperOpenBuffer.mockResolvedValue({ files: [
-      fakeEntry('readme.txt', 'File', Buffer.from('hello')),
-      fakeEntry('CAX-1234/notes.txt', 'File', Buffer.from('hello')),
-      fakeEntry('CAX-1234/photo.jpg', 'File', jpeg),
-    ] });
+    mocks.unzipperOpenBuffer.mockResolvedValue({
+      files: [
+        fakeEntry('readme.txt', 'File', Buffer.from('hello')),
+        fakeEntry('CAX-1234/notes.txt', 'File', Buffer.from('hello')),
+        fakeEntry('CAX-1234/photo.jpg', 'File', jpeg),
+      ]
+    });
     const listingId = new Types.ObjectId();
     mocks.findListings.mockResolvedValue([{ _id: listingId, normalizedRegistrationNumber: 'CAX1234', images: [] }]);
 
@@ -88,9 +92,11 @@ describe('inventory image processing', () => {
   });
 
   it('caps attached images at the configured per-listing limit, accounting for existing images', async () => {
-    mocks.unzipperOpenBuffer.mockResolvedValue({ files: [
-      fakeEntry('CAX-1234/a.jpg', 'File', jpeg), fakeEntry('CAX-1234/b.jpg', 'File', jpeg), fakeEntry('CAX-1234/c.jpg', 'File', jpeg),
-    ] });
+    mocks.unzipperOpenBuffer.mockResolvedValue({
+      files: [
+        fakeEntry('CAX-1234/a.jpg', 'File', jpeg), fakeEntry('CAX-1234/b.jpg', 'File', jpeg), fakeEntry('CAX-1234/c.jpg', 'File', jpeg),
+      ]
+    });
     const listingId = new Types.ObjectId();
     // maxListingImages is 3 (mocked above) and this listing already has 2 images.
     mocks.findListings.mockResolvedValue([{ _id: listingId, normalizedRegistrationNumber: 'CAX1234', images: [{ key: 'a' }, { key: 'b' }] }]);
@@ -98,7 +104,7 @@ describe('inventory image processing', () => {
     const result = await processInventoryImages(uploadJobId);
 
     expect(result.imagesAttached).toBe(1);
-    expect(mocks.appendImages).toHaveBeenCalledWith(listingId, expect.arrayContaining([expect.objectContaining({ order: 2 })]));
+    expect(mocks.appendImages).toHaveBeenCalledWith(listingId, expect.arrayContaining([expect.objectContaining({ order: 2 })]), 3);
   });
 
   it('marks the job failed when the zip cannot be downloaded', async () => {

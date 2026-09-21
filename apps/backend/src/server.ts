@@ -7,6 +7,9 @@ const port = env.PORT;
 
 await connectDatabase();
 
+void connectDatabase();
+void initializeFirebaseAdmin();
+
 const server = app.listen(port, '0.0.0.0', () => {
   console.log(`MotorX backend is running on port ${port}.`);
 });

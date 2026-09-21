@@ -71,6 +71,16 @@ Expected backend behavior:
 - Reject creating or reactivating a listing whose `registrationNumber` already belongs to another
   currently `draft`/`active` listing (409); archived/sold listings never block a relist.
 
+### Search
+
+- `GET /api/v1/search?q=...` — public natural-language vehicle search. Supports the same structured
+  make/model/category/body/condition/fuel/transmission/year/price/location/mileage filters as browse,
+  plus relevance sorting. The response contains `listings`, `pagination`, and `search` interpretation
+  metadata (`interpreted`, `correctedTerms`, `mode`, and `durationMs`).
+- Query text is capped at 200 characters and page size at 50. Active-listing scope is mandatory.
+- `mode` is `hybrid` when Atlas Vector Search contributes, `lexical-fallback` when semantic search is
+  unavailable, or `structured` when the query is fully represented by extracted filters.
+
 ### Vehicle Categories
 
 A listing's `category` (`car | motorcycle | van | truck | three_wheeler | bus | other`) determines

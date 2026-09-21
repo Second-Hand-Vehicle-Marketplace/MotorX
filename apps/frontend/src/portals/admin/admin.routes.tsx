@@ -23,8 +23,4 @@ export const adminRoutes = [
 		path: '/admin/audit-logs',
 		page: 'AuditLogs',
 	},
-	{
-		path: '/admin/system-health',
-		page: 'SystemHealth',
-	},
 ] as const;

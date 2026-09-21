@@ -112,4 +112,4 @@ suspension/activation, listing removal). Written by `createAdminAuditLog`.
 
 ## `notifications`
 
-Not yet implemented — see `apps/backend/src/modules/notifications` (currently a stub).
+Notifications are persisted in `apps/backend/src/modules/notifications` with in-app state and email delivery metadata.

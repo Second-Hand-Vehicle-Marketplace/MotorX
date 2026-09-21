@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useBuyerListing } from '@/features/buyers/hooks/useBuyerListing';
 import { ListingGallery } from '@/features/listings/components/ListingGallery';
@@ -124,6 +124,8 @@ export const VehicleDetails: React.FC = () => {
               {formatPrice(listing.price, listing.currency)}
             </div>
 
+            {listing.status === 'sold' && <div className="badge badge-error" style={{ display: 'inline-block', marginBottom: '1rem' }}>Sold</div>}
+
             <div style={{ borderTop: '1px solid var(--color-glass-border)', borderBottom: '1px solid var(--color-glass-border)', padding: '1rem 0', margin: '1rem 0' }}>
               <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Sold by
@@ -151,6 +153,8 @@ export const VehicleDetails: React.FC = () => {
                 </p>
               )}
             </div>
+
+            {actionMessage && <p style={{ color: 'var(--color-success)', fontSize: '0.8125rem', marginTop: '1rem' }}>{actionMessage}</p>}
 
             <div style={{ marginTop: '1.5rem', fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'flex', justifyContent: 'space-between' }}>
               <span>{listing.publishedAt ? `Listed ${formatDate(listing.publishedAt)}` : 'Active listing'}</span>

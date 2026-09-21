@@ -15,6 +15,7 @@ export interface DealerApplicationInput {
   email: string;
   phone: string;
   password: string;
+  idToken?: string;
   businessName: string;
   businessLicense: string;
   address: string;

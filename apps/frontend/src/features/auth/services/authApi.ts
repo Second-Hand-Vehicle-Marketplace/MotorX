@@ -1,6 +1,8 @@
 import type { ApiSuccessResponse, AuthUserDto } from '@motorx/shared-contracts';
 import type { User } from '../types/auth.types';
 import { apiClient } from '../../../shared/services/apiClient';
+import { firebaseAuth } from '../../../config/firebase';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 
 function toFrontendUser(user: AuthUserDto): User {
   return {

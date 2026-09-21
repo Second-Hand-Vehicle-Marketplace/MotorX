@@ -150,7 +150,7 @@ For Atlas errors, confirm the public IP, IP Access List entry, database username
 
 ### 10. Open MotorX
 
-- Frontend: <http://localhost:8080>
+- Frontend: <http://localhost:4173>
 - Backend API: <http://localhost:3000>
 - Backend liveness check: <http://localhost:3000/health/live>
 - Backend readiness check: <http://localhost:3000/health/ready>
@@ -204,3 +204,8 @@ docker compose down
    ```
 
 Changing the Atlas IP Access List does not require rebuilding Docker images.
+
+## Embedding
+npm.cmd run search:backfill --workspace @motorx/backend -- --all
+## To process only listings that do not already have embeddings:
+npm.cmd run search:backfill --workspace @motorx/backend

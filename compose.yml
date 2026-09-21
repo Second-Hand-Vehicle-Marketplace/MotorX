@@ -94,6 +94,8 @@ services:
           --ignore-existing \
           "motorx-local/$${S3_BUCKET}"
 
+        mc anonymous set download "motorx-local/$${S3_BUCKET}"
+
         echo "MinIO bucket is ready."
 
     networks:
@@ -131,7 +133,7 @@ services:
       S3_FORCE_PATH_STYLE: "true"
 
       # Frontend origin
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:4173}
 
     depends_on:
       redis:
