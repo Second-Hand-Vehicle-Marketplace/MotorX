@@ -57,6 +57,13 @@ export const DealerLayout: React.FC = () => {
             Add New Vehicle
           </NavLink>
 
+          <NavLink to="/dealer/profile" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.1 19.7A9 9 0 1118.9 19.7a9 9 0 01-13.8 0zM12 12a3 3 0 100-6 3 3 0 000 6zm-5.3 7.1a5.8 5.8 0 0110.6 0" />
+            </svg>
+            Business Profile
+          </NavLink>
+
           <span className="sidebar-section-label">Bulk Inventory</span>
 
           <NavLink to="/dealer/uploads/new" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>

@@ -29,7 +29,9 @@ function serializeDealer(dealer: Dealer & { _id: Types.ObjectId }): DealerApplic
     description: dealer.description ?? 'No business description was provided.', inventoryCount: dealer.inventoryCount ?? null,
     verificationDocuments: dealer.verificationDocuments ?? [], status: dealer.status,
     rejectionReason: dealer.rejectionReason ?? null, reviewedBy: dealer.reviewedBy?.toString() ?? null,
-    reviewedAt: dealer.reviewedAt?.toISOString() ?? null, createdAt: dealer.createdAt.toISOString(), updatedAt: dealer.updatedAt.toISOString(),
+    reviewedAt: dealer.reviewedAt?.toISOString() ?? null,
+    reviewHistory: (dealer.reviewHistory ?? []).map((review) => ({ status: review.status, reason: review.reason ?? null, reviewedBy: review.reviewedBy?.toString() ?? null, reviewedAt: review.reviewedAt.toISOString() })),
+    createdAt: dealer.createdAt.toISOString(), updatedAt: dealer.updatedAt.toISOString(),
   };
 }
 

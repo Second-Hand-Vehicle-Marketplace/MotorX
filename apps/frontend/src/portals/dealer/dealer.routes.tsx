@@ -19,4 +19,8 @@ export const dealerRoutes = [
 		path: '/dealer/listings/new',
 		page: 'ListingForm',
 	},
+	{
+		path: '/dealer/profile',
+		page: 'DealerProfile',
+	},
 ] as const;

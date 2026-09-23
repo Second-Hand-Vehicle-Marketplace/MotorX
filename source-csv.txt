@@ -1,0 +1,7 @@
+﻿registrationNumber,title,make,model,year,price,currency,location,description,edition,bodyType,condition,mileageKm,fuelType,transmission,engineCapacityCc,batteryCapacityKWh,batteryRangeKm
+CAR-4513,Toyota Aqua 2020,Toyota,Aqua,2020,7800000,LKR,Colombo,"Mint condition, carefully used home car",G Grade,hatchback,used,28000,hybrid,automatic,1500,,
+BEY-8822,Suzuki Wagon R 2021,Suzuki,Wagon R,2021,5600000,LKR,Kandy,"First owner, immaculate condition",FX,hatchback,used,19000,hybrid,automatic,660,,
+CAA-9933,Nissan X-Trail 2018,Nissan,X-Trail,2018,12500000,LKR,Gampaha,"Sunroof, 7 seater, leather seats",20X,suv,used,54000,hybrid,automatic,2000,,
+CAB-1205,Hyundai Ioniq 2020,Hyundai,Ioniq,2020,11000000,LKR,Colombo,"Electric fast charge, excellent range",Electric,sedan,reconditioned,25000,electric,automatic,,38.3,280
+CAC-7790,Mitsubishi Montero 2017,Mitsubishi,Montero,2017,24000000,LKR,Kurunegala,"Full option, 4WD, pristine condition",Exceed,suv,used,72000,diesel,automatic,3000,,
+

@@ -41,8 +41,8 @@ describe('inventory image processing', () => {
   it('matches a zip folder to a listing by normalized registration number and attaches images', async () => {
     mocks.unzipperOpenBuffer.mockResolvedValue({
       files: [
-        fakeEntry('CAX-1234/photo1.jpg', 'File', jpeg),
-        fakeEntry('CAX-1234/photo2.jpg', 'File', jpeg),
+        fakeEntry('CAX-1234/photo1.png', 'File', jpeg),
+        fakeEntry('CAX-1234/photo2.png', 'File', jpeg),
       ]
     });
     const listingId = new Types.ObjectId();
@@ -57,6 +57,16 @@ describe('inventory image processing', () => {
 
   it('groups entries whose zip path uses backslashes (PowerShell Compress-Archive) the same as forward slashes', async () => {
     mocks.unzipperOpenBuffer.mockResolvedValue({ files: [fakeEntry('CAX-1234\\photo1.jpg', 'File', jpeg)] });
+    const listingId = new Types.ObjectId();
+    mocks.findListings.mockResolvedValue([{ _id: listingId, normalizedRegistrationNumber: 'CAX1234', images: [] }]);
+
+    const result = await processInventoryImages(uploadJobId);
+
+    expect(result).toMatchObject({ imagesAttached: 1, matchedListings: 1, unmatchedFolders: [] });
+  });
+
+  it('matches images when the zip contains an extra wrapper folder', async () => {
+    mocks.unzipperOpenBuffer.mockResolvedValue({ files: [fakeEntry('PhotoArchive/CAX-1234/photo.jpg', 'File', jpeg)] });
     const listingId = new Types.ObjectId();
     mocks.findListings.mockResolvedValue([{ _id: listingId, normalizedRegistrationNumber: 'CAX1234', images: [] }]);
 
@@ -112,5 +122,15 @@ describe('inventory image processing', () => {
     await expect(processInventoryImages(uploadJobId)).rejects.toThrow('S3 unavailable');
     expect(mocks.failImage).toHaveBeenCalledWith(uploadJobId, 'S3 unavailable');
     expect(mocks.completeImage).not.toHaveBeenCalled();
+  });
+
+  it('fails with an actionable reason instead of a silent 0/0 when the zip has no matching folder/image entries', async () => {
+    mocks.unzipperOpenBuffer.mockResolvedValue({ files: [fakeEntry('readme.txt', 'File', Buffer.from('hello')), fakeEntry('photo.jpg', 'File', jpeg)] });
+
+    await expect(processInventoryImages(uploadJobId)).rejects.toThrow(/No vehicle photos were found/);
+
+    expect(mocks.failImage).toHaveBeenCalledWith(uploadJobId, expect.stringContaining('No vehicle photos were found'));
+    expect(mocks.completeImage).not.toHaveBeenCalled();
+    expect(mocks.findListings).not.toHaveBeenCalled();
   });
 });

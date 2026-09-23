@@ -14,8 +14,9 @@ const Marketplace = React.lazy(() => import('../portals/buyer/pages/Marketplace'
 const VehicleDetails = React.lazy(() => import('../portals/buyer/pages/VehicleDetails').then((module) => ({ default: module.VehicleDetails })));
 const DealerLayout = React.lazy(() => import('../portals/dealer/layout/DealerLayout').then((module) => ({ default: module.DealerLayout })));
 const DealerDashboard = React.lazy(() => import('../portals/dealer/pages/DealerDashboard').then((module) => ({ default: module.DealerDashboard })));
-const ListingManager = React.lazy(() => import('../portals/dealer/pages/ListingManager').then((module) => ({ default: module.ListingManager })));
+const ListingManager = React.lazy(() => import('../portals/dealer/pages/ListingManagerEnhanced').then((module) => ({ default: module.ListingManagerEnhanced })));
 const ListingForm = React.lazy(() => import('../portals/dealer/pages/ListingForm').then((module) => ({ default: module.ListingForm })));
+const DealerProfile = React.lazy(() => import('../portals/dealer/pages/DealerProfile').then((module) => ({ default: module.DealerProfile })));
 const InventoryUpload = React.lazy(() => import('../portals/dealer/pages/InventoryUpload').then((module) => ({ default: module.InventoryUpload })));
 const UploadDetails = React.lazy(() => import('../portals/dealer/pages/UploadDetails').then((module) => ({ default: module.UploadDetails })));
 const AdminLayout = React.lazy(() => import('../portals/admin/layout/AdminLayout').then((module) => ({ default: module.AdminLayout })));
@@ -56,6 +57,7 @@ export function App() {
                 <Route path="/dealer/listings" element={<ListingManager />} />
                 <Route path="/dealer/listings/new" element={<ListingForm />} />
                 <Route path="/dealer/listings/:listingId/edit" element={<ListingForm />} />
+                <Route path="/dealer/profile" element={<DealerProfile />} />
                 <Route path="/dealer/uploads/new" element={<InventoryUpload />} />
                 <Route path="/dealer/uploads/:uploadId" element={<UploadDetails />} />
               </Route>

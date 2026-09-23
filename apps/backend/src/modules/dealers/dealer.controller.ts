@@ -1,8 +1,8 @@
 import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../../shared/types/authenticatedRequest.js';
 import { sendSuccess } from '../../shared/responses/apiResponse.js';
-import { getMyDealerApplication, submitDealerApplication } from './dealer.service.js';
-import type { CreateDealerApplicationBody } from './dealer.validation.js';
+import { getMyDealerApplication, submitDealerApplication, updateMyDealerProfile } from './dealer.service.js';
+import type { CreateDealerApplicationBody, UpdateDealerProfileBody } from './dealer.validation.js';
 import { deleteDealerDocuments, storeDealerDocuments } from './dealerDocument.storage.js';
 
 // Handles submission of a buyer's dealer application.
@@ -23,4 +23,8 @@ export async function createApplication(request: AuthenticatedRequest, response:
 // Returns the authenticated user's application.
 export async function getMyApplication(request: AuthenticatedRequest, response: Response) {
   sendSuccess(response, await getMyDealerApplication(request.localUser!._id));
+}
+
+export async function updateMyProfile(request: AuthenticatedRequest, response: Response) {
+  sendSuccess(response, await updateMyDealerProfile(request.localUser!._id, request.body as UpdateDealerProfileBody));
 }

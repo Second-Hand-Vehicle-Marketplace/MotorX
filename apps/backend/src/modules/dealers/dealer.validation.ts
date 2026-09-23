@@ -20,7 +20,13 @@ export const createDealerApplicationSchema = z.object({
   inventoryCount: z.union([z.literal(''), z.coerce.number().int().min(0).max(100000)]).optional().transform((value) => value === '' ? undefined : value),
 });
 
+export const updateDealerProfileSchema = createDealerApplicationSchema.pick({
+  businessName: true, phone: true, address: true, representativeName: true, city: true, province: true,
+  businessPhone: true, businessEmail: true, website: true, dealershipType: true, brands: true, description: true, inventoryCount: true,
+}).partial();
+
 export const dealerIdParamsSchema = z.object({ dealerId: z.string().regex(/^[a-f\d]{24}$/i) });
 export const rejectionBodySchema = z.object({ reason: z.string().trim().min(3).max(500) });
 
 export type CreateDealerApplicationBody = z.infer<typeof createDealerApplicationSchema>;
+export type UpdateDealerProfileBody = z.infer<typeof updateDealerProfileSchema>;

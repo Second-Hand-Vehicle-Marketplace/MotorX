@@ -35,6 +35,7 @@ export const DealerPendingPage: React.FC = () => {
         {rejected && application?.rejectionReason && <div className="rejection-reason"><span>Reason provided by the administrator</span>{application.rejectionReason}</div>}
         {application?.reviewedAt && <small>Reviewed {new Date(application.reviewedAt).toLocaleString()}</small>}
         <div className="auth-status-actions">
+          {rejected && <Link to="/dealer/apply" className="btn btn-primary">Update and resubmit</Link>}
           {isAuthenticated
             ? <button className="btn btn-primary" onClick={() => void logout()}>Sign Out</button>
             : <Link to="/login" className="btn btn-primary">Return to Sign In</Link>}

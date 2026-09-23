@@ -103,8 +103,10 @@ export function findDealerApplicationById(dealerId: string, session?: ClientSess
 
 // Applies a review decision only while the application remains pending.
 export function updateDealerApplicationReview(dealerId: string, status: 'approved' | 'rejected', adminId: Types.ObjectId, rejectionReason: string | undefined, session: ClientSession) {
+  const reviewedAt = new Date();
   return DealerModel.findOneAndUpdate({ _id: dealerId, status: 'pending' }, {
-    $set: { status, reviewedBy: adminId, reviewedAt: new Date(), ...(rejectionReason ? { rejectionReason } : {}) },
+    $set: { status, reviewedBy: adminId, reviewedAt, ...(rejectionReason ? { rejectionReason } : {}) },
+    $push: { reviewHistory: { status, ...(rejectionReason ? { reason: rejectionReason } : {}), reviewedBy: adminId, reviewedAt } },
     ...(status === 'approved' ? { $unset: { rejectionReason: 1 } } : {}),
   }, { new: true, runValidators: true, session });
 }
