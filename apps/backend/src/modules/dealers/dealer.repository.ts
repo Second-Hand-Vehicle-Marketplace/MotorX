@@ -8,7 +8,7 @@ export const findDealerByUserId = (userId: Types.ObjectId) => DealerModel.findOn
 export const createDealer = (userId: Types.ObjectId, input: CreateDealerApplicationBody & { verificationDocuments: Array<{ category: 'businessRegistration' | 'identityProof' | 'additionalDocument'; key: string; originalName: string; contentType: string; size: number }> }) => DealerModel.create({ userId, ...input });
 export const resubmitDealer = (userId: Types.ObjectId, input: CreateDealerApplicationBody & { verificationDocuments: Array<{ category: 'businessRegistration' | 'identityProof' | 'additionalDocument'; key: string; originalName: string; contentType: string; size: number }> }) => DealerModel.findOneAndUpdate(
 	{ userId, status: 'rejected' },
-	{ $set: { ...input, status: 'pending', rejectionReason: undefined, reviewedBy: undefined, reviewedAt: undefined } },
+	{ $set: { ...input, status: 'pending' }, $unset: { rejectionReason: 1, reviewedBy: 1, reviewedAt: 1 } },
 	{ new: true, runValidators: true },
 );
 export const updateApprovedDealerProfile = (userId: Types.ObjectId, input: UpdateDealerProfileBody) => DealerModel.findOneAndUpdate(
