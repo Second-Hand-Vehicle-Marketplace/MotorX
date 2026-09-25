@@ -1,3 +1,7 @@
+# Separate project name so a test run never replaces the local "motorx" dev
+# containers or volumes, and no published ports so it can run alongside them.
+name: motorx-test
+
 services:
   mongodb:
     image: mongo:7
@@ -14,6 +18,11 @@ services:
       - /data/db
 
     volumes: !reset []
+
+    # The backend and worker only join motorx-network, so MongoDB must too.
+    networks:
+      - motorx-network
+
     healthcheck:
       test: [ "CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 }).ok" ]
       interval: 5s
@@ -32,6 +41,8 @@ services:
       - mongodb:27017
       - --eval
       - 'try { rs.status() } catch (error) { rs.initiate({ _id: "rs0", members: [{ _id: 0, host: "mongodb:27017" }] }) }'
+    networks:
+      - motorx-network
 
   redis:
     command:
@@ -45,18 +56,24 @@ services:
       - /data
 
     volumes: !reset []
+    ports: !reset []
 
   minio:
     tmpfs:
       - /data
 
     volumes: !reset []
+    ports: !reset []
 
   minio-init:
     environment:
       S3_BUCKET: motorx-test
 
   backend:
+    # The slim production image has no Vitest; tests use the development stage.
+    build:
+      target: development
+
     environment:
       NODE_ENV: test
 
@@ -71,9 +88,14 @@ services:
       mongodb-init:
         condition: service_completed_successfully
 
-    command: npm run test --workspace @motorx/backend
+    # Test files share one database, so run them serially (matches CI).
+    command: npm run test --workspace @motorx/backend -- --maxWorkers=1
+    ports: !reset []
 
   worker:
+    build:
+      target: development
+
     environment:
       NODE_ENV: test
 
@@ -88,8 +110,9 @@ services:
       mongodb-init:
         condition: service_completed_successfully
 
-    command: npm run test --workspace @motorx/worker
+    command: npm run test --workspace @motorx/worker -- --maxWorkers=1
 
   frontend:
     profiles:
       - frontend-tests
+    ports: !reset []

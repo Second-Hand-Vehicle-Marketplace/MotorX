@@ -11,5 +11,11 @@ const rejectedRecordSchema = new mongoose.Schema<RejectedInventoryRecord>({
 rejectedRecordSchema.index({ uploadJobId: 1, rowNumber: 1 }, { unique: true });
 const RejectedRecordModel = mongoose.models.RejectedRecord ?? mongoose.model<RejectedInventoryRecord>('RejectedRecord', rejectedRecordSchema);
 
-// Persists invalid and duplicate rows in one batch for dealer correction later.
-export async function insertRejectedRecords(records: RejectedInventoryRecord[]) { if (!records.length) return []; return RejectedRecordModel.insertMany(records, { ordered: true }); }
+// Persists invalid and duplicate rows for dealer correction later. Insert-once per
+// (upload, row): re-running a batch after a crash leaves the existing records untouched.
+export async function insertRejectedRecords(records: RejectedInventoryRecord[]) {
+  if (!records.length) return;
+  await RejectedRecordModel.bulkWrite(records.map((record) => ({
+    updateOne: { filter: { uploadJobId: record.uploadJobId, rowNumber: record.rowNumber }, update: { $setOnInsert: record }, upsert: true },
+  })), { ordered: false });
+}

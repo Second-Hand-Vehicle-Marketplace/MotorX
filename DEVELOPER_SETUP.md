@@ -26,8 +26,8 @@ If the application already connects successfully, no Atlas change is needed. If 
 Before starting, obtain the following from the project administrator through a secure channel:
 
 - access to the GitHub repository;
-- access to the MotorX MongoDB Atlas project, or a dedicated Atlas database username and password;
-- the Atlas cluster connection string;
+- access to the MotorX **development** MongoDB Atlas project, or a dedicated development database username and password;
+- the **development** Atlas cluster connection string (never the production one);
 - the required Firebase Admin SDK values;
 - the required Firebase Web SDK values;
 - any other non-empty secret values required by the root `.env` file.
@@ -42,6 +42,7 @@ Install:
 
 - Git;
 - Docker Desktop with Docker Compose;
+- Node.js 24 LTS (the version in `.nvmrc`), needed to run builds, tests, and scripts outside Docker;
 - a current web browser.
 
 Start Docker Desktop and wait until the Docker engine is running.
@@ -75,13 +76,13 @@ Invoke-RestMethod "https://api.ipify.org"
 
 An Atlas project owner should then:
 
-1. Sign in to MongoDB Atlas and open the MotorX project.
+1. Sign in to MongoDB Atlas and open the MotorX **development** project.
 2. Open **Security > Network Access**.
 3. Select **Add IP Address**.
 4. Add the developer's current public IP address and a recognizable description.
 5. Save the entry and wait until Atlas marks it active.
 
-Add a single developer address instead of `0.0.0.0/0`. The latter permits connections from anywhere and should not be used for routine development.
+Add a single developer address instead of `0.0.0.0/0`. The latter permits connections from anywhere and must not be used in either project. Developer IPs are never added to the production project; see [Production database access](#production-database-access).
 
 Official reference: [MongoDB Atlas IP Access List documentation](https://www.mongodb.com/docs/atlas/security/add-ip-address-to-list/).
 
@@ -204,6 +205,18 @@ docker compose down
    ```
 
 Changing the Atlas IP Access List does not require rebuilding Docker images.
+
+## Local ports
+
+`compose.yml` is for local development only. Every published port is bound to `127.0.0.1`, so Redis (which has no password), the MinIO console (whose example credentials are public in `.env.example`), and the dev servers are reachable from this computer but not from other machines on the same network. Do not change these bindings to `0.0.0.0`, and never run `compose.yml` on a server.
+
+## Production database access
+
+Production uses a **separate Atlas project** (or at minimum a separate cluster) from development, with its own database user that has only `readWrite` on the production database.
+
+- The production backend and worker run on ECS in private subnets and reach the internet through a NAT Gateway with an Elastic IP. The production Atlas IP Access List contains **only that Elastic IP**. If the cluster is M10 or higher, an Atlas Private Endpoint (AWS PrivateLink) can replace the IP entry.
+- The production `MONGODB_URI` is stored in AWS Secrets Manager and injected through the ECS task definition's `secrets`. It never goes in a `.env` file or in GitHub.
+- When `NODE_ENV=production`, the backend and worker refuse to start unless `MONGODB_URI` uses TLS, is not a local host, and names a database that does not look like a dev or test database (for example `motorx_test` or `motorx-dev`).
 
 ## Embedding
 npm.cmd run search:backfill --workspace @motorx/backend -- --all

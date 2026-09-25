@@ -1,5 +1,6 @@
 import mongoose, { type Types } from 'mongoose';
 import type { DealerApplicationDto } from '@motorx/shared-contracts';
+import { inventoryQueue } from '../../config/queue.js';
 import { AppError } from '../../shared/errors/AppError.js';
 import { errorCodes } from '../../shared/errors/errorCodes.js';
 import { buildPaginationMeta } from '../../shared/utils/pagination.js';
@@ -29,7 +30,7 @@ function serializeDealer(dealer: Dealer & { _id: Types.ObjectId }): DealerApplic
     description: dealer.description ?? 'No business description was provided.', inventoryCount: dealer.inventoryCount ?? null,
     verificationDocuments: dealer.verificationDocuments ?? [], status: dealer.status,
     rejectionReason: dealer.rejectionReason ?? null, reviewedBy: dealer.reviewedBy?.toString() ?? null,
-    reviewedAt: dealer.reviewedAt?.toISOString() ?? null, createdAt: dealer.createdAt.toISOString(), updatedAt: dealer.updatedAt.toISOString(),
+    reviewedAt: dealer.reviewedAt?.toISOString() ?? null, documentsDeletedAt: dealer.documentsDeletedAt?.toISOString() ?? null, createdAt: dealer.createdAt.toISOString(), updatedAt: dealer.updatedAt.toISOString(),
   };
 }
 
@@ -85,14 +86,52 @@ export async function getUploadsForAdmin(query: ListAdminUploadsQuery) {
   return { data, meta: buildPaginationMeta(query.page, query.limit, result.total) };
 }
 
+// Worker liveness can't be observed directly from the backend process (separate container, no
+// shared port), so it's approximated via a heartbeat the worker writes on its reaper interval
+// (default 60s — see apps/worker/src/jobs/reaper.job.ts). This window must stay comfortably
+// above that interval so a healthy worker between heartbeats isn't reported as down.
+const WORKER_HEARTBEAT_STALE_AFTER_MS = 120_000;
+
 // Reports truthful live state for configured backend dependencies.
-export function getSystemHealthForAdmin() { const ready = mongoose.connection.readyState === 1; return { checkedAt: new Date().toISOString(), backend: { status: 'operational', uptimeSeconds: Math.floor(process.uptime()) }, database: { status: ready ? 'operational' : 'unavailable', readyState: mongoose.connection.readyState }, queue: { status: 'not_configured' }, worker: { status: 'not_configured' } }; }
+export async function getSystemHealthForAdmin() {
+  const ready = mongoose.connection.readyState === 1;
+
+  let queueStatus: { status: string; counts?: Record<string, number> };
+  try {
+    queueStatus = { status: 'operational', counts: await inventoryQueue.getJobCounts('active', 'waiting', 'delayed', 'failed') };
+  } catch {
+    queueStatus = { status: 'unavailable' };
+  }
+
+  const heartbeat = await mongoose.connection.db
+    ?.collection<{ _id: string; lastSeenAt: Date }>('workerHeartbeats')
+    .findOne({ _id: 'worker' });
+  const lastSeenAt = heartbeat?.lastSeenAt;
+  const workerAlive = !!lastSeenAt && Date.now() - new Date(lastSeenAt).getTime() < WORKER_HEARTBEAT_STALE_AFTER_MS;
+
+  return {
+    checkedAt: new Date().toISOString(),
+    backend: { status: 'operational', uptimeSeconds: Math.floor(process.uptime()) },
+    database: { status: ready ? 'operational' : 'unavailable', readyState: mongoose.connection.readyState },
+    queue: queueStatus,
+    worker: { status: workerAlive ? 'operational' : 'unavailable', lastSeenAt: lastSeenAt?.toISOString() ?? null },
+  };
+}
 
 // Returns the pending applications visible to administrators.
 export async function getDealerApplicationsForAdmin(query: ListAdminDealerApplicationsQuery) { const records = await listDealerApplications(query); return records.map((item) => serializeDealer(item as unknown as Dealer & { _id: Types.ObjectId })); }
 
-// Returns protected document metadata after validating its application and index.
-export async function getDealerDocumentForAdmin(dealerId: string, index: number) { const dealer = await findDealerApplicationById(dealerId); if (!dealer) throw new AppError(404, errorCodes.notFound, 'The dealer application was not found.'); const document = dealer.verificationDocuments[index]; if (!document) throw new AppError(404, errorCodes.notFound, 'The verification document was not found.'); return document; }
+// Returns protected document metadata after validating its application and index, and records
+// who opened which identity document in the audit log before any bytes are released.
+export async function getDealerDocumentForAdmin(dealerId: string, index: number, adminId: Types.ObjectId) {
+  const dealer = await findDealerApplicationById(dealerId);
+  if (!dealer) throw new AppError(404, errorCodes.notFound, 'The dealer application was not found.');
+  if (dealer.documentsDeletedAt) throw new AppError(410, errorCodes.notFound, `Verification documents were deleted on ${dealer.documentsDeletedAt.toISOString().slice(0, 10)} under the document retention policy.`);
+  const document = dealer.verificationDocuments[index];
+  if (!document) throw new AppError(404, errorCodes.notFound, 'The verification document was not found.');
+  await createAdminAuditLog({ eventType: 'dealer_document_viewed', actorId: adminId, targetId: dealer.userId, targetName: dealer.businessName, details: `Viewed ${document.category} document "${document.originalName}".`.slice(0, 500) });
+  return document;
+}
 
 // Reviews an application, role assignment, and audit record as one transaction.
 export async function reviewDealerApplicationAsAdmin(dealerId: string, adminId: Types.ObjectId, decision: 'approved' | 'rejected', reason?: string) {

@@ -1,13 +1,13 @@
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { storageClient, storageConfig } from '../../config/storage.js';
 
-// Uploads one validated image and returns its public object URL.
-export async function uploadListingImage(key: string, file: Express.Multer.File): Promise<string> {
+// Uploads one re-encoded image and returns its public object URL.
+export async function uploadListingImage(key: string, body: Buffer, contentType: string): Promise<string> {
   await storageClient.send(new PutObjectCommand({
     Bucket: storageConfig.bucket,
     Key: key,
-    Body: file.buffer,
-    ContentType: file.mimetype,
+    Body: body,
+    ContentType: contentType,
     CacheControl: 'public, max-age=31536000, immutable',
   }));
   return `${storageConfig.publicUrl}/${encodeURIComponent(key)}`;

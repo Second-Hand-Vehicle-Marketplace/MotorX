@@ -1,4 +1,4 @@
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 
 WORKDIR /app
 
@@ -32,7 +32,10 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL \
 RUN npm run build --workspace @motorx/shared-contracts
 RUN npm run build --workspace @motorx/frontend
 
-FROM nginx:1.27-alpine AS runtime
+FROM nginx:1.30-alpine AS runtime
+
+# Apply Alpine security fixes released since the base image was published.
+RUN apk upgrade --no-cache
 
 COPY infrastructure/nginx/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/apps/frontend/dist /usr/share/nginx/html

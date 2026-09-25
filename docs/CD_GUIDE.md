@@ -59,16 +59,18 @@ Create the following through AWS Console, CloudFormation, Terraform, or your ins
 3. An ECS Fargate cluster named `motorx-production`.
 4. Backend, worker, and frontend task definitions and services.
 5. An S3 bucket for MotorX objects.
-6. A Redis service reachable only from the backend and worker security groups.
+6. A Redis service reachable only from the backend and worker security groups, with TLS, AUTH, Multi-AZ failover, and `maxmemory-policy noeviction` (see [RESILIENCE.md](RESILIENCE.md)).
 7. CloudWatch log groups for all three containers.
 
 Recommended task settings:
 
-| Service | Container name | Port | Health check | Initial desired count |
-|---|---|---:|---|---:|
-| Backend | `backend` | 3000 | `/health/live` | 1 |
-| Worker | `worker` | none | ECS process health | 1 |
-| Frontend | `frontend` | 80 | `/healthz` | 1 |
+| Service | Container name | Port | Container health check (restarts) | Load balancer health check (traffic) | Desired count | Stop timeout |
+|---|---|---:|---|---|---:|---:|
+| Backend | `backend` | 3000 | `/health/live` | `/health/ready` | 2, spread across two Availability Zones | 30 s |
+| Worker | `worker` | none (3100 internal) | `/health/live` on port 3100 | none | 2 | 30 s |
+| Frontend | `frontend` | 80 | `/healthz` | `/healthz` | 2 | 30 s |
+
+The container health check only proves the process responds; it never checks MongoDB or Redis, so a shared-dependency outage does not restart every task. `/health/ready` returns 503 only when MongoDB is unreachable; a Redis outage reports `DEGRADED` but keeps serving (uploads wait as pending). Both services finish their graceful shutdown within `SHUTDOWN_TIMEOUT_MS` (20 s default), inside the 30 s stop timeout. Worker replicas are safe: jobs are claimed with lease-owner tokens. Resilience design, backups, alarms, and pre-launch tests: [RESILIENCE.md](RESILIENCE.md).
 
 Enable the ECS rolling-deployment circuit breaker with automatic rollback for every service:
 

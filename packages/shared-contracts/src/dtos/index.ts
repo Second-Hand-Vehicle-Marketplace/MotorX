@@ -54,6 +54,8 @@ export interface DealerApplicationDto {
   rejectionReason: string | null;
   reviewedBy: string | null;
   reviewedAt: string | null;
+  // When the verification files were deleted under the retention policy, if they have been.
+  documentsDeletedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

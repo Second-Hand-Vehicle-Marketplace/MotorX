@@ -21,9 +21,11 @@ permissions:
 jobs:
   deploy:
     name: Publish and deploy
+    # Weekly scheduled CI runs only rebuild and rescan; they never deploy.
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event != 'schedule')
     runs-on: ubuntu-latest
     timeout-minutes: 40
     environment:

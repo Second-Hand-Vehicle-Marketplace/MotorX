@@ -21,6 +21,7 @@ function serializeDealer(dealer: Dealer & { _id: Types.ObjectId }): DealerApplic
     verificationDocuments: dealer.verificationDocuments ?? [],
     status: dealer.status, rejectionReason: dealer.rejectionReason ?? null,
     reviewedBy: dealer.reviewedBy?.toString() ?? null, reviewedAt: dealer.reviewedAt?.toISOString() ?? null,
+    documentsDeletedAt: dealer.documentsDeletedAt?.toISOString() ?? null,
     createdAt: dealer.createdAt.toISOString(), updatedAt: dealer.updatedAt.toISOString(),
   };
 }

@@ -1,0 +1,60 @@
+
+> @motorx/backend@0.1.0 build
+> tsc -p tsconfig.json
+
+
+> @motorx/frontend@0.1.0 build
+> tsc -p tsconfig.json && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 229 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                               1.22 kB │ gzip:  0.56 kB
+dist/assets/index-BiibINbE.css               37.50 kB │ gzip:  7.26 kB
+dist/assets/imageConstraints-CsV8Gvh9.js      0.04 kB │ gzip:  0.05 kB
+dist/assets/formatters-Cg4M8Egu.js            0.69 kB │ gzip:  0.36 kB
+dist/assets/ListingStatusBadge-DCpcjujy.js    0.71 kB │ gzip:  0.28 kB
+dist/assets/adminApi-DwIOd2UU.js              0.82 kB │ gzip:  0.34 kB
+dist/assets/vehicleAttributes-Sb-zxGtz.js     0.91 kB │ gzip:  0.33 kB
+dist/assets/buyerApi-CgfqNrTj.js              1.04 kB │ gzip:  0.48 kB
+dist/assets/inventoryApi-DDgsLSE7.js          1.08 kB │ gzip:  0.48 kB
+dist/assets/listingApi-nq8IDVs2.js            1.62 kB │ gzip:  0.66 kB
+dist/assets/DealerPendingPage-CkYRthmb.js     1.92 kB │ gzip:  0.89 kB
+dist/assets/AuditLogs-Kgxnrhr0.js             2.39 kB │ gzip:  0.92 kB
+dist/assets/ListingCard-DynOfSAy.js           2.60 kB │ gzip:  1.15 kB
+dist/assets/UploadMonitoring-CL6Yndsp.js      3.33 kB │ gzip:  1.20 kB
+dist/assets/BuyerLayout-BUtZc8Jy.js           3.62 kB │ gzip:  1.34 kB
+dist/assets/UserManagement-CyoOwQ0J.js        3.66 kB │ gzip:  1.46 kB
+dist/assets/NotificationCenter-BVbPHNPG.js    3.95 kB │ gzip:  1.66 kB
+dist/assets/DealerLayout-Cb2m2Z2T.js          3.96 kB │ gzip:  1.40 kB
+dist/assets/DealerDashboard-_hQG4T6Y.js       4.13 kB │ gzip:  1.47 kB
+dist/assets/ListingMonitoring-BeYqQ5BT.js     4.15 kB │ gzip:  1.60 kB
+dist/assets/LoginPage-DWmFlsWf.js             4.43 kB │ gzip:  1.96 kB
+dist/assets/AdminLayout-DAK2sLCt.js           4.44 kB │ gzip:  1.38 kB
+dist/assets/DealerApprovals-Ddm8SZWx.js       4.77 kB │ gzip:  1.75 kB
+dist/assets/ListingManager-Chtn7FkZ.js        5.23 kB │ gzip:  1.81 kB
+dist/assets/AdminDashboard-B2460JQF.js        6.53 kB │ gzip:  2.13 kB
+dist/assets/LandingPage-CHVAqUMO.js           7.34 kB │ gzip:  2.45 kB
+dist/assets/VehicleDetails-B01ZVvkl.js        7.76 kB │ gzip:  2.68 kB
+dist/assets/UploadDetails-e2SLW0Pj.js         7.84 kB │ gzip:  2.47 kB
+dist/assets/Marketplace-ClzxY_6c.js          10.55 kB │ gzip:  2.96 kB
+dist/assets/InventoryUpload-Vm4RM-tK.js      12.35 kB │ gzip:  3.88 kB
+dist/assets/RegisterPage-41taO_S_.js         12.63 kB │ gzip:  2.73 kB
+dist/assets/ListingForm-CMwPe4lE.js          15.40 kB │ gzip:  4.50 kB
+dist/assets/query-vendor-BhEBF28S.js         38.81 kB │ gzip: 11.71 kB
+dist/assets/http-vendor-CzApALvg.js          48.54 kB │ gzip: 18.63 kB
+dist/assets/index-DNx0W8pT.js                74.25 kB │ gzip: 19.43 kB
+dist/assets/react-vendor-CHu0mT75.js        182.06 kB │ gzip: 59.88 kB
+dist/assets/firebase-DpROL1v_.js            182.48 kB │ gzip: 38.33 kB
+✓ built in 4.09s
+
+> @motorx/worker@0.1.0 build
+> tsc -p tsconfig.json
+
+
+> @motorx/shared-contracts@0.1.0 build
+> tsc -p tsconfig.json
+
+

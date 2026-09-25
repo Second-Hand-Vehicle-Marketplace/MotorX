@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { z } from 'zod';
+import { findProductionMongoUriProblems } from '@motorx/shared-contracts';
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -25,6 +26,24 @@ const envSchema = z.object({
   SMTP_USER: z.string().trim().min(1),
   SMTP_PASS: z.string().trim().min(1),
   SMTP_FROM: z.string().trim().min(1).optional(),
+
+  WORKER_HEALTH_PORT: z.coerce.number().int().positive().default(3_100),
+  JOB_REAPER_INTERVAL_MS: z.coerce.number().int().positive().default(60_000),
+  JOB_MAX_RECLAIM_ATTEMPTS: z.coerce.number().int().positive().default(5),
+  // A job still pending after this long is assumed to have lost its queue message and is re-queued.
+  PENDING_JOB_REENQUEUE_AFTER_MS: z.coerce.number().int().min(30_000).default(120_000),
+  // How long a shutdown may wait for running jobs before handing them back and exiting.
+  // Must be below the orchestrator's stop timeout (ECS default: 30 s).
+  SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(120_000).default(25_000),
+  // Days after an approve/reject decision before verification documents are deleted.
+  DEALER_DOCUMENT_RETENTION_DAYS: z.coerce.number().int().min(1).max(3_650).default(90),
+  DOCUMENT_RETENTION_INTERVAL_MS: z.coerce.number().int().min(60_000).default(3_600_000),
+}).superRefine((config, context) => {
+  // Refuses to consume jobs in production against a local, dev, test, or unencrypted database.
+  if (config.NODE_ENV !== 'production') return;
+  for (const message of findProductionMongoUriProblems(config.MONGODB_URI)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['MONGODB_URI'], message });
+  }
 });
 
 // Parses worker configuration once so invalid deployments fail before consuming jobs.

@@ -7,6 +7,28 @@ import { formatDateTime, formatFileSize } from '@/shared/utils/formatters';
 
 const activeImageStatuses = new Set<ImageProcessingStatus>(['pending', 'processing']);
 
+// Re-queues a failed stage and refreshes the job so its new pending status shows immediately.
+const RetryButton: React.FC<{ uploadId: string; stage: 'csv' | 'images' }> = ({ uploadId, stage }) => {
+  const queryClient = useQueryClient();
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [error, setError] = useState('');
+  const retry = async () => {
+    setError(''); setIsRetrying(true);
+    try {
+      await (stage === 'csv' ? inventoryApi.retryUpload(uploadId) : inventoryApi.retryImages(uploadId));
+      await queryClient.invalidateQueries({ queryKey: ['upload', uploadId] });
+    } catch (retryError) {
+      setError(retryError instanceof Error ? retryError.message : 'Could not retry this upload.');
+    } finally { setIsRetrying(false); }
+  };
+  return (
+    <span style={{ display: 'inline-flex', gap: '0.75rem', alignItems: 'center', marginLeft: '0.75rem' }}>
+      <button onClick={() => void retry()} disabled={isRetrying} className="btn btn-secondary btn-sm">{isRetrying ? 'Retrying...' : 'Retry'}</button>
+      {error && <span>{error}</span>}
+    </span>
+  );
+};
+
 const VehiclePhotosCard: React.FC<{ uploadId: string; canUpload: boolean; imageProcessingStatus: ImageProcessingStatus; imageZipFileName: string | null; imagesAttached: number; matchedListings: number; unmatchedFolders: string[]; imageFailureReason: string | null }> = ({
   uploadId, canUpload, imageProcessingStatus, imageZipFileName, imagesAttached, matchedListings, unmatchedFolders, imageFailureReason,
 }) => {
@@ -63,7 +85,7 @@ const VehiclePhotosCard: React.FC<{ uploadId: string; canUpload: boolean; imageP
       )}
 
       {canUpload && imageProcessingStatus === 'failed' && imageFailureReason && (
-        <p style={{ fontSize: '0.8125rem', color: 'var(--color-error)', marginBottom: '1rem' }}>Processing failed: {imageFailureReason}</p>
+        <p style={{ fontSize: '0.8125rem', color: 'var(--color-error)', marginBottom: '1rem' }}>Processing failed: {imageFailureReason}<RetryButton uploadId={uploadId} stage="images" /></p>
       )}
 
       {canUpload && !activeImageStatuses.has(imageProcessingStatus) && (
@@ -91,7 +113,8 @@ export const UploadDetails: React.FC = () => {
     queryKey: ['upload', uploadId],
     queryFn: () => inventoryApi.getUpload(uploadId!),
     enabled: !!uploadId,
-    refetchInterval: (query) => activeImageStatuses.has(query.state.data?.imageProcessingStatus ?? 'none') ? 2_000 : false,
+    // Poll while either stage is queued or running (including after a Retry).
+    refetchInterval: (query) => activeImageStatuses.has(query.state.data?.imageProcessingStatus ?? 'none') || query.state.data?.status === 'pending' || query.state.data?.status === 'processing' ? 2_000 : false,
   });
   const recordsQuery = useQuery({ queryKey: ['upload-rejected-records', uploadId], queryFn: () => inventoryApi.getRejectedRecords(uploadId!, 1, 100), enabled: !!uploadId });
 
@@ -144,7 +167,7 @@ export const UploadDetails: React.FC = () => {
 
       {job.status === 'failed' && job.failureReason && (
         <div className="glass-card" style={{ padding: '1rem', marginBottom: '2rem', color: 'var(--color-error)' }}>
-          Processing failed: {job.failureReason}
+          Processing failed: {job.failureReason}<RetryButton uploadId={job.id} stage="csv" />
         </div>
       )}
 

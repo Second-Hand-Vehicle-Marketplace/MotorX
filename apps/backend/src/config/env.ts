@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { z } from 'zod';
+import { findProductionMongoUriProblems } from '@motorx/shared-contracts';
 
 const envSchema = z.object({
   NODE_ENV: z
@@ -7,6 +8,9 @@ const envSchema = z.object({
     .default('development'),
 
   PORT: z.coerce.number().default(3000),
+  // How long shutdown waits for in-flight requests. Must be below the orchestrator's stop
+  // timeout (ECS default: 30 s), after which the process is killed outright.
+  SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(120_000).default(20_000),
 
   MONGODB_URI: z.string().trim().min(1),
   REDIS_URL: z.string().url().default('redis://localhost:6379'),
@@ -39,6 +43,12 @@ const envSchema = z.object({
   SMTP_USER: z.string().trim().min(1),
   SMTP_PASS: z.string().trim().min(1),
   SMTP_FROM: z.string().trim().min(1).optional(),
+}).superRefine((config, context) => {
+  // Refuses to start production against a local, dev, test, or unencrypted database.
+  if (config.NODE_ENV !== 'production') return;
+  for (const message of findProductionMongoUriProblems(config.MONGODB_URI)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['MONGODB_URI'], message });
+  }
 });
 
 export const env = envSchema.parse(process.env);

@@ -17,7 +17,7 @@ export interface AdminStats {
   totalUsers: number; activeDealers: number; registeredDealers: number; totalListings: number; activeListings: number; pendingDealerApplications: number;
 }
 
-export type AdminAuditEvent = 'dealer_approved' | 'dealer_rejected' | 'user_suspended' | 'user_activated' | 'listing_removed';
+export type AdminAuditEvent = 'dealer_approved' | 'dealer_rejected' | 'user_suspended' | 'user_activated' | 'listing_removed' | 'dealer_document_viewed';
 export interface AdminAuditLog { id: string; eventType: AdminAuditEvent; actorId: string; actorName: string; targetId: string; targetName: string; details: string; timestamp: string }
 export interface AdminUpload { id: string; dealerId: string; dealerName: string; fileName: string; fileSize: number; status: 'pending' | 'processing' | 'completed' | 'completedWithErrors' | 'failed'; totalRecords: number; processedRecords: number; validRecords: number; rejectedRecords: number; failureReason: string | null; createdAt: string; completedAt: string | null }
 export interface AdminSystemHealth { checkedAt: string; backend: { status: string; uptimeSeconds: number }; database: { status: string; readyState: number }; queue: { status: string }; worker: { status: string } }

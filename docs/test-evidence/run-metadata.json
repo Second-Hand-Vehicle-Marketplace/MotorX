@@ -1,0 +1,10 @@
+{
+  "recordedAt": "2026-09-21T15:45:05.984419+00:00",
+  "revision": "d57b9cc714a2634f0e16c210589d5f236471f841",
+  "platform": "Windows-10-10.0.26200-SP0",
+  "node": "v22.19.0",
+  "buildCommand": "npm.cmd run build --workspaces --if-present",
+  "buildExitCode": 0,
+  "databaseIntegration": "Not executed: Docker daemon access denied in this execution environment.",
+  "browserE2E": "Not executed: no existing browser test suite in repository."
+}

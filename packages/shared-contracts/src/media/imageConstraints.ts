@@ -9,3 +9,11 @@ export const LISTING_IMAGE_MIN_HEIGHT_PX = 384;
 // Absorbs rounding drift from client-side canvas export without accepting an obviously
 // mismatched (e.g. portrait) upload sent directly to the API.
 export const LISTING_IMAGE_ASPECT_RATIO_TOLERANCE = 0.05;
+
+// Server-side re-encoding limits applied to every uploaded listing photo (backend and worker).
+// Images are decoded and saved again from their pixels only, which drops hidden trailing data
+// and all metadata (EXIF GPS location, camera details). Anything larger than the pixel cap is
+// refused before decoding, so a small "decompression bomb" file cannot exhaust memory.
+export const LISTING_IMAGE_MAX_INPUT_PIXELS = 40_000_000;
+export const LISTING_IMAGE_MAX_DIMENSION_PX = 2560;
+export const LISTING_IMAGE_OUTPUT_QUALITY = 82;

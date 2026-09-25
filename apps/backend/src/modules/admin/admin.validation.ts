@@ -31,7 +31,7 @@ export const rejectDealerApplicationBodySchema = z.object({ reason: z.string().t
 
 export const listAdminAuditQuerySchema = z.object({
   ...adminPaginationSchema,
-  eventType: z.enum(['dealer_approved', 'dealer_rejected', 'user_suspended', 'user_activated', 'listing_removed']).optional(),
+  eventType: z.enum(['dealer_approved', 'dealer_rejected', 'user_suspended', 'user_activated', 'listing_removed', 'dealer_document_viewed']).optional(),
 });
 
 export const listAdminUploadsQuerySchema = z.object({

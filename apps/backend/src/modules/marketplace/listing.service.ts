@@ -40,17 +40,31 @@ async function assertRegistrationNotActivelyListed(normalizedRegistrationNumber:
   if (existing) throw new AppError(409, errorCodes.conflict, 'A currently listed vehicle already uses this registration number.');
 }
 
+// Rethrows a MongoDB duplicate-key error as the same conflict assertRegistrationNotActivelyListed
+// throws, and anything else unchanged. The partial unique index on normalizedRegistrationNumber
+// is the actual race-safety backstop; the pre-check above is just a cheap early rejection for the
+// common non-racing case, so a concurrent request that slips past it still gets the same 409.
+function rethrowAsRegistrationConflict(error: unknown): never {
+  if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: unknown }).code === 11000)
+    throw new AppError(409, errorCodes.conflict, 'A currently listed vehicle already uses this registration number.');
+  throw error;
+}
+
 // Creates a draft or immediately published listing for a dealer.
 export async function createDealerListing(dealerId: Types.ObjectId, input: CreateListingBody) {
   const normalizedRegistrationNumber = normalizeRegistrationNumber(input.registrationNumber);
   await assertRegistrationNotActivelyListed(normalizedRegistrationNumber);
   let embedding: number[] | undefined;
   try { embedding = await generateSearchEmbedding(composeListingSearchText(input)); } catch { embedding = undefined; }
-  const document = await createListingRecord({
-    ...input, registrationNumber: input.registrationNumber.trim().toUpperCase(), normalizedRegistrationNumber,
-    dealerId, images: [], embedding, publishedAt: input.status === 'active' ? new Date() : undefined,
-  });
-  return serializeListing(document.toObject() as ListingRecord);
+  try {
+    const document = await createListingRecord({
+      ...input, registrationNumber: input.registrationNumber.trim().toUpperCase(), normalizedRegistrationNumber,
+      dealerId, images: [], embedding, publishedAt: input.status === 'active' ? new Date() : undefined,
+    });
+    return serializeListing(document.toObject() as ListingRecord);
+  } catch (error) {
+    rethrowAsRegistrationConflict(error);
+  }
 }
 
 // Returns every listing owned by the authenticated dealer.
@@ -76,6 +90,7 @@ export async function updateDealerListing(listingId: string, dealerId: Types.Obj
   const update: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     if (key === 'attributes' || value === undefined) continue;
+    if (key === 'description' && value === null) continue; // cleared via $unset below
     update[key] = value;
   }
 
@@ -135,7 +150,12 @@ export async function changeDealerListingStatus(listingId: string, dealerId: Typ
   }
   const update: Record<string, unknown> = { status: nextStatus };
   if (nextStatus === 'active' && !existing.publishedAt) update.publishedAt = new Date();
-  const listing = await transitionOwnedListingStatus(listingId, dealerId, currentStatus, update);
-  if (!listing) throw new AppError(409, errorCodes.conflict, 'The listing status changed before this request completed.');
-  return serializeListing(listing.toObject() as ListingRecord);
+  try {
+    const listing = await transitionOwnedListingStatus(listingId, dealerId, currentStatus, update);
+    if (!listing) throw new AppError(409, errorCodes.conflict, 'The listing status changed before this request completed.');
+    return serializeListing(listing.toObject() as ListingRecord);
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    rethrowAsRegistrationConflict(error);
+  }
 }

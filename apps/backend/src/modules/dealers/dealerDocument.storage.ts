@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { storageClient, storageConfig } from '../../config/storage.js';
+import { sanitizeDealerDocument } from './dealerDocument.content.js';
 
 const extensions: Record<string, string> = {
   'application/pdf': 'pdf',
@@ -17,17 +18,19 @@ export interface StoredDealerDocument {
 }
 
 export async function storeDealerDocuments(userId: string, files: Array<{ category: StoredDealerDocument['category']; file: Express.Multer.File }>): Promise<StoredDealerDocument[]> {
+  // Check every file before storing any, so a rejected upload leaves nothing behind.
+  const sanitized = await Promise.all(files.map(async ({ category, file }) => ({ category, file, ...(await sanitizeDealerDocument(file)) })));
   const stored: StoredDealerDocument[] = [];
   try {
-    for (const { category, file } of files) {
-      const key = `dealer-verification/${userId}/${randomUUID()}.${extensions[file.mimetype]}`;
+    for (const { category, file, body, contentType } of sanitized) {
+      const key = `dealer-verification/${userId}/${randomUUID()}.${extensions[contentType]}`;
       await storageClient.send(new PutObjectCommand({
         Bucket: storageConfig.bucket,
         Key: key,
-        Body: file.buffer,
-        ContentType: file.mimetype,
+        Body: body,
+        ContentType: contentType,
       }));
-      stored.push({ category, key, originalName: file.originalname, contentType: file.mimetype, size: file.size });
+      stored.push({ category, key, originalName: file.originalname, contentType, size: body.length });
     }
     return stored;
   } catch (error) {

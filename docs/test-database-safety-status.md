@@ -162,10 +162,13 @@ Compose validation:
 docker compose --env-file .env.example -f compose.yml -f compose.test.yml config --quiet
 ```
 
-Run the isolated test stack:
+Run the isolated test stack. It uses the separate `motorx-test` project and publishes no ports, so it can run while the local `motorx` dev stack is up. Use `run` per suite: `up --abort-on-container-exit` stops everything as soon as the one-shot `minio-init` container finishes, before any test starts.
 
 ```powershell
-docker compose -f compose.yml -f compose.test.yml up --build --abort-on-container-exit
+docker compose -f compose.yml -f compose.test.yml build backend worker
+docker compose -f compose.yml -f compose.test.yml run --rm backend
+docker compose -f compose.yml -f compose.test.yml run --rm worker
+docker compose -f compose.yml -f compose.test.yml down -v
 ```
 
 ## Status by acceptance criterion

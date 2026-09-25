@@ -9,7 +9,7 @@ export const dealerApplicationSchema = z.object({
   inventoryCount: z.number().nullable(),
   verificationDocuments: z.array(z.object({ category: z.enum(['businessRegistration', 'identityProof', 'additionalDocument']), key: z.string(), originalName: z.string(), contentType: z.string(), size: z.number() })),
   status: z.enum(dealerApplicationStatuses),
-  rejectionReason: z.string().nullable(), reviewedBy: z.string().nullable(), reviewedAt: z.string().nullable(),
+  rejectionReason: z.string().nullable(), reviewedBy: z.string().nullable(), reviewedAt: z.string().nullable(), documentsDeletedAt: z.string().nullable().default(null),
   createdAt: z.string(), updatedAt: z.string(),
 });
 export const dealerResponseSchema = z.object({ success: z.literal(true), data: dealerApplicationSchema, meta: z.null() });

@@ -22,6 +22,8 @@ export interface ListingImage {
 export type Listing = {
   dealerId: Types.ObjectId;
   sourceUploadJobId?: Types.ObjectId;
+  // CSV row this listing was imported from, so a retried import never creates it twice.
+  sourceRowNumber?: number;
   registrationNumber: string;
   normalizedRegistrationNumber: string;
   title: string;
@@ -58,6 +60,7 @@ const listingSchema = new Schema<Listing>(
   {
     dealerId: { type: Schema.Types.ObjectId, required: true, ref: 'AuthUser' },
     sourceUploadJobId: { type: Schema.Types.ObjectId, ref: 'UploadJob' },
+    sourceRowNumber: { type: Number, min: 2 },
     registrationNumber: { type: String, required: true, trim: true, uppercase: true, maxlength: 20 },
     normalizedRegistrationNumber: { type: String, required: true, maxlength: 20 },
     title: { type: String, required: true, trim: true, maxlength: 160 },
@@ -82,6 +85,7 @@ listingSchema.index({ status: 1, publishedAt: -1, _id: -1 }, { name: 'status_pub
 listingSchema.index({ dealerId: 1, status: 1, createdAt: -1 }, { name: 'dealerId_status_createdAt' });
 listingSchema.index({ make: 1, model: 1, year: -1 }, { name: 'make_model_year' });
 listingSchema.index({ sourceUploadJobId: 1 }, { sparse: true, name: 'sourceUploadJobId' });
+listingSchema.index({ sourceUploadJobId: 1, sourceRowNumber: 1 }, { unique: true, partialFilterExpression: { sourceRowNumber: { $exists: true } }, name: 'sourceUploadJobId_sourceRowNumber' });
 listingSchema.index({ category: 1, status: 1 }, { name: 'category_status' });
 listingSchema.index({ status: 1, category: 1, price: 1 }, { name: 'status_category_price' });
 listingSchema.index({ status: 1, category: 1, year: -1 }, { name: 'status_category_year' });
@@ -89,8 +93,14 @@ listingSchema.index({ status: 1, 'attributes.fuelType': 1, 'attributes.transmiss
 listingSchema.index({ status: 1, 'attributes.bodyType': 1, 'attributes.condition': 1 }, { name: 'status_body_condition' });
 listingSchema.index({ status: 1, 'attributes.mileageKm': 1 }, { name: 'status_mileage' });
 listingSchema.index({ status: 1, location: 1 }, { name: 'status_location' });
-// Not unique: an archived/sold vehicle's registration number may legitimately be relisted later
-// (by the same or a different dealer). Duplicate checks scope this to draft/active listings only.
-listingSchema.index({ normalizedRegistrationNumber: 1 }, { name: 'normalizedRegistrationNumber' });
+// Partial unique: only one draft/active listing may exist per registration number at a time.
+// Archived/sold listings are excluded from the filter, so relisting a since-sold vehicle is
+// still fine. This is the DB-level backstop for assertRegistrationNotActivelyListed's check in
+// listing.service.ts, which alone can't prevent two concurrent requests from both passing the
+// check before either write lands.
+listingSchema.index(
+  { normalizedRegistrationNumber: 1 },
+  { name: 'normalizedRegistrationNumber_unique_active', unique: true, partialFilterExpression: { status: { $in: ['draft', 'active'] } } },
+);
 
 export const ListingModel = models.Listing ?? model<Listing>('Listing', listingSchema);

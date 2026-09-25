@@ -1,0 +1,43 @@
+# Opens pull requests when dependencies have updates. CI (tests, npm audit,
+# Gitleaks, Trivy) runs on each one; merge it when CI is green.
+version: 2
+
+updates:
+  # npm packages for every workspace (one root lockfile).
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    groups:
+      # Batch low-risk updates into one PR; majors still arrive one per PR.
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Node.js majors are upgraded deliberately (Dockerfiles, CI, .nvmrc, engines together).
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
+
+  # Base images in the Dockerfiles (node, nginx).
+  - package-ecosystem: docker
+    directory: /infrastructure/docker
+    schedule:
+      interval: weekly
+      day: monday
+    ignore:
+      # Same reason: a Node or nginx major is a planned upgrade, not an automatic one.
+      - dependency-name: node
+        update-types: [version-update:semver-major]
+      - dependency-name: nginx
+        update-types: [version-update:semver-major, version-update:semver-minor]
+
+  # Versions of the actions used in .github/workflows.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      github-actions:
+        patterns: ["*"]

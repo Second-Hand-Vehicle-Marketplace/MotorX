@@ -8,8 +8,8 @@ import { addOwnedListingImage, findOwnedListing, removeOwnedListingImage, reorde
 import { serializeListing } from './listing.service.js';
 import { deleteListingImageObject, uploadListingImage } from './listingImage.storage.js';
 import { hasValidImageSignature } from './listingImage.signature.js';
-
-const extensions = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' } as const;
+import { LISTING_IMAGE_MAX_DIMENSION_PX, LISTING_IMAGE_OUTPUT_QUALITY } from '@motorx/shared-contracts';
+import { InvalidImageError, reencodeImage } from '../../shared/utils/imageReencode.js';
 
 // Uploads an image and atomically attaches its metadata to an owned listing.
 export async function addDealerListingImage(listingId: string, dealerId: Types.ObjectId, file: Express.Multer.File, alt?: string) {
@@ -19,9 +19,15 @@ export async function addDealerListingImage(listingId: string, dealerId: Types.O
   if (listing.images.length >= storageConfig.maxListingImages)
     throw new AppError(409, errorCodes.conflict, `A listing can contain at most ${storageConfig.maxListingImages} images.`);
 
-  const extension = extensions[file.mimetype as keyof typeof extensions];
-  const key = `${listingId}-${randomUUID()}.${extension}`;
-  const url = await uploadListingImage(key, file);
+  // Every stored photo is a fresh WebP rebuilt from the decoded pixels, never the uploaded bytes.
+  let webp: Buffer;
+  try { webp = await reencodeImage(file.buffer, { maxDimension: LISTING_IMAGE_MAX_DIMENSION_PX, output: 'webp', quality: LISTING_IMAGE_OUTPUT_QUALITY }); }
+  catch (error) {
+    if (error instanceof InvalidImageError) throw new AppError(400, errorCodes.validation, 'The image could not be processed. Upload a valid JPEG, PNG, or WebP photo under 40 megapixels.');
+    throw error;
+  }
+  const key = `${listingId}-${randomUUID()}.webp`;
+  const url = await uploadListingImage(key, webp, 'image/webp');
   const image: ListingImage = { key, url, ...(alt ? { alt } : {}), order: listing.images.length };
   try {
     const updated = await addOwnedListingImage(listingId, dealerId, image, storageConfig.maxListingImages);

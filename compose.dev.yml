@@ -1,5 +1,8 @@
 services:
   backend:
+    # tsx (npm run dev) is a dev dependency, so use the development image stage.
+    build:
+      target: development
     command: npm run dev --workspace @motorx/backend
     environment:
       NODE_ENV: development
@@ -9,6 +12,8 @@ services:
       - ./packages/shared-contracts/src:/app/packages/shared-contracts/src
 
   worker:
+    build:
+      target: development
     command: npm run dev --workspace @motorx/worker
     environment:
       NODE_ENV: development

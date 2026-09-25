@@ -16,6 +16,11 @@ export interface UploadJob {
   imageZipFileName?: string; imageZipStorageKey?: string;
   imagesAttached: number; matchedListings: number; unmatchedFolders: string[];
   imageFailureReason?: string; imageCompletedAt?: Date;
+
+  // Written by the worker: processing lease and durable attempt counters (see the worker's
+  // uploadJob.repository.ts). Declared here so the backend's retry action can reset them.
+  processingStartedAt?: Date; leaseExpiresAt?: Date; leaseOwner?: string;
+  attemptCount: number; imageAttemptCount: number;
 }
 
 const { Schema, model, models } = mongoose;
@@ -34,6 +39,9 @@ const uploadJobSchema = new Schema<UploadJob>({
   imagesAttached: { type: Number, default: 0, min: 0 }, matchedListings: { type: Number, default: 0, min: 0 },
   unmatchedFolders: { type: [String], default: [] },
   imageFailureReason: { type: String, trim: true, maxlength: 1000 }, imageCompletedAt: Date,
+
+  processingStartedAt: Date, leaseExpiresAt: Date, leaseOwner: String,
+  attemptCount: { type: Number, default: 0, min: 0 }, imageAttemptCount: { type: Number, default: 0, min: 0 },
 }, { timestamps: true, versionKey: false, collection: 'uploadJobs' });
 
 uploadJobSchema.index({ status: 1, createdAt: -1 });

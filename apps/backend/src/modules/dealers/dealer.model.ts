@@ -24,6 +24,8 @@ export interface Dealer {
   rejectionReason?: string;
   reviewedBy?: Types.ObjectId;
   reviewedAt?: Date;
+  // Set by the worker's retention job when the verification files are deleted from storage.
+  documentsDeletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,6 +61,7 @@ const dealerSchema = new Schema<Dealer>({
   rejectionReason: { type: String, trim: true, maxlength: 500 },
   reviewedBy: { type: Schema.Types.ObjectId, ref: 'AuthUser' },
   reviewedAt: Date,
+  documentsDeletedAt: Date,
 }, { timestamps: true, versionKey: false, collection: 'dealers' });
 
 dealerSchema.index({ status: 1, createdAt: 1 }, { name: 'status_createdAt' });

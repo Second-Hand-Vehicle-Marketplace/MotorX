@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 import mongoose from 'mongoose';
+import { inventoryQueue } from './config/queue.js';
 import { logger } from './config/logger.js';
 import { authUserRouter } from './modules/auth-users/authUser.routes.js';
 import { listingImageRouter, listingRouter } from './modules/marketplace/index.js';
@@ -46,11 +47,32 @@ app.get('/health/live', (_request, response) => {
   sendSuccess(response, { service: 'backend', status: 'UP' });
 });
 
-app.get('/health/ready', (_request, response) => {
-  const databaseReady = mongoose.connection.readyState === 1;
-  const status = databaseReady ? 'READY' : 'NOT_READY';
+// Resolves false instead of waiting when a dependency does not answer quickly: a hung Redis or
+// MongoDB must never make the health endpoint itself hang.
+async function checkWithin(check: () => Promise<unknown>, timeoutMs: number): Promise<boolean> {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    await Promise.race([check(), new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('timeout')), timeoutMs); })]);
+    return true;
+  } catch { return false; } finally { clearTimeout(timer); }
+}
+
+// Readiness decides whether the load balancer sends traffic here. It depends on MongoDB only:
+// almost every request needs the database, but only uploads need Redis. Every instance shares the
+// same Redis, so failing readiness on a Redis outage would take the whole site down instead of
+// just delaying uploads (which stay pending and are queued once Redis returns).
+// Liveness (/health/live) is what the orchestrator restarts on; it never checks dependencies.
+app.get('/health/ready', async (_request, response) => {
+  const [databaseReady, redisReady] = await Promise.all([
+    checkWithin(async () => { if (mongoose.connection.readyState !== 1) throw new Error('disconnected'); await mongoose.connection.db!.admin().ping(); }, 1_000),
+    checkWithin(async () => { const client = await inventoryQueue.client; await client.info(); }, 1_000),
+  ]);
   if (!databaseReady) response.status(503);
-  sendSuccess(response, { service: 'backend', status, dependencies: { database: databaseReady ? 'ready' : 'unavailable' } });
+  sendSuccess(response, {
+    service: 'backend',
+    status: !databaseReady ? 'NOT_READY' : redisReady ? 'READY' : 'DEGRADED',
+    dependencies: { database: databaseReady ? 'ready' : 'unavailable', redis: redisReady ? 'ready' : 'unavailable' },
+  });
 });
 
 app.use('/api/v1/auth', authUserRouter);
