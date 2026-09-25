@@ -9,7 +9,7 @@ import { extractCsvBatches, type ExtractedInventoryRow } from '../pipeline/extra
 import { createListingDuplicateKey, detectExactDuplicates } from '../pipeline/detectDuplicates.js';
 import { persistRejectedRows, persistValidRows } from '../pipeline/persist.js';
 import { prepareInventoryBatch } from '../pipeline/transform.js';
-import { findImportedRowNumbers } from '../repositories/listing.repository.js';
+import { countOpenDealerListings, findImportedRowNumbers } from '../repositories/listing.repository.js';
 import { claimPendingUploadJob, completeUploadJob, failUploadJob, renewUploadLease, retryUploadJob, updateUploadProgress, type ProcessingCounts } from '../repositories/uploadJob.repository.js';
 import { trackLease, untrackLease } from './activeLeases.js';
 import { holdLease, LeaseLostError, type HeldLease } from './jobLease.js';
@@ -40,13 +40,17 @@ async function processInventoryBatch(uploadJobId: string, lease: HeldLease, deal
   for (const row of resumed) seenKeys.add(createListingDuplicateKey(row.data));
   const duplicateResult = await detectExactDuplicates(prepared.valid.filter((row) => !alreadyImported.has(row.rowNumber)), seenKeys);
 
+  // Keep the dealer within MAX_LISTINGS_PER_DEALER: rows past the remaining capacity are rejected.
+  const remaining = Math.max(0, env.MAX_LISTINGS_PER_DEALER - await countOpenDealerListings(dealerId));
+  const overLimit = duplicateResult.unique.splice(remaining);
   const rejected = [
+    ...overLimit.map((row) => ({ uploadJobId: jobObjectId, rowNumber: row.rowNumber, originalData: row.originalData, errors: [`Listing limit of ${env.MAX_LISTINGS_PER_DEALER} draft and active listings reached.`], reason: 'validation' as const })),
     ...prepared.invalid.map((row) => ({ uploadJobId: jobObjectId, rowNumber: row.rowNumber, originalData: row.originalData, errors: row.errors, reason: 'validation' as const })),
     ...duplicateResult.duplicates.map((row) => ({ uploadJobId: jobObjectId, rowNumber: row.rowNumber, originalData: row.originalData, errors: ['An exact matching listing already exists.'], reason: 'duplicate' as const })),
   ];
   await Promise.all([persistValidRows(dealerId, jobObjectId, duplicateResult.unique), persistRejectedRows(rejected)]);
   counts.processedRecords = processedRecords; counts.validRecords += duplicateResult.unique.length + resumed.length;
-  counts.rejectedRecords += prepared.invalid.length; counts.duplicateRecords += duplicateResult.duplicates.length;
+  counts.rejectedRecords += prepared.invalid.length + overLimit.length; counts.duplicateRecords += duplicateResult.duplicates.length;
   if (!(await updateUploadProgress(uploadJobId, lease.owner, counts))) throw new LeaseLostError(uploadJobId);
 }
 

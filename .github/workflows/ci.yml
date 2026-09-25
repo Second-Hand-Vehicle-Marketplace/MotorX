@@ -115,6 +115,9 @@ jobs:
       - name: Test worker
         run: npm test --workspace @motorx/worker -- --maxWorkers=1
 
+      - name: Test frontend
+        run: npm test --workspace @motorx/frontend
+
   docker-build:
     name: Build ${{ matrix.component }} image
     needs: build-and-test

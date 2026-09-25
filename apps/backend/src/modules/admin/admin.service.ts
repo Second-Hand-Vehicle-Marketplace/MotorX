@@ -1,6 +1,8 @@
 import mongoose, { type Types } from 'mongoose';
 import type { DealerApplicationDto } from '@motorx/shared-contracts';
+import { firebaseAuth } from '../../config/firebase.js';
 import { inventoryQueue } from '../../config/queue.js';
+import { AuthUserModel } from '../auth-users/authUser.model.js';
 import { AppError } from '../../shared/errors/AppError.js';
 import { errorCodes } from '../../shared/errors/errorCodes.js';
 import { buildPaginationMeta } from '../../shared/utils/pagination.js';
@@ -34,16 +36,31 @@ function serializeDealer(dealer: Dealer & { _id: Types.ObjectId }): DealerApplic
   };
 }
 
+// Runs fn in one MongoDB transaction (retried by the driver on transient errors) and returns its result.
+async function inTransaction<T>(fn: (session: mongoose.ClientSession) => Promise<T>): Promise<T> {
+  const session = await mongoose.startSession();
+  try {
+    let result!: T;
+    await session.withTransaction(async () => { result = await fn(session); });
+    return result;
+  } finally { await session.endSession(); }
+}
+
 // Returns a paginated administrative view of user accounts.
 export async function getUsersForAdmin(query: ListAdminUsersQuery) { const result = await listAdminUsers(query); return { data: result.documents.map((item) => serializeUser(item as Record<string, any>)), meta: buildPaginationMeta(query.page, query.limit, result.total) }; }
 
 // Changes account access and records the significant operation.
 export async function changeUserStatusAsAdmin(userId: string, status: 'active' | 'suspended', adminId: Types.ObjectId) {
   if (adminId.toString() === userId && status === 'suspended') throw new AppError(409, errorCodes.conflict, 'You cannot suspend your own administrator account.');
-  const user = await updateAdminUserStatus(userId, status);
-  if (!user) throw new AppError(404, errorCodes.notFound, 'The user was not found.');
+  // The status change and its audit record commit together, or not at all.
+  const user = await inTransaction(async (session) => {
+    const updated = await updateAdminUserStatus(userId, status, session);
+    if (!updated) throw new AppError(404, errorCodes.notFound, 'The user was not found.');
+    const target = updated as unknown as { _id: Types.ObjectId; displayName?: string; email: string };
+    await createAdminAuditLog({ eventType: status === 'suspended' ? 'user_suspended' : 'user_activated', actorId: adminId, targetId: target._id, targetName: target.displayName || target.email, details: `User account ${status}.` }, session);
+    return updated;
+  });
   const record = user as unknown as { _id: Types.ObjectId; displayName?: string; email: string };
-  await createAdminAuditLog({ eventType: status === 'suspended' ? 'user_suspended' : 'user_activated', actorId: adminId, targetId: record._id, targetName: record.displayName || record.email, details: `User account ${status}.` });
   if (status === 'suspended') await notifyAccountSuspended(record._id);
   return serializeUser(user as unknown as Record<string, any>);
 }
@@ -53,11 +70,16 @@ export async function getListingsForAdmin(query: ListAdminListingsQuery) { const
 
 // Archives a listing and records which administrator removed it.
 export async function removeListingAsAdmin(listingId: string, adminId: Types.ObjectId) {
-  const listing = await archiveListingByAdmin(listingId);
-  if (!listing) throw new AppError(404, errorCodes.notFound, 'The vehicle listing was not found.');
+  // The archive and its audit record commit together, or not at all.
+  const listing = await inTransaction(async (session) => {
+    const archived = await archiveListingByAdmin(listingId, session);
+    if (!archived) throw new AppError(404, errorCodes.notFound, 'The vehicle listing was not found.');
+    const target = archived as unknown as { _id: Types.ObjectId; title: string };
+    await createAdminAuditLog({ eventType: 'listing_removed', actorId: adminId, targetId: target._id, targetName: target.title, details: 'Vehicle listing archived by an administrator.' }, session);
+    return archived;
+  });
   const record = listing as unknown as { _id: Types.ObjectId; title: string; make: string; model: string; year: number; category: string; registrationNumber: string; dealerId: Types.ObjectId | { _id: Types.ObjectId }; createdAt: Date };
   const dealerUserId = typeof record.dealerId === 'object' && '_id' in record.dealerId ? record.dealerId._id : record.dealerId;
-  await createAdminAuditLog({ eventType: 'listing_removed', actorId: adminId, targetId: record._id, targetName: record.title, details: 'Vehicle listing archived by an administrator.' });
   await notifyListingRemoved(dealerUserId, record.title, {
     vehicle: `${record.year} ${record.make} ${record.model}`,
     registrationNumber: record.registrationNumber,
@@ -133,8 +155,20 @@ export async function getDealerDocumentForAdmin(dealerId: string, index: number,
   return document;
 }
 
+// A dealer can publish to every buyer, so their email must be proven before approval. Checked with
+// Firebase at approval time (not from a token), so it reflects the applicant's current state.
+async function assertApplicantEmailVerified(dealerId: string) {
+  const application = await findDealerApplicationById(dealerId);
+  if (!application) return; // the transaction below reports the missing application
+  const applicant = await AuthUserModel.findById(application.userId).select('firebaseUid').lean<{ firebaseUid: string }>();
+  if (!applicant) return;
+  const { emailVerified } = await firebaseAuth.getUser(applicant.firebaseUid);
+  if (!emailVerified) throw new AppError(409, errorCodes.conflict, 'The applicant has not verified their email address yet. Ask them to open the verification link, then approve again.');
+}
+
 // Reviews an application, role assignment, and audit record as one transaction.
 export async function reviewDealerApplicationAsAdmin(dealerId: string, adminId: Types.ObjectId, decision: 'approved' | 'rejected', reason?: string) {
+  if (decision === 'approved') await assertApplicantEmailVerified(dealerId);
   const session = await mongoose.startSession(); let result: DealerApplicationDto | undefined;
   try {
     await session.withTransaction(async () => {

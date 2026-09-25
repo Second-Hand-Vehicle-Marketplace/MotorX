@@ -27,6 +27,11 @@ export async function findActivelyListedRegistrations(normalizedRegistrationNumb
   return new Set(matches.map((row: any) => row.normalizedRegistrationNumber as string));
 }
 
+// Drafts and active listings count toward the per-dealer listing limit.
+export function countOpenDealerListings(dealerId: Types.ObjectId) {
+  return ListingModel.countDocuments({ dealerId, status: { $in: ['draft', 'active'] } });
+}
+
 // Returns which of these CSV row numbers an earlier attempt of this upload already imported.
 export async function findImportedRowNumbers(uploadJobId: Types.ObjectId, rowNumbers: number[]): Promise<Set<number>> {
   if (!rowNumbers.length) return new Set();

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csvDailyQuota, photoZipDailyQuota, uploadBurstLimiter, uploadConcurrencyGate } from '../../shared/middleware/rateLimits.js';
 import { loadLocalUser } from '../../shared/middleware/loadLocalUser.js';
 import { requireAuthenticated } from '../../shared/middleware/requireAuthenticated.js';
 import { requireRole } from '../../shared/middleware/requireRole.js';
@@ -14,10 +15,10 @@ inventoryRouter.use(verifyFirebaseToken, loadLocalUser, requireAuthenticated, re
 inventoryRouter.get('/template/:category', validateRequest({ params: csvTemplateParamsSchema }), asyncHandler(downloadInventoryCsvTemplate));
 // uploadSingleInventoryCsv (multer) must run before body validation: it's what populates
 // request.body from the multipart form in the first place.
-inventoryRouter.post('/', uploadSingleInventoryCsv, validateRequest({ body: uploadCategoryBodySchema }), asyncHandler(uploadDealerInventory));
+inventoryRouter.post('/', uploadConcurrencyGate, uploadBurstLimiter, csvDailyQuota, uploadSingleInventoryCsv, validateRequest({ body: uploadCategoryBodySchema }), asyncHandler(uploadDealerInventory));
 inventoryRouter.get('/', validateRequest({ query: listInventoryUploadsQuerySchema }), asyncHandler(listMyInventoryUploads));
 inventoryRouter.get('/:uploadId', validateRequest({ params: inventoryUploadIdParamsSchema }), asyncHandler(getMyInventoryUpload));
 inventoryRouter.get('/:uploadId/rejected-records', validateRequest({ params: inventoryUploadIdParamsSchema, query: listRejectedRecordsQuerySchema }), asyncHandler(listMyUploadRejectedRecords));
-inventoryRouter.post('/:uploadId/images', validateRequest({ params: inventoryUploadIdParamsSchema }), uploadSingleImagesZip, asyncHandler(uploadDealerInventoryImages));
+inventoryRouter.post('/:uploadId/images', validateRequest({ params: inventoryUploadIdParamsSchema }), uploadConcurrencyGate, uploadBurstLimiter, photoZipDailyQuota, uploadSingleImagesZip, asyncHandler(uploadDealerInventoryImages));
 inventoryRouter.post('/:uploadId/retry', validateRequest({ params: inventoryUploadIdParamsSchema }), asyncHandler(retryInventoryUpload));
 inventoryRouter.post('/:uploadId/images/retry', validateRequest({ params: inventoryUploadIdParamsSchema }), asyncHandler(retryInventoryUploadImages));

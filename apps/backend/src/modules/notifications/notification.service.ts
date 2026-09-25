@@ -1,17 +1,15 @@
 import type { Types } from 'mongoose';
 import type { NotificationChannel, NotificationDto, NotificationType } from '@motorx/shared-contracts';
 import { buildPaginationMeta } from '../../shared/utils/pagination.js';
-import { mailer, mailerConfig } from '../../config/mailer.js';
+import { logger } from '../../config/logger.js';
 import type { NotificationDocument } from './notification.model.js';
 import {
   countUnreadNotifications,
   createNotification,
   findAdminUserIds,
-  findUserContact,
   listNotificationsForUser,
   markAllNotificationsRead,
   markNotificationRead,
-  setNotificationEmailStatus,
 } from './notification.repository.js';
 
 function serializeNotification(record: Record<string, any>): NotificationDto {
@@ -30,49 +28,15 @@ function serializeNotification(record: Record<string, any>): NotificationDto {
 
 type NotificationDetails = Record<string, string | number | null>;
 
-function escapeHtml(value: string) {
-  return value.replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character] ?? character);
-}
-
-function detailRows(details?: NotificationDetails) {
-  if (!details) return '';
-  const labels: Record<string, string> = { vehicle: 'Vehicle', registrationNumber: 'Registration number', listingId: 'Listing ID', uploadedAt: 'Uploaded', removedAt: 'Removed', category: 'Category' };
-  return Object.entries(details).filter(([, value]) => value !== null && value !== undefined && value !== '').map(([key, value]) => `<tr><td style="padding:8px 10px;color:#8290a6;font-size:12px">${escapeHtml(labels[key] ?? key)}</td><td style="padding:8px 10px;color:#172033;font-size:13px;font-weight:700">${escapeHtml(String(value))}</td></tr>`).join('');
-}
-
-function notificationEmailHtml(title: string, message: string, details?: NotificationDetails) {
-  const rows = detailRows(details);
-  const detailBlock = rows ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:24px;border:1px solid #e4e9f1;border-radius:10px;overflow:hidden"><tr><td colspan="2" style="padding:10px;background:#f7f9fc;color:#526078;font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase">Vehicle record</td></tr>${rows}</table>` : '';
-  return `<!doctype html><html><body style="margin:0;background:#f4f7fb;color:#172033;font-family:Arial,Helvetica,sans-serif"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#fff;border:1px solid #e4e9f1;border-radius:16px;overflow:hidden"><tr><td style="padding:22px 28px;background:#13233f;color:#fff"><div style="font-size:22px;font-weight:800;letter-spacing:-.3px">Motor<span style="color:#55b7ff">X</span></div><div style="margin-top:5px;color:#b9c9e5;font-size:12px;letter-spacing:1.4px;text-transform:uppercase">Vehicle marketplace</div></td></tr><tr><td style="padding:34px 28px 30px"><div style="display:inline-block;padding:6px 10px;border-radius:999px;background:#eaf5ff;color:#1670b8;font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase">Account notification</div><h1 style="margin:18px 0 12px;font-size:26px;line-height:1.2;color:#172033">${escapeHtml(title)}</h1><p style="margin:0;color:#526078;font-size:16px;line-height:1.65">${escapeHtml(message)}</p>${detailBlock}</td></tr><tr><td style="padding:18px 28px;border-top:1px solid #edf0f5;color:#8290a6;font-size:12px;line-height:1.5">This message was sent by MotorX because an important activity affected your account.<br>© MotorX</td></tr></table></td></tr></table></body></html>`;
-}
-
-// Sends the email leg for one notification and records whether it actually went out — a failed
-// send must never surface as a thrown error, since the in-app record has already been created.
-async function deliverEmail(notification: NotificationDocument, userId: Types.ObjectId) {
-  try {
-    const contact = await findUserContact(userId);
-    if (!contact) throw new Error('Recipient user account was not found.');
-    await mailer.sendMail({
-      from: mailerConfig.from,
-      to: contact.email,
-      replyTo: mailerConfig.from,
-      subject: `MotorX | ${notification.title}`,
-      text: `${notification.title}\n\n${notification.message}${notification.details ? `\n\n${Object.entries(notification.details).map(([key, value]) => `${key}: ${value}`).join('\n')}` : ''}\n\nThis message was sent by MotorX because an important activity affected your account.`,
-      html: notificationEmailHtml(notification.title, notification.message, notification.details),
-      headers: { 'X-Auto-Response-Suppress': 'All' },
-    });
-    await setNotificationEmailStatus(notification._id, 'sent');
-  } catch {
-    await setNotificationEmailStatus(notification._id, 'failed');
-  }
-}
-
-// Central entry point for every trigger in the notification delivery strategy: creates the
-// in-app record first (always durable), then fires the email leg only if requested.
+// Records one notification. Emails are only queued here (emailStatus 'pending'); the worker's
+// outbox job sends them with retries. A failure to record a notification is logged, never thrown,
+// so it cannot make an already committed action (approval, suspension, removal) look failed.
 async function notify(userId: Types.ObjectId, type: NotificationType, title: string, message: string, channels: NotificationChannel[], details?: NotificationDetails) {
-  const notification = await createNotification({ userId, type, title, message, channels, details });
-  if (channels.includes('email')) await deliverEmail(notification, userId);
-  return notification;
+  try { return await createNotification({ userId, type, title, message, channels, details }); }
+  catch (error) {
+    logger.error({ err: error, type, userId: String(userId) }, 'Could not record notification.');
+    return null;
+  }
 }
 
 async function notifyMany(userIds: Types.ObjectId[], type: NotificationType, title: string, message: string, channels: NotificationChannel[]) {
@@ -90,12 +54,12 @@ export function notifyImageProcessingClean(dealerUserId: Types.ObjectId) {
 }
 
 export async function notifyDealerApplicationSubmitted(businessName: string) {
-  const adminIds = await findAdminUserIds();
+  const adminIds = await findAdminUserIds().catch(() => []);
   return notifyMany(adminIds, 'dealer_application_submitted', 'New dealer application', `${businessName} submitted a dealer application for review.`, ['in_app']);
 }
 
 export async function notifyUploadHighRejectionRate(uploadJobId: string, rejectionRate: number) {
-  const adminIds = await findAdminUserIds();
+  const adminIds = await findAdminUserIds().catch(() => []);
   return notifyMany(adminIds, 'upload_high_rejection_rate', 'High rejection rate on an upload', `Upload ${uploadJobId} rejected ${Math.round(rejectionRate * 100)}% of its records.`, ['in_app']);
 }
 

@@ -31,6 +31,11 @@ export async function listDealerListings(dealerId: Types.ObjectId, page: number,
   return { documents: documents as unknown as ListingRecord[], total };
 }
 
+// Listings that count toward the per-dealer limit: drafts and active listings (sold and archived do not).
+export function countOpenDealerListings(dealerId: Types.ObjectId) {
+  return ListingModel.countDocuments({ dealerId, status: { $in: ['draft', 'active'] } });
+}
+
 export async function countDealerListings(dealerId: Types.ObjectId) {
   const [total, active, draft, sold, archived] = await Promise.all([
     ListingModel.countDocuments({ dealerId }), ListingModel.countDocuments({ dealerId, status: 'active' }),

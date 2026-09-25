@@ -4,16 +4,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   storageSend: vi.fn(), claim: vi.fn(), update: vi.fn(), complete: vi.fn(), fail: vi.fn(), retry: vi.fn(), renew: vi.fn(),
-  findActive: vi.fn(), findImported: vi.fn(), insertListings: vi.fn(), insertRejected: vi.fn(), notifyResult: vi.fn(),
+  findActive: vi.fn(), findImported: vi.fn(), countOpen: vi.fn(), insertListings: vi.fn(), insertRejected: vi.fn(), notifyResult: vi.fn(),
 }));
 
 vi.mock('../config/storage.js', () => ({ workerStorageClient: { send: mocks.storageSend }, workerStorageConfig: { bucket: 'test-bucket' } }));
-vi.mock('../config/env.js', () => ({ env: { ETL_BATCH_SIZE: 2, JOB_MAX_RECLAIM_ATTEMPTS: 5 } }));
+vi.mock('../config/env.js', () => ({ env: { ETL_BATCH_SIZE: 2, JOB_MAX_RECLAIM_ATTEMPTS: 5, MAX_LISTINGS_PER_DEALER: 2_000 } }));
 vi.mock('../repositories/uploadJob.repository.js', () => ({
   JOB_LEASE_MS: 120_000, claimPendingUploadJob: mocks.claim, updateUploadProgress: mocks.update, completeUploadJob: mocks.complete,
   failUploadJob: mocks.fail, retryUploadJob: mocks.retry, renewUploadLease: mocks.renew,
 }));
-vi.mock('../repositories/listing.repository.js', () => ({ findActivelyListedRegistrations: mocks.findActive, insertImportedListings: mocks.insertListings, findImportedRowNumbers: mocks.findImported }));
+vi.mock('../repositories/listing.repository.js', () => ({ findActivelyListedRegistrations: mocks.findActive, insertImportedListings: mocks.insertListings, findImportedRowNumbers: mocks.findImported, countOpenDealerListings: mocks.countOpen }));
 vi.mock('../repositories/rejectedRecord.repository.js', () => ({ insertRejectedRecords: mocks.insertRejected }));
 vi.mock('../pipeline/generateEmbedding.js', () => ({ generateEmbedding: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./notification.service.js', () => ({ notifyUploadJobResult: mocks.notifyResult, notifyUploadHighRejectionRate: vi.fn() }));
@@ -31,7 +31,7 @@ describe('inventory upload ETL service', () => {
     vi.clearAllMocks();
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     mocks.claim.mockResolvedValue({ storageKey: 'inventory/test.csv', dealerId, category: 'car', attemptCount: 1 });
-    mocks.findActive.mockResolvedValue(new Set()); mocks.findImported.mockResolvedValue(new Set());
+    mocks.findActive.mockResolvedValue(new Set()); mocks.findImported.mockResolvedValue(new Set()); mocks.countOpen.mockResolvedValue(0);
     mocks.insertListings.mockResolvedValue([]); mocks.insertRejected.mockResolvedValue(undefined);
     mocks.update.mockResolvedValue(true); mocks.complete.mockResolvedValue(true); mocks.fail.mockResolvedValue(true); mocks.retry.mockResolvedValue(true);
   });
@@ -95,6 +95,17 @@ describe('inventory upload ETL service', () => {
 
     expect(insertedRowNumbers()).toEqual([5]); // only the row never imported
     expect(result).toMatchObject({ processedRecords: 4, validRecords: 4, rejectedRecords: 0, duplicateRecords: 0, stage: 'completed' });
+  });
+
+  it("rejects rows beyond the dealer's listing limit instead of importing them", async () => {
+    mocks.countOpen.mockResolvedValue(1_999); // room for exactly one more listing
+    mocks.storageSend.mockResolvedValue({ Body: Readable.from(header + car('CAX-0001') + car('CAX-0002')) });
+
+    const result = await extractInventoryUpload(new Types.ObjectId().toString());
+
+    expect(insertedRowNumbers()).toEqual([2]);
+    expect(result).toMatchObject({ validRecords: 1, rejectedRecords: 1 });
+    expect(mocks.insertRejected).toHaveBeenCalledWith([expect.objectContaining({ rowNumber: 3, errors: [expect.stringContaining('Listing limit of 2000')] })]);
   });
 
   it('stops without writing when another worker has taken over the lease', async () => {

@@ -9,6 +9,7 @@ import { processInventoryImagesJob } from './jobs/inventoryImages.job.js';
 import { processInventoryUploadJob } from './jobs/inventoryUpload.job.js';
 import { runLeaseReaper } from './jobs/reaper.job.js';
 import { runDocumentRetention } from './jobs/documentRetention.job.js';
+import { runEmailOutbox } from './jobs/emailOutbox.job.js';
 import { retryImageProcessing, retryUploadJob } from './repositories/uploadJob.repository.js';
 import { listActiveLeases } from './services/activeLeases.js';
 
@@ -46,6 +47,14 @@ async function startWorker() {
   runRetention();
   const retentionTimer = setInterval(runRetention, env.DOCUMENT_RETENTION_INTERVAL_MS);
 
+  // Delivers queued notification emails (the outbox), one cycle at a time.
+  let outboxRunning = false;
+  const outboxTimer = setInterval(() => {
+    if (outboxRunning) return;
+    outboxRunning = true;
+    void runEmailOutbox().catch((error) => console.error('Email outbox cycle failed.', error)).finally(() => { outboxRunning = false; });
+  }, env.EMAIL_OUTBOX_INTERVAL_MS);
+
   // Emits concise lifecycle events for operational diagnosis.
   worker.on('completed', (job, result) => console.log('Inventory extraction completed.', { bullJobId: job.id, result }));
   worker.on('failed', (job, error) => console.error('Inventory extraction failed.', { bullJobId: job?.id, message: error.message }));
@@ -62,6 +71,7 @@ async function startWorker() {
     hardExit.unref();
     clearInterval(reaperTimer);
     clearInterval(retentionTimer);
+    clearInterval(outboxTimer);
 
     let drainTimer: NodeJS.Timeout | undefined;
     const finishedInTime = await Promise.race([

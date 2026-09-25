@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { listingPhotoLimiter, uploadConcurrencyGate } from '../../shared/middleware/rateLimits.js';
 import { loadLocalUser } from '../../shared/middleware/loadLocalUser.js';
 import { requireAuthenticated } from '../../shared/middleware/requireAuthenticated.js';
 import { requireRole } from '../../shared/middleware/requireRole.js';
@@ -22,7 +23,7 @@ listingRouter.post('/', ...dealerOnly, validateRequest({ body: createListingBody
 listingRouter.patch('/:listingId', ...dealerOnly, validateRequest({ params: listingIdParamsSchema, body: updateListingBodySchema }), asyncHandler(updateListing));
 listingRouter.patch('/:listingId/status', ...dealerOnly, validateRequest({ params: listingIdParamsSchema, body: updateListingStatusBodySchema }), asyncHandler(updateListingStatus));
 listingRouter.delete('/:listingId', ...dealerOnly, validateRequest({ params: listingIdParamsSchema }), asyncHandler(deleteListing));
-listingRouter.post('/:listingId/images', ...dealerOnly, validateRequest({ params: listingIdParamsSchema }), uploadSingleListingImage,
+listingRouter.post('/:listingId/images', ...dealerOnly, validateRequest({ params: listingIdParamsSchema }), uploadConcurrencyGate, listingPhotoLimiter, uploadSingleListingImage,
   validateRequest({ body: listingImageMetadataSchema }), asyncHandler(addListingImage));
 listingRouter.delete('/:listingId/images/:imageKey', ...dealerOnly,
   validateRequest({ params: listingImageKeyParamsSchema }), asyncHandler(deleteListingImage));

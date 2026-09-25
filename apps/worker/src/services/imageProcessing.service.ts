@@ -2,7 +2,7 @@ import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sd
 import { createHash, randomUUID } from 'node:crypto';
 import { Types } from 'mongoose';
 import * as unzipper from 'unzipper';
-import { normalizeRegistrationNumber } from '@motorx/shared-contracts';
+import { LISTING_IMAGE_OBJECT_PREFIX, normalizeRegistrationNumber } from '@motorx/shared-contracts';
 import { env } from '../config/env.js';
 import { workerStorageClient, workerStorageConfig } from '../config/storage.js';
 import { appendListingImages, findListingsByUploadJob, type WorkerListingImage } from '../repositories/listing.repository.js';
@@ -114,7 +114,7 @@ export function deterministicImageKey(uploadJobId: string, listingId: string, en
 
 // Uploads one re-encoded photo under its deterministic key and returns its ListingImage metadata.
 async function uploadImage(key: string, order: number, entry: ZipImageEntry): Promise<WorkerListingImage> {
-  await workerStorageClient.send(new PutObjectCommand({ Bucket: workerStorageConfig.bucket, Key: key, Body: entry.buffer, ContentType: entry.mimeType, CacheControl: 'public, max-age=31536000, immutable' }));
+  await workerStorageClient.send(new PutObjectCommand({ Bucket: workerStorageConfig.bucket, Key: `${LISTING_IMAGE_OBJECT_PREFIX}${key}`, Body: entry.buffer, ContentType: entry.mimeType, CacheControl: 'public, max-age=31536000, immutable' }));
   return { key, url: `${workerStorageConfig.publicUrl}/${encodeURIComponent(key)}`, alt: entry.fileName, order };
 }
 
@@ -159,7 +159,7 @@ export async function processInventoryImages(uploadJobId: string) {
       const result = await appendListingImages((listing as any)._id, images, workerStorageConfig.maxListingImages);
       if (result?.modifiedCount === 1) { imagesAttached += images.length; continue; }
       // Not attached (the listing changed meanwhile): remove the objects so none are left untracked.
-      await Promise.allSettled(images.map(({ key }) => workerStorageClient.send(new DeleteObjectCommand({ Bucket: workerStorageConfig.bucket, Key: key }))));
+      await Promise.allSettled(images.map(({ key }) => workerStorageClient.send(new DeleteObjectCommand({ Bucket: workerStorageConfig.bucket, Key: `${LISTING_IMAGE_OBJECT_PREFIX}${key}` }))));
     }
 
     lease.assertHeld();

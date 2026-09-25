@@ -13,6 +13,7 @@ The MongoDB `uploadJobs` document is the source of truth. The Redis/BullMQ messa
 | Worker crashes or is killed mid-job | The job's lease (2 min, renewed every 40 s while work continues) expires, and the reconciler re-queues it. The next attempt **resumes**: CSV imports continue after the last checkpointed batch, and each CSV row can create at most one listing (unique `sourceUploadJobId` + `sourceRowNumber`). Rejected rows are insert-once. Photos use deterministic storage keys (upload + listing + zip path + content hash), so a retry overwrites its own objects and skips photos already attached. |
 | A slow worker's lease expires and another worker takes over | Every write (progress, completion, failure) requires the current lease-owner token. The old worker's writes are refused and it stops without changing anything. |
 | Temporary storage, network, or database error | The job goes back to `pending` and BullMQ retries it after about 5 s, 10 s, and 20 s (exponential backoff with jitter). Permanent errors (unreadable CSV, invalid zip, missing file) fail immediately. |
+| Email (SMTP) is down | Notifications are recorded immediately and their emails queued (`emailStatus: pending`). The worker's outbox sends them every 15 s, retrying after 1 min, 5 min, 30 min, and 2 h before marking them `failed`. The action that caused the email is never delayed or failed by it. |
 | Retries exhausted | After `JOB_MAX_RECLAIM_ATTEMPTS` (5) claims, the job is marked `failed` and the dealer is notified. The dealer can press **Retry** on the upload page (`POST /api/v1/dealer/uploads/:id/retry` or `/images/retry`), which starts a fresh attempt budget and resumes safely. |
 | Deployment or scale-in stops a worker | The worker stops taking jobs and waits up to `SHUTDOWN_TIMEOUT_MS` (25 s) for running jobs. Anything still running is handed back as `pending`, so another worker resumes it at once. |
 | Deployment stops a backend task | It stops accepting connections, lets in-flight requests finish for up to `SHUTDOWN_TIMEOUT_MS` (20 s), then closes MongoDB and Redis and exits before ECS's 30 s stop timeout. |
@@ -24,6 +25,7 @@ The MongoDB `uploadJobs` document is the source of truth. The Redis/BullMQ messa
 - **Backend: at least 2 tasks in 2 Availability Zones** behind the load balancer, so one host or zone failure does not take the site down.
 - **Worker: 2 tasks.** Concurrent processing is safe because of the lease-owner tokens.
 - Container health check: `/health/live`. Load balancer target health: `/health/ready` (backend).
+- Set `TRUST_PROXY_HOPS=1` on the backend behind the load balancer, so rate limits see real client IPs.
 - Stop timeout: 30 s. Deployment circuit breaker with rollback enabled (already in CD_GUIDE).
 - Images are immutable (tagged by commit SHA) and ECR tag immutability is on.
 
@@ -41,6 +43,13 @@ The MongoDB `uploadJobs` document is the source of truth. The Redis/BullMQ messa
 - **Continuous backups with point-in-time recovery** (M10+ dedicated cluster). On shared tiers, schedule regular `mongodump` exports to a separate, versioned S3 bucket.
 - Separate production project and least-privilege database user (see CD_GUIDE §4).
 - After deploying this change, confirm the new unique index `sourceUploadJobId_sourceRowNumber` on `listings` was built (created automatically at startup).
+
+### S3 and CloudFront (listing photos)
+
+- Listing photos are stored under `listing-images/`; dealer documents under `dealer-verification/`; inventory files under `inventory/`.
+- Serve photos through **CloudFront** with Origin Access Control: origin = the bucket, **origin path `/listing-images`**, and a bucket policy that grants CloudFront `s3:GetObject` on `arn:aws:s3:::<bucket>/listing-images/*` **only**. Documents and CSVs are then unreachable through the CDN.
+- Set `S3_PUBLIC_URL` (backend and worker) to the CloudFront address, e.g. `https://images.example.com`. New photos then get CDN URLs; the backend `/api/v1/listing-images` route keeps working as a fallback.
+- Once, after deploying: `node dist/scripts/migrateListingImages.js --dry-run`, then run it without `--dry-run` (add `--public-url=https://images.example.com` to point old photos at the CDN). It moves older photos under the prefix and strips their metadata (GPS). Safe to re-run.
 
 ### S3
 
@@ -85,7 +94,7 @@ Run each test in staging and record the result. Each one checks a specific item 
 
 | # | Test | Pass when |
 |---|---|---|
-| 1 | Kill a worker (`docker kill` / stop the ECS task) halfway through a large ZIP and a large CSV | The job resumes on another worker within about 3 minutes; the listing's photo count equals the zip's photos (no duplicates); the CSV creates each row's listing exactly once |
+| 1 | Kill a worker (`docker kill` / stop the ECS task) halfway through a large ZIP and a large CSV | The job resumes on another worker within about 5 minutes (mostly waiting for the dead worker's 2-minute lease); the listing's photo count equals the zip's photos (no duplicates); the CSV creates each row's listing exactly once. **Automated for CSV:** `bash scripts/drills/kill-worker-mid-import.sh` (local test stack). Last run: 60,000 rows, killed mid-import, completed by a second worker in 4 min 43 s with 60,000 listings from 60,000 distinct rows. |
 | 2 | Stop Redis, upload a CSV, then start Redis | The upload is accepted immediately as `pending` and completes within about 3 minutes of Redis returning |
 | 3 | Block MongoDB (remove the Atlas access-list entry) | API requests fail within about 10 s with an error, not a hang; `/health/ready` returns 503 within 1 s; service recovers on its own when access returns |
 | 4 | Deploy an image that exits at startup | The ECS circuit breaker rolls back to the previous task definition; the site stays up |

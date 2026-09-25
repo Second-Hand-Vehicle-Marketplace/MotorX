@@ -4,6 +4,7 @@ import { AppProviders } from './providers';
 
 // Auth
 import { RoleGuard } from '../features/auth/components/RoleGuard';
+import { EmailVerificationBanner } from '../features/auth/components/EmailVerificationBanner';
 
 // Portals
 const LoginPage = React.lazy(() => import('../features/auth/pages/LoginPage').then((module) => ({ default: module.LoginPage })));
@@ -31,6 +32,7 @@ export function App() {
   return (
     <AppProviders>
       <BrowserRouter>
+        <EmailVerificationBanner />
         <Suspense fallback={<div role="status" aria-label="Loading page" className="loading-spinner" style={{ display: 'block', margin: '4rem auto' }} />}>
           <Routes>
             {/* Auth Route */}

@@ -6,6 +6,7 @@ import { errorCodes } from '../../shared/errors/errorCodes.js';
 import { buildPaginationMeta } from '../../shared/utils/pagination.js';
 import { enqueueInventoryImages, enqueueInventoryUpload } from './inventory.queue.js';
 import { logger } from '../../config/logger.js';
+import { assertDealerListingCapacity } from '../marketplace/listing.service.js';
 import { createUploadJob, findDealerUploadJob, listDealerUploadJobs, listRejectedRecordsForUpload, markImageProcessingPending, resetFailedImageProcessing, resetFailedUploadJob } from './inventory.repository.js';
 import { deleteInventoryCsv, deleteInventoryImagesZip, storeInventoryCsv, storeInventoryImagesZip } from './inventory.storage.js';
 import type { ListInventoryUploadsQuery, ListRejectedRecordsQuery } from './inventory.validation.js';
@@ -44,6 +45,9 @@ function serializeRejectedRecord(record: Record<string, any>) { return { id: Str
 export async function createInventoryUpload(dealerId: Types.ObjectId, category: VehicleCategory, file: Express.Multer.File) {
   const validation = validateInventoryCsv(file, category);
   if (!validation.valid) throw new AppError(400, errorCodes.validation, validation.message);
+  // Rows beyond the dealer's remaining capacity are rejected by the worker; a dealer already at
+  // the limit is told now instead of after processing.
+  await assertDealerListingCapacity(dealerId);
   const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
   const storageKey = `inventory/${dealerId}/${randomUUID()}-${safeName}`;
   await storeInventoryCsv(storageKey, file);

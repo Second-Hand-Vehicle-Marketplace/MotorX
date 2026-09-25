@@ -14,6 +14,8 @@ import { notificationRouter } from './modules/notifications/index.js';
 import { searchRouter } from './modules/search/index.js';
 import { errorHandler } from './shared/middleware/errorHandler.js';
 import { sendSuccess } from './shared/responses/apiResponse.js';
+import { env } from './config/env.js';
+import { apiLimiter } from './shared/middleware/rateLimits.js';
 
 export const app = express();
 
@@ -42,6 +44,11 @@ app.use(
 );
 app.use(express.json());
 app.disable('x-powered-by');
+// Behind the AWS load balancer the client IP arrives in X-Forwarded-For; trust exactly that many
+// proxies so rate limits apply per real client (0 locally, where there is no proxy).
+app.set('trust proxy', env.TRUST_PROXY_HOPS);
+// Health checks stay outside the limiter so load balancer probes are never throttled.
+app.use('/api', apiLimiter);
 
 app.get('/health/live', (_request, response) => {
   sendSuccess(response, { service: 'backend', status: 'UP' });

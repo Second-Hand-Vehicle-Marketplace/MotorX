@@ -11,6 +11,30 @@ const envSchema = z.object({
   // How long shutdown waits for in-flight requests. Must be below the orchestrator's stop
   // timeout (ECS default: 30 s), after which the process is killed outright.
   SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(120_000).default(20_000),
+  // Number of proxies in front of the API (1 behind an AWS load balancer), so rate limits see the
+  // real client IP from X-Forwarded-For instead of the proxy's. 0 locally.
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
+
+  // Abuse controls. Per-minute budgets are per client IP (per user where noted), shared across
+  // all backend instances through Redis; a Redis outage disables them rather than the API.
+  RATE_LIMIT_API_PER_MINUTE: z.coerce.number().int().positive().default(300),
+  RATE_LIMIT_SEARCH_PER_MINUTE: z.coerce.number().int().positive().default(30),
+  RATE_LIMIT_UPLOADS_PER_10_MINUTES: z.coerce.number().int().positive().default(20),
+  RATE_LIMIT_LISTING_PHOTOS_PER_10_MINUTES: z.coerce.number().int().positive().default(150),
+  RATE_LIMIT_DEALER_APPLICATIONS_PER_HOUR: z.coerce.number().int().positive().default(5),
+  // Daily upload quotas per dealer.
+  QUOTA_CSV_UPLOADS_PER_DAY: z.coerce.number().int().positive().default(50),
+  QUOTA_PHOTO_ZIPS_PER_DAY: z.coerce.number().int().positive().default(200),
+  // Draft + active listings one dealer may hold (manual listings and CSV imports). Must stay
+  // above the SRS bulk-import size (5,000 records in one upload).
+  MAX_LISTINGS_PER_DEALER: z.coerce.number().int().positive().default(10_000),
+  // Uploads are held in memory while being checked and stored, so each backend instance accepts
+  // at most this many at once (e.g. 4 x 50 MB zips = 200 MB) and asks the rest to retry shortly.
+  MAX_CONCURRENT_UPLOADS: z.coerce.number().int().positive().default(4),
+
+  // How long a verified Firebase ID token is trusted before it is checked with Firebase again
+  // (including whether it was revoked). Tokens are also never trusted past their own expiry.
+  AUTH_TOKEN_CACHE_TTL_MS: z.coerce.number().int().min(0).max(600_000).default(120_000),
 
   MONGODB_URI: z.string().trim().min(1),
   REDIS_URL: z.string().url().default('redis://localhost:6379'),
@@ -38,10 +62,12 @@ const envSchema = z.object({
   EMBEDDING_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(30_000).default(4_000),
   ATLAS_VECTOR_INDEX: z.string().trim().min(1).default('listing_embedding_index'),
 
-  SMTP_HOST: z.string().trim().min(1),
+  // Email is sent only by the worker's outbox; the backend no longer needs SMTP credentials.
+  // Kept optional so existing .env files still load.
+  SMTP_HOST: z.string().trim().min(1).optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
-  SMTP_USER: z.string().trim().min(1),
-  SMTP_PASS: z.string().trim().min(1),
+  SMTP_USER: z.string().trim().min(1).optional(),
+  SMTP_PASS: z.string().trim().min(1).optional(),
   SMTP_FROM: z.string().trim().min(1).optional(),
 }).superRefine((config, context) => {
   // Refuses to start production against a local, dev, test, or unencrypted database.

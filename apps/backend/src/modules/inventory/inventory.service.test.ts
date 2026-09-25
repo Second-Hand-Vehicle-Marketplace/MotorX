@@ -4,11 +4,12 @@ import { csvTemplatesByCategory } from '@motorx/shared-contracts';
 
 const mocks = vi.hoisted(() => ({
   storeCsv: vi.fn(), deleteCsv: vi.fn(), createJob: vi.fn(), enqueueUpload: vi.fn(), enqueueImages: vi.fn(),
-  resetFailedUpload: vi.fn(), resetFailedImages: vi.fn(), warn: vi.fn(),
+  resetFailedUpload: vi.fn(), resetFailedImages: vi.fn(), warn: vi.fn(), assertCapacity: vi.fn(),
 }));
 
 vi.mock('../../config/logger.js', () => ({ logger: { warn: mocks.warn } }));
 vi.mock('./inventory.storage.js', () => ({ storeInventoryCsv: mocks.storeCsv, deleteInventoryCsv: mocks.deleteCsv, storeInventoryImagesZip: vi.fn(), deleteInventoryImagesZip: vi.fn() }));
+vi.mock('../marketplace/listing.service.js', () => ({ assertDealerListingCapacity: mocks.assertCapacity }));
 vi.mock('./inventory.queue.js', () => ({ enqueueInventoryUpload: mocks.enqueueUpload, enqueueInventoryImages: mocks.enqueueImages }));
 vi.mock('./inventory.repository.js', () => ({
   createUploadJob: mocks.createJob, resetFailedUploadJob: mocks.resetFailedUpload, resetFailedImageProcessing: mocks.resetFailedImages,
@@ -27,6 +28,7 @@ describe('inventory upload acceptance', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.storeCsv.mockResolvedValue(undefined);
+    mocks.assertCapacity.mockResolvedValue(undefined);
     mocks.createJob.mockResolvedValue({ _id: jobId, ...jobDocument() });
   });
 
@@ -59,6 +61,13 @@ describe('inventory upload acceptance', () => {
 
     await expect(pending).resolves.toMatchObject({ status: 'pending' });
     vi.useRealTimers();
+  });
+
+  it('tells a dealer at the listing limit before storing anything', async () => {
+    mocks.assertCapacity.mockRejectedValue(Object.assign(new Error('limit'), { statusCode: 409 }));
+
+    await expect(createInventoryUpload(dealerId, 'car', csvFile)).rejects.toMatchObject({ statusCode: 409 });
+    expect(mocks.storeCsv).not.toHaveBeenCalled();
   });
 
   it('still removes the stored file if the MongoDB job itself cannot be created', async () => {

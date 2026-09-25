@@ -2,6 +2,7 @@ import { app } from './app.js';
 import { connectDatabase, disconnectDatabase } from './config/database.js';
 import { env } from './config/env.js';
 import { closeInventoryQueue } from './config/queue.js';
+import { disconnectRedis } from './config/redis.js';
 
 const port = env.PORT;
 
@@ -38,7 +39,7 @@ async function shutdown(signal: string): Promise<void> {
     server.closeAllConnections();
   }
 
-  const results = await Promise.allSettled([disconnectDatabase(), closeInventoryQueue()]);
+  const results = await Promise.allSettled([disconnectDatabase(), closeInventoryQueue(), disconnectRedis()]);
   const failed = results.some((result) => result.status === 'rejected');
   if (failed) console.error('Backend shutdown cleanup failed.', results);
   process.exit(failed ? 1 : 0);

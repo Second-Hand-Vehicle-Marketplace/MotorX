@@ -7,6 +7,8 @@ const envSchema = z.object({
   MONGODB_URI: z.string().trim().min(1), REDIS_URL: z.string().url(),
   INVENTORY_QUEUE_NAME: z.string().trim().min(1).default('inventory-processing'),
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(20).default(2),
+  // Same limit the backend enforces: draft + active listings per dealer. Rows beyond it are rejected.
+  MAX_LISTINGS_PER_DEALER: z.coerce.number().int().positive().default(10_000),
   ETL_BATCH_SIZE: z.coerce.number().int().min(10).max(2_000).default(250),
   S3_ENDPOINT: z.string().url(), S3_REGION: z.string().trim().min(1).default('us-east-1'),
   S3_BUCKET: z.string().trim().min(1), S3_ACCESS_KEY: z.string().trim().min(1), S3_SECRET_KEY: z.string().trim().min(1),
@@ -37,6 +39,8 @@ const envSchema = z.object({
   SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(120_000).default(25_000),
   // Days after an approve/reject decision before verification documents are deleted.
   DEALER_DOCUMENT_RETENTION_DAYS: z.coerce.number().int().min(1).max(3_650).default(90),
+  // How often queued notification emails are sent.
+  EMAIL_OUTBOX_INTERVAL_MS: z.coerce.number().int().min(1_000).default(15_000),
   DOCUMENT_RETENTION_INTERVAL_MS: z.coerce.number().int().min(60_000).default(3_600_000),
 }).superRefine((config, context) => {
   // Refuses to consume jobs in production against a local, dev, test, or unencrypted database.

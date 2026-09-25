@@ -17,3 +17,7 @@ export const LISTING_IMAGE_ASPECT_RATIO_TOLERANCE = 0.05;
 export const LISTING_IMAGE_MAX_INPUT_PIXELS = 40_000_000;
 export const LISTING_IMAGE_MAX_DIMENSION_PX = 2560;
 export const LISTING_IMAGE_OUTPUT_QUALITY = 82;
+
+// Storage prefix for listing photos (backend uploads, worker zip imports). Private objects such as
+// dealer documents and inventory files use other prefixes, so a CDN can be limited to this one.
+export const LISTING_IMAGE_OBJECT_PREFIX = 'listing-images/';

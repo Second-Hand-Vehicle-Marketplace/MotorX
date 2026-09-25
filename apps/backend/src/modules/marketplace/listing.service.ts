@@ -10,6 +10,7 @@ import {
   findOwnedListing,
   listDealerListings,
   countDealerListings,
+  countOpenDealerListings,
   transitionOwnedListingStatus,
   updateOwnedListing,
   type ListingRecord,
@@ -20,6 +21,7 @@ import { deleteListingImageObject } from './listingImage.storage.js';
 import type { ListingImage } from './listing.model.js';
 import type { ListingStatus } from '@motorx/shared-contracts';
 import { generateSearchEmbedding } from '../search/search.embedding.js';
+import { env } from '../../config/env.js';
 
 // Converts a listing record into the shared API DTO.
 export function serializeListing(listing: ListingRecord): ListingDto {
@@ -50,8 +52,15 @@ function rethrowAsRegistrationConflict(error: unknown): never {
   throw error;
 }
 
+// Refuses new listings once the dealer holds MAX_LISTINGS_PER_DEALER drafts and active listings.
+export async function assertDealerListingCapacity(dealerId: Types.ObjectId) {
+  if (await countOpenDealerListings(dealerId) >= env.MAX_LISTINGS_PER_DEALER)
+    throw new AppError(409, errorCodes.quotaExceeded, `You have reached the limit of ${env.MAX_LISTINGS_PER_DEALER} draft and active listings. Archive or mark sold listings to add more.`);
+}
+
 // Creates a draft or immediately published listing for a dealer.
 export async function createDealerListing(dealerId: Types.ObjectId, input: CreateListingBody) {
+  await assertDealerListingCapacity(dealerId);
   const normalizedRegistrationNumber = normalizeRegistrationNumber(input.registrationNumber);
   await assertRegistrationNotActivelyListed(normalizedRegistrationNumber);
   let embedding: number[] | undefined;

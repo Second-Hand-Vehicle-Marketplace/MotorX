@@ -25,8 +25,8 @@ export async function listAdminUsers(options: ListAdminUsersQuery) {
   return { documents, total };
 }
 
-export function updateAdminUserStatus(userId: string, status: 'active' | 'suspended') {
-  return AuthUserModel.findByIdAndUpdate(userId, { $set: { status } }, { new: true, runValidators: true }).lean();
+export function updateAdminUserStatus(userId: string, status: 'active' | 'suspended', session?: ClientSession) {
+  return AuthUserModel.findByIdAndUpdate(userId, { $set: { status } }, { new: true, runValidators: true, session }).lean();
 }
 
 // Includes dealer identity so administrators can moderate across dealerships.
@@ -47,8 +47,8 @@ export async function listAdminListings(options: ListAdminListingsQuery) {
 }
 
 // Soft removal preserves the listing for later audit inspection.
-export function archiveListingByAdmin(listingId: string) {
-  return ListingModel.findByIdAndUpdate(listingId, { $set: { status: 'archived' } }, { new: true, runValidators: true })
+export function archiveListingByAdmin(listingId: string, session?: ClientSession) {
+  return ListingModel.findByIdAndUpdate(listingId, { $set: { status: 'archived' } }, { new: true, runValidators: true, session })
     .populate('dealerId', 'displayName email').lean();
 }
 
