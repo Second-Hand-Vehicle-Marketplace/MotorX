@@ -30,5 +30,8 @@ const authUserSchema = new Schema<AuthUser>(
   { timestamps: true, versionKey: false },
 );
 
+// Public pages look up suspended accounts to hide their listings.
+authUserSchema.index({ status: 1 }, { name: 'status' });
+
 export const AuthUserModel =
   models.AuthUser ?? model<AuthUser>('AuthUser', authUserSchema);

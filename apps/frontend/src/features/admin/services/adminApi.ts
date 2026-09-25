@@ -24,7 +24,8 @@ export interface AdminSystemHealth { checkedAt: string; backend: { status: strin
 
 export interface AdminUserFilters { search?: string; role?: UserRole; status?: AdminUser['status']; page?: number; limit?: number }
 export interface AdminListingFilters { search?: string; status?: AdminListing['status']; category?: VehicleCategory; page?: number; limit?: number }
-export interface AdminUploadFilters { status?: AdminUpload['status']; dealerId?: string; page?: number; limit?: number }
+export interface AdminUploadFilters { status?: AdminUpload['status']; dealerId?: string; uploadId?: string; from?: string; to?: string; page?: number; limit?: number }
+export interface AdminAuditFilters { eventType?: AdminAuditEvent; from?: string; to?: string; page?: number; limit?: number }
 
 // Provides one frontend entry point for every admin API operation.
 export const adminApi = {
@@ -48,13 +49,13 @@ export const adminApi = {
     const response = await apiClient.get<ApiSuccessResponse<AdminStats>>('/admin/stats');
     return response.data.data;
   },
-  async listAuditLogs(eventType?: AdminAuditEvent) {
-    const response = await apiClient.get<ApiSuccessResponse<AdminAuditLog[], PaginationMeta>>('/admin/audit-logs', { params: { eventType, limit: 100 } });
-    return response.data.data;
+  async listAuditLogs(filters: AdminAuditFilters = {}) {
+    const response = await apiClient.get<ApiSuccessResponse<AdminAuditLog[], PaginationMeta>>('/admin/audit-logs', { params: { limit: 50, ...filters } });
+    return { logs: response.data.data, meta: response.data.meta };
   },
   async listUploads(filters: AdminUploadFilters = {}) {
-    const response = await apiClient.get<ApiSuccessResponse<AdminUpload[], PaginationMeta>>('/admin/uploads', { params: { limit: 100, ...filters } });
-    return response.data.data;
+    const response = await apiClient.get<ApiSuccessResponse<AdminUpload[], PaginationMeta>>('/admin/uploads', { params: { limit: 50, ...filters } });
+    return { uploads: response.data.data, meta: response.data.meta };
   },
   async getSystemHealth() {
     const response = await apiClient.get<ApiSuccessResponse<AdminSystemHealth>>('/admin/system-health');

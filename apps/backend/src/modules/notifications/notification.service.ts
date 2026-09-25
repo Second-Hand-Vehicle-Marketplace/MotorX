@@ -53,9 +53,11 @@ export function notifyImageProcessingClean(dealerUserId: Types.ObjectId) {
   return notify(dealerUserId, 'image_processing_completed', 'Vehicle photos processed', 'Your vehicle-photos zip finished processing and every photo matched a listing.', ['in_app']);
 }
 
-export async function notifyDealerApplicationSubmitted(businessName: string) {
+export async function notifyDealerApplicationSubmitted(businessName: string, resubmitted = false) {
   const adminIds = await findAdminUserIds().catch(() => []);
-  return notifyMany(adminIds, 'dealer_application_submitted', 'New dealer application', `${businessName} submitted a dealer application for review.`, ['in_app']);
+  return resubmitted
+    ? notifyMany(adminIds, 'dealer_application_submitted', 'Dealer application resubmitted', `${businessName} corrected and resubmitted their dealer application.`, ['in_app'])
+    : notifyMany(adminIds, 'dealer_application_submitted', 'New dealer application', `${businessName} submitted a dealer application for review.`, ['in_app']);
 }
 
 export async function notifyUploadHighRejectionRate(uploadJobId: string, rejectionRate: number) {

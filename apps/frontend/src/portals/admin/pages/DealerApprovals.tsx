@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { DealerApplication } from '@/features/dealers/types/dealer.types';
 import { approveDealerApplication, getPendingDealerApplications, openDealerDocument, rejectDealerApplication } from '@/features/dealers/services/dealerApi';
 type ApplicationStatus = 'pending' | 'approved' | 'rejected';
@@ -10,7 +11,13 @@ export const DealerApprovals: React.FC = () => {
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [error, setError] = useState('');
-  const [status, setStatus] = useState<ApplicationStatus>('pending');
+  // The tab and the selected application come from the URL, so dashboard links such as
+  // ?status=approved or ?applicationId=… open the right list and the exact record.
+  const [params, setParams] = useSearchParams();
+  const requestedStatus = params.get('status');
+  const status: ApplicationStatus = requestedStatus === 'approved' || requestedStatus === 'rejected' ? requestedStatus : 'pending';
+  const selectedId = params.get('applicationId');
+  const setStatus = (value: ApplicationStatus) => setParams({ status: value });
 
   const loadApplications = async () => {
     try { setError(''); setDealers(await getPendingDealerApplications(status)); }
@@ -18,6 +25,10 @@ export const DealerApprovals: React.FC = () => {
     finally { setIsLoading(false); }
   };
   useEffect(() => { setIsLoading(true); void loadApplications(); }, [status]);
+  // Bring the selected application into view once the list has loaded.
+  useEffect(() => {
+    if (!isLoading && selectedId) document.getElementById(`application-${selectedId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [isLoading, selectedId]);
 
   const decide = async (dealerId: string, decision: 'approve' | 'reject') => {
     if (decision === 'reject' && rejectionReason.trim().length < 3) {
@@ -41,7 +52,7 @@ export const DealerApprovals: React.FC = () => {
       {error && <div className="auth-message auth-message-error" role="alert">{error}</div>}
       {isLoading && <div className="loading-spinner" style={{ margin: '3rem auto', display: 'block' }} />}
       {!isLoading && dealers.map((dealer) => (
-        <article key={dealer.id} className="glass-card dealer-review-card">
+        <article key={dealer.id} id={`application-${dealer.id}`} className="glass-card dealer-review-card" aria-current={dealer.id === selectedId ? 'true' : undefined} style={dealer.id === selectedId ? { outline: '2px solid var(--color-accent)' } : undefined}>
           <div className="dealer-review-header"><div><span className={`badge ${status === 'pending' ? 'badge-warning' : status === 'approved' ? 'badge-success' : 'badge-error'}`}>{status} application</span><h2>{dealer.businessName}</h2><p>{dealer.representativeName} &bull; submitted {new Date(dealer.createdAt).toLocaleDateString()}</p></div></div>
           <div className="dealer-review-grid">
             <div><span>Registration</span><strong>{dealer.registrationNumber}</strong></div>
@@ -51,6 +62,12 @@ export const DealerApprovals: React.FC = () => {
             <div><span>Brands</span><strong>{dealer.brands.join(', ') || 'Not specified'}</strong></div>
             <div><span>Typical inventory</span><strong>{dealer.inventoryCount ?? 'Not specified'}</strong></div>
           </div>
+          {dealer.reviewHistory.length > 0 && (
+            <div className="rejection-reason">
+              <span>Resubmitted after {dealer.reviewHistory.length === 1 ? 'a rejection' : `${dealer.reviewHistory.length} rejections`}. Earlier decisions:</span>
+              <ul style={{ margin: '0.25rem 0 0', paddingLeft: '1.25rem' }}>{dealer.reviewHistory.map((entry, index) => <li key={index}>{entry.reviewedAt ? new Date(entry.reviewedAt).toLocaleDateString() : 'Earlier'}: {entry.reason ?? 'No reason recorded.'}</li>)}</ul>
+            </div>
+          )}
           <div className="dealer-description"><span>Business description</span><p>{dealer.description}</p>{dealer.website && <a href={dealer.website} target="_blank" rel="noreferrer">Open dealership website</a>}</div>
           <div className="dealer-documents"><span>Verification documents</span><div>{dealer.documentsDeletedAt && <small>Deleted on {new Date(dealer.documentsDeletedAt).toLocaleDateString()} under the document retention policy.</small>}{dealer.verificationDocuments.map((document, index) => <button key={document.key} className="btn btn-secondary btn-sm" onClick={() => void openDealerDocument(dealer.id, index)}>{document.category.replace(/([A-Z])/g, ' $1')} &mdash; {document.originalName}</button>)}</div></div>
           {rejectingId === dealer.id && <div className="rejection-editor"><label className="form-label" htmlFor={`reason-${dealer.id}`}>Rejection reason</label><textarea id={`reason-${dealer.id}`} className="form-textarea" value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)} maxLength={500} placeholder="Explain what information is missing or why the application cannot be approved." /></div>}

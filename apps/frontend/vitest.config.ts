@@ -11,5 +11,7 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
     restoreMocks: true,
+    // Each jsdom worker is memory-hungry; more than two at once crashed on developer laptops.
+    maxWorkers: 2,
   },
 });

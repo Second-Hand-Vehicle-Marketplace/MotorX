@@ -78,5 +78,6 @@ export interface AuthContextValue extends AuthState {
   registerBuyer: (data: BuyerRegistrationInput) => Promise<void>;
   registerDealerApplication: (data: DealerApplicationInput) => Promise<DealerApplicationDto>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<User>;
 }
 import type { DealerApplicationDto } from '@motorx/shared-contracts';

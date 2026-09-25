@@ -28,9 +28,10 @@ Expected backend behavior:
 
 ### Dealer Applications
 
-- `POST /api/v1/dealers/applications` accepts multipart form data from a newly authenticated buyer account.
-- `GET /api/v1/dealers/me` returns the current user's application, including pending/rejected status and review reason.
-- `GET /api/v1/admin/dealer-applications` returns pending applications to administrators.
+- `POST /api/v1/dealers/applications` accepts multipart form data from a buyer account (new or existing). A buyer whose application was **rejected** resubmits through the same endpoint: the application returns to `pending`, the earlier decision is kept in `reviewHistory`, and the old documents are deleted. Returns 409 while an application is pending or after approval. Rate limited per account.
+- `GET /api/v1/dealers/me` returns the current user's application, including status, review reason, `submittedAt`, and `reviewHistory`.
+- `PATCH /api/v1/dealers/me/profile` (approved dealers) updates editable business details: `representativeName`, `phone`, `address`, `city`, `province`, `businessPhone`, `businessEmail`, `website` (`""` removes it), `dealershipType`, `brands`, `description`, `inventoryCount`. `businessName` and `registrationNumber` are verified during review and cannot be changed here.
+- `GET /api/v1/admin/dealer-applications?status=pending|approved|rejected` returns applications to administrators; pending ones oldest submission first. Approving requires the applicant's email to be verified (409 otherwise).
 - `GET /api/v1/admin/dealer-applications/:dealerId/documents/:documentIndex` streams a protected verification document to an administrator.
 - `PATCH /api/v1/admin/dealer-applications/:dealerId/approve` approves an application and atomically promotes the user to the dealer role.
 - `PATCH /api/v1/admin/dealer-applications/:dealerId/reject` stores the rejection reason, reviewer, and review date.
@@ -137,13 +138,18 @@ Expected backend/worker behavior:
 - `GET /api/v1/admin/users` returns user management data.
 - `GET /api/v1/admin/dealers` returns dealer approvals.
 - `GET /api/v1/admin/listings` returns moderated listing data. Supports `search`, `status`, and `category` filters.
-- `GET /api/v1/admin/uploads` returns upload monitoring data.
+- `GET /api/v1/admin/uploads` returns upload monitoring data. Supports `status`, `dealerId`, `from`/`to` (YYYY-MM-DD, inclusive), `page`, `limit`, or `uploadId` for one exact upload.
+- `GET /api/v1/admin/audit-logs` returns administrative events. Supports `eventType`, `from`/`to` (YYYY-MM-DD, inclusive), `page`, and `limit`.
 - `GET /api/v1/admin/system-health` returns service health for the dashboard.
 
 ## Health Routes
 
 - `GET /health/live` confirms the API process is up.
-- `GET /health/ready` confirms the API can reach its required dependencies.
+- `GET /health/ready` returns 503 only when MongoDB is unreachable (1 s timeout per dependency). A Redis outage reports `DEGRADED` but keeps serving; uploads wait as pending.
+
+## Public Listing Visibility
+
+Browse (`GET /api/v1/listings`), listing detail (`GET /api/v1/listings/:listingId`), and search (`GET /api/v1/search`) return only active listings whose dealer account is active. Listings of a suspended dealer disappear immediately on the instance that suspended them and within 15 seconds on other instances, and reappear on reactivation.
 - `GET /health` returns operational status for backend, database, queue, and ETL worker.
 - `GET /api/v1/admin/system-health` returns protected operational details for administrators.
 

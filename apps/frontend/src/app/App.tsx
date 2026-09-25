@@ -18,6 +18,7 @@ const DealerDashboard = React.lazy(() => import('../portals/dealer/pages/DealerD
 const ListingManager = React.lazy(() => import('../portals/dealer/pages/ListingManager').then((module) => ({ default: module.ListingManager })));
 const ListingForm = React.lazy(() => import('../portals/dealer/pages/ListingForm').then((module) => ({ default: module.ListingForm })));
 const InventoryUpload = React.lazy(() => import('../portals/dealer/pages/InventoryUpload').then((module) => ({ default: module.InventoryUpload })));
+const DealerProfile = React.lazy(() => import('../portals/dealer/pages/DealerProfile').then((module) => ({ default: module.DealerProfile })));
 const UploadDetails = React.lazy(() => import('../portals/dealer/pages/UploadDetails').then((module) => ({ default: module.UploadDetails })));
 const AdminLayout = React.lazy(() => import('../portals/admin/layout/AdminLayout').then((module) => ({ default: module.AdminLayout })));
 const AdminDashboard = React.lazy(() => import('../portals/admin/pages/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
@@ -60,6 +61,7 @@ export function App() {
                 <Route path="/dealer/listings/:listingId/edit" element={<ListingForm />} />
                 <Route path="/dealer/uploads/new" element={<InventoryUpload />} />
                 <Route path="/dealer/uploads/:uploadId" element={<UploadDetails />} />
+                <Route path="/dealer/profile" element={<DealerProfile />} />
               </Route>
             </Route>
 

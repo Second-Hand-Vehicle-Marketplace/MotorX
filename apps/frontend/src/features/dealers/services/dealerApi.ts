@@ -43,3 +43,8 @@ export async function approveDealerApplication(dealerId: string): Promise<Dealer
 export async function rejectDealerApplication(dealerId: string, reason: string): Promise<DealerApplication> {
   return dealerResponseSchema.parse((await apiClient.patch(`/admin/dealer-applications/${dealerId}/reject`, { reason })).data).data;
 }
+// Editable business details of an approved dealer (business name and registration number are fixed).
+export type DealerProfileUpdate = Partial<Pick<DealerApplication, 'representativeName' | 'phone' | 'address' | 'city' | 'province' | 'businessPhone' | 'businessEmail' | 'dealershipType' | 'brands' | 'description'>> & { website?: string; inventoryCount?: number };
+export async function updateMyDealerProfile(input: DealerProfileUpdate): Promise<DealerApplication> {
+  return dealerResponseSchema.parse((await apiClient.patch('/dealers/me/profile', input)).data).data;
+}

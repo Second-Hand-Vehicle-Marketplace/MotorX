@@ -56,6 +56,10 @@ export interface DealerApplicationDto {
   reviewedAt: string | null;
   // When the verification files were deleted under the retention policy, if they have been.
   documentsDeletedAt: string | null;
+  // When this version of the application was (re)submitted.
+  submittedAt: string;
+  // Earlier rejected submissions, oldest first.
+  reviewHistory: Array<{ status: 'rejected'; reason: string | null; reviewedAt: string | null; submittedAt: string | null }>;
   createdAt: string;
   updatedAt: string;
 }

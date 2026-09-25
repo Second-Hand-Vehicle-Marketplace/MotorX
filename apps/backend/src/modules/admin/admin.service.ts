@@ -1,4 +1,6 @@
 import mongoose, { type Types } from 'mongoose';
+import { serializeReviewState } from '../dealers/dealer.service.js';
+import { invalidateHiddenDealerIds } from '../marketplace/publicVisibility.js';
 import type { DealerApplicationDto } from '@motorx/shared-contracts';
 import { firebaseAuth } from '../../config/firebase.js';
 import { inventoryQueue } from '../../config/queue.js';
@@ -32,7 +34,7 @@ function serializeDealer(dealer: Dealer & { _id: Types.ObjectId }): DealerApplic
     description: dealer.description ?? 'No business description was provided.', inventoryCount: dealer.inventoryCount ?? null,
     verificationDocuments: dealer.verificationDocuments ?? [], status: dealer.status,
     rejectionReason: dealer.rejectionReason ?? null, reviewedBy: dealer.reviewedBy?.toString() ?? null,
-    reviewedAt: dealer.reviewedAt?.toISOString() ?? null, documentsDeletedAt: dealer.documentsDeletedAt?.toISOString() ?? null, createdAt: dealer.createdAt.toISOString(), updatedAt: dealer.updatedAt.toISOString(),
+    reviewedAt: dealer.reviewedAt?.toISOString() ?? null, documentsDeletedAt: dealer.documentsDeletedAt?.toISOString() ?? null, ...serializeReviewState(dealer), createdAt: dealer.createdAt.toISOString(), updatedAt: dealer.updatedAt.toISOString(),
   };
 }
 
@@ -61,6 +63,7 @@ export async function changeUserStatusAsAdmin(userId: string, status: 'active' |
     return updated;
   });
   const record = user as unknown as { _id: Types.ObjectId; displayName?: string; email: string };
+  invalidateHiddenDealerIds(); // a suspended dealer's listings disappear from public pages at once
   if (status === 'suspended') await notifyAccountSuspended(record._id);
   return serializeUser(user as unknown as Record<string, any>);
 }

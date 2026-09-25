@@ -68,8 +68,14 @@ export function createAdminAuditLog(input: { eventType: AdminAuditEvent; actorId
   return AdminAuditLogModel.create([input], { session }).then(([record]) => record);
 }
 
+// createdAt condition for an inclusive YYYY-MM-DD date range (UTC days).
+function createdWithin(from?: string, to?: string) {
+  if (!from && !to) return {};
+  return { createdAt: { ...(from ? { $gte: new Date(`${from}T00:00:00.000Z`) } : {}), ...(to ? { $lt: new Date(new Date(`${to}T00:00:00.000Z`).getTime() + 86_400_000) } : {}) } };
+}
+
 export async function listAdminAuditLogs(options: ListAdminAuditQuery) {
-  const filter = options.eventType ? { eventType: options.eventType } : {};
+  const filter = { ...(options.eventType ? { eventType: options.eventType } : {}), ...createdWithin(options.from, options.to) };
   const [documents, total] = await Promise.all([
     AdminAuditLogModel.find(filter).populate('actorId', 'displayName email').sort({ createdAt: -1, _id: -1 }).skip((options.page - 1) * options.limit).limit(options.limit).lean(),
     AdminAuditLogModel.countDocuments(filter),
@@ -78,7 +84,9 @@ export async function listAdminAuditLogs(options: ListAdminAuditQuery) {
 }
 
 export async function listAdminUploads(options: ListAdminUploadsQuery) {
-  const filter = { ...(options.status ? { status: options.status } : {}), ...(options.dealerId ? { dealerId: options.dealerId } : {}) };
+  const filter = options.uploadId
+    ? { _id: options.uploadId }
+    : { ...(options.status ? { status: options.status } : {}), ...(options.dealerId ? { dealerId: options.dealerId } : {}), ...createdWithin(options.from, options.to) };
   const [documents, total] = await Promise.all([
     UploadJobModel.find(filter).populate('dealerId', 'displayName email').sort({ createdAt: -1, _id: -1 }).skip((options.page - 1) * options.limit).limit(options.limit).lean(),
     UploadJobModel.countDocuments(filter),
@@ -88,7 +96,8 @@ export async function listAdminUploads(options: ListAdminUploadsQuery) {
 
 // Loads pending applications in submission order for the admin review queue.
 export function listDealerApplications(options: ListAdminDealerApplicationsQuery) {
-  return DealerModel.find({ status: options.status }).sort({ createdAt: options.status === 'pending' ? 1 : -1 }).lean();
+  // Pending: oldest submission first (a corrected resubmission joins the back of the queue).
+  return DealerModel.find({ status: options.status }).sort(options.status === 'pending' ? { submittedAt: 1, createdAt: 1 } : { updatedAt: -1 }).lean();
 }
 
 // Backward-compatible pending queue helper for repository callers and tests.
