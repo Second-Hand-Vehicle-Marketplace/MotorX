@@ -20,14 +20,24 @@ function titleCase(value: string) { return value.trim().toLowerCase().replace(/\
 // "Plug-in Hybrid" / "plug in hybrid" / "PLUG_IN_HYBRID" all resolve to "plug_in_hybrid".
 function normalizeEnumValue(value?: string) { return (value ?? '').trim().toLowerCase().replace(/[\s-]+/g, '_'); }
 
+function normalizeCsvTitle(title: string, make: string, model: string) {
+  const fullVehicleName = `${make} ${model}`.trim();
+  const normalizedTitle = title.trim();
+  return normalizedTitle.length >= 3 && fullVehicleName.length > normalizedTitle.length && fullVehicleName.toLowerCase().startsWith(normalizedTitle.toLowerCase())
+    ? fullVehicleName
+    : normalizedTitle;
+}
+
 // Common fields shared by every category's CSV row.
 export function normalizeCommonFields(row: ExtractedInventoryRow) {
   const description = row.description?.trim();
+  const make = titleCase(row.make ?? '');
+  const model = titleCase(row.model ?? '');
   return {
     registrationNumber: (row.registrationNumber ?? '').trim().toUpperCase(),
-    title: (row.title ?? '').trim(),
-    make: titleCase(row.make ?? ''),
-    model: titleCase(row.model ?? ''),
+    title: normalizeCsvTitle(row.title ?? '', make, model),
+    make,
+    model,
     year: normalizeNumber(row.year),
     price: normalizeNumber(row.price),
     currency: (row.currency?.trim() || 'LKR').toUpperCase(),

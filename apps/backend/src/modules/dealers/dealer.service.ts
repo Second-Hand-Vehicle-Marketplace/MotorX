@@ -4,8 +4,8 @@ import { AppError } from '../../shared/errors/AppError.js';
 import { errorCodes } from '../../shared/errors/errorCodes.js';
 import { notifyDealerApplicationSubmitted } from '../notifications/notification.service.js';
 import type { Dealer } from './dealer.model.js';
-import { createDealer, findDealerByUserId } from './dealer.repository.js';
-import type { CreateDealerApplicationBody } from './dealer.validation.js';
+import { createDealer, findDealerByUserId, resubmitDealer, updateApprovedDealerProfile } from './dealer.repository.js';
+import type { CreateDealerApplicationBody, UpdateDealerProfileBody } from './dealer.validation.js';
 import type { StoredDealerDocument } from './dealerDocument.storage.js';
 
 // Converts a MongoDB dealer record into the public API contract.
@@ -21,6 +21,7 @@ function serializeDealer(dealer: Dealer & { _id: Types.ObjectId }): DealerApplic
     verificationDocuments: dealer.verificationDocuments ?? [],
     status: dealer.status, rejectionReason: dealer.rejectionReason ?? null,
     reviewedBy: dealer.reviewedBy?.toString() ?? null, reviewedAt: dealer.reviewedAt?.toISOString() ?? null,
+    reviewHistory: (dealer.reviewHistory ?? []).map((review) => ({ status: review.status, reason: review.reason ?? null, reviewedBy: review.reviewedBy?.toString() ?? null, reviewedAt: review.reviewedAt.toISOString() })),
     createdAt: dealer.createdAt.toISOString(), updatedAt: dealer.updatedAt.toISOString(),
   };
 }
@@ -28,9 +29,14 @@ function serializeDealer(dealer: Dealer & { _id: Types.ObjectId }): DealerApplic
 // Creates one unique application for an eligible buyer account.
 export async function submitDealerApplication(userId: Types.ObjectId, role: string, input: CreateDealerApplicationBody, verificationDocuments: StoredDealerDocument[]) {
   if (role !== 'buyer') throw new AppError(409, errorCodes.conflict, 'Only buyer accounts can submit a dealer application.');
-  if (await findDealerByUserId(userId)) throw new AppError(409, errorCodes.conflict, 'A dealer application already exists for this account.');
+  const existing = await findDealerByUserId(userId);
+  if (existing && existing.status !== 'rejected') throw new AppError(409, errorCodes.conflict, 'A dealer application already exists for this account.');
   try {
-    const dealer = serializeDealer((await createDealer(userId, { ...input, verificationDocuments })).toObject() as Dealer & { _id: Types.ObjectId });
+    const saved = existing
+      ? await resubmitDealer(userId, { ...input, verificationDocuments })
+      : await createDealer(userId, { ...input, verificationDocuments });
+    if (!saved) throw new AppError(409, errorCodes.conflict, 'This dealer application can no longer be resubmitted.');
+    const dealer = serializeDealer(saved.toObject() as Dealer & { _id: Types.ObjectId });
     await notifyDealerApplicationSubmitted(dealer.businessName);
     return dealer;
   }
@@ -46,5 +52,11 @@ export async function getMyDealerApplication(userId: Types.ObjectId) {
   const dealer = await findDealerByUserId(userId);
   if (!dealer) throw new AppError(404, errorCodes.notFound, 'No dealer application was found for this account.');
   return serializeDealer(dealer as unknown as Dealer & { _id: Types.ObjectId });
+}
+
+export async function updateMyDealerProfile(userId: Types.ObjectId, input: UpdateDealerProfileBody) {
+  const dealer = await updateApprovedDealerProfile(userId, input);
+  if (!dealer) throw new AppError(409, errorCodes.conflict, 'Only approved dealer profiles can be updated.');
+  return serializeDealer(dealer.toObject() as Dealer & { _id: Types.ObjectId });
 }
 

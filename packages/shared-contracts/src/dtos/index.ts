@@ -32,6 +32,13 @@ export interface DealerVerificationDocumentDto {
   size: number;
 }
 
+export interface DealerApplicationReviewDto {
+  status: 'approved' | 'rejected';
+  reason: string | null;
+  reviewedBy: string | null;
+  reviewedAt: string;
+}
+
 export interface DealerApplicationDto {
   id: string;
   userId: string;
@@ -54,6 +61,7 @@ export interface DealerApplicationDto {
   rejectionReason: string | null;
   reviewedBy: string | null;
   reviewedAt: string | null;
+  reviewHistory: DealerApplicationReviewDto[];
   createdAt: string;
   updatedAt: string;
 }

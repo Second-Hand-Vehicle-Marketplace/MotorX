@@ -24,6 +24,7 @@ export interface Dealer {
   rejectionReason?: string;
   reviewedBy?: Types.ObjectId;
   reviewedAt?: Date;
+  reviewHistory: Array<{ status: 'approved' | 'rejected'; reason?: string; reviewedBy?: Types.ObjectId; reviewedAt: Date }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,6 +60,13 @@ const dealerSchema = new Schema<Dealer>({
   rejectionReason: { type: String, trim: true, maxlength: 500 },
   reviewedBy: { type: Schema.Types.ObjectId, ref: 'AuthUser' },
   reviewedAt: Date,
+  reviewHistory: { type: [{
+    _id: false,
+    status: { type: String, enum: ['approved', 'rejected'], required: true },
+    reason: { type: String, trim: true, maxlength: 500 },
+    reviewedBy: { type: Schema.Types.ObjectId, ref: 'AuthUser' },
+    reviewedAt: { type: Date, required: true },
+  }], default: [] },
 }, { timestamps: true, versionKey: false, collection: 'dealers' });
 
 dealerSchema.index({ status: 1, createdAt: 1 }, { name: 'status_createdAt' });
