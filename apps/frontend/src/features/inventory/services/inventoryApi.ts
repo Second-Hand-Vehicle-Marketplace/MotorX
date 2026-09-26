@@ -50,6 +50,18 @@ export const inventoryApi = {
     return response.data.data;
   },
 
+  // Re-queues a failed CSV import; it resumes from where it stopped without duplicating rows.
+  async retryUpload(uploadId: string): Promise<UploadJob> {
+    const response = await apiClient.post<ApiSuccessResponse<UploadJob>>(`/dealer/uploads/${uploadId}/retry`);
+    return response.data.data;
+  },
+
+  // Re-queues failed photo processing for the zip already uploaded with this job.
+  async retryImages(uploadId: string): Promise<UploadJob> {
+    const response = await apiClient.post<ApiSuccessResponse<UploadJob>>(`/dealer/uploads/${uploadId}/images/retry`);
+    return response.data.data;
+  },
+
   async getRejectedRecords(uploadId: string, page = 1, limit = 50): Promise<PaginatedResponse<RejectedRecord>> {
     const response = await apiClient.get<ApiSuccessResponse<{ records: RejectedRecord[]; pagination: PaginationMeta }>>(`/dealer/uploads/${uploadId}/rejected-records`, {
       params: { page, limit },

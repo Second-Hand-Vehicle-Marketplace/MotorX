@@ -34,9 +34,6 @@ export async function openDealerDocument(dealerId: string, documentIndex: number
 export async function getMyDealerApplication(): Promise<DealerApplication> {
   return dealerResponseSchema.parse((await apiClient.get('/dealers/me')).data).data;
 }
-export async function updateMyDealerProfile(input: Partial<Omit<CreateDealerApplicationInput, 'registrationNumber'>>): Promise<DealerApplication> {
-  return dealerResponseSchema.parse((await apiClient.patch('/dealers/me', input)).data).data;
-}
 export async function getPendingDealerApplications(status: 'pending' | 'approved' | 'rejected' = 'pending'): Promise<DealerApplication[]> {
   return dealerListResponseSchema.parse((await apiClient.get('/admin/dealer-applications', { params: { status } })).data).data;
 }
@@ -45,4 +42,9 @@ export async function approveDealerApplication(dealerId: string): Promise<Dealer
 }
 export async function rejectDealerApplication(dealerId: string, reason: string): Promise<DealerApplication> {
   return dealerResponseSchema.parse((await apiClient.patch(`/admin/dealer-applications/${dealerId}/reject`, { reason })).data).data;
+}
+// Editable business details of an approved dealer (business name and registration number are fixed).
+export type DealerProfileUpdate = Partial<Pick<DealerApplication, 'representativeName' | 'phone' | 'address' | 'city' | 'province' | 'businessPhone' | 'businessEmail' | 'dealershipType' | 'brands' | 'description'>> & { website?: string; inventoryCount?: number };
+export async function updateMyDealerProfile(input: DealerProfileUpdate): Promise<DealerApplication> {
+  return dealerResponseSchema.parse((await apiClient.patch('/dealers/me/profile', input)).data).data;
 }

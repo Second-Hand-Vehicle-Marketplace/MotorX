@@ -12,8 +12,8 @@ function toBuyerListing(dto: ListingDto, dealer?: BuyerDealerDto | null): Listin
   return {
     id: dto.id, dealerId: dto.dealerId, dealer: dealer ?? null, registrationNumber: dto.registrationNumber,
     title: dto.title, make: dto.make, model: dto.model, year: dto.year, price: dto.price, currency: dto.currency, location: dto.location,
-    description: dto.description ?? '', images: dto.images.map((image, index) => ({ id: image.key, url: image.url, alt: image.alt ?? dto.title, isPrimary: index === 0 })),
-    status: dto.status, publishedAt: dto.publishedAt, category: dto.category, attributes: dto.attributes,
+    description: dto.description ?? '', images: dto.images.map((image, index) => ({ id: image.key, url: image.url, thumbUrl: image.thumbUrl ?? undefined, alt: image.alt ?? dto.title, isPrimary: index === 0 })),
+    status: dto.status, publishedAt: dto.publishedAt, lastConfirmedAt: dto.lastConfirmedAt, category: dto.category, attributes: dto.attributes,
   } as Listing;
 }
 
@@ -28,6 +28,17 @@ export const buyerApi = {
     const response = await apiClient.get<ApiSuccessResponse<BuyerSearchCollection>>('/search', { params: { page, limit, ...filters } });
     const { listings, pagination } = response.data.data;
     return { data: listings.map((listing) => toBuyerListing(listing)), total: pagination.total, page: pagination.page, pageSize: pagination.limit, totalPages: pagination.totalPages };
+  },
+  // Public vehicles most like one vehicle (same kind, closest make, model, price and age).
+  async getSimilarVehicles(listingId: string, limit = 6): Promise<Listing[]> {
+    const response = await apiClient.get<ApiSuccessResponse<{ listings: ListingDto[] }>>(`/listings/${listingId}/similar`, { params: { limit } });
+    return response.data.data.listings.map((listing) => toBuyerListing(listing));
+  },
+  // Vehicles matched to the ones this browser viewed recently (newest first). Nothing is stored server-side.
+  async getRecommendedVehicles(viewedIds: string[], limit = 8): Promise<Listing[]> {
+    if (!viewedIds.length) return [];
+    const response = await apiClient.get<ApiSuccessResponse<{ listings: ListingDto[]; basedOn: number }>>('/listings/recommendations', { params: { viewed: viewedIds.join(','), limit } });
+    return response.data.data.listings.map((listing) => toBuyerListing(listing));
   },
   // Loads one active vehicle, with its dealer's public profile, for the details page.
   async getVehicle(listingId: string) { const response = await apiClient.get<ApiSuccessResponse<BuyerListingDetailDto>>(`/listings/${listingId}`); return toBuyerListing(response.data.data, response.data.data.dealer); },

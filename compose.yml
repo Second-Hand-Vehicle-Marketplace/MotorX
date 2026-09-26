@@ -1,3 +1,10 @@
+# =========================================================
+# LOCAL DEVELOPMENT ONLY - never deploy this file to a server.
+# Every published port is bound to 127.0.0.1 so Redis (no password),
+# the MinIO console, and the dev servers are unreachable from other
+# machines. Production runs on ECS: only the HTTPS load balancer is
+# public; Redis (ElastiCache), S3, and the worker stay private.
+# =========================================================
 name: motorx
 
 services:
@@ -15,9 +22,12 @@ services:
       - "yes"
       - --appendfsync
       - everysec
+      # BullMQ keeps queue state in Redis: it must never be evicted like cache data.
+      - --maxmemory-policy
+      - noeviction
 
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
 
     volumes:
       - redis_data:/data
@@ -35,6 +45,8 @@ services:
   # =========================================================
   # MinIO
   # Local S3-compatible object storage
+  # Credentials come from .env; the .env.example values are public,
+  # so the console must stay bound to 127.0.0.1.
   # =========================================================
   minio:
     image: ${MINIO_IMAGE:-minio/minio:latest}
@@ -47,8 +59,8 @@ services:
       MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?S3_SECRET_KEY is required}
 
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
 
     volumes:
       - minio_data:/data
@@ -108,6 +120,8 @@ services:
       dockerfile: infrastructure/docker/backend.Dockerfile
 
     restart: unless-stopped
+    # Longer than SHUTDOWN_TIMEOUT_MS so the graceful shutdown finishes before Docker kills it.
+    stop_grace_period: 30s
 
     env_file:
       - .env
@@ -141,10 +155,10 @@ services:
         condition: service_completed_successfully
 
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
 
     healthcheck:
-      test: [ "CMD", "node", "-e", "fetch('http://localhost:3000/health/live').then(response => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))" ]
+      test: [ "CMD", "node", "-e", "fetch('http://localhost:3000/health/ready').then(response => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -162,6 +176,7 @@ services:
       dockerfile: infrastructure/docker/worker.Dockerfile
 
     restart: unless-stopped
+    stop_grace_period: 30s
 
     env_file:
       - .env
@@ -186,12 +201,21 @@ services:
       HF_API_KEY: ${HF_API_KEY}
       HF_EMBEDDING_MODEL: ${HF_EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
 
+      WORKER_HEALTH_PORT: ${WORKER_HEALTH_PORT:-3100}
+
     depends_on:
       redis:
         condition: service_healthy
 
       minio-init:
         condition: service_completed_successfully
+
+    healthcheck:
+      test: [ "CMD", "node", "-e", "fetch('http://localhost:3100/health').then(response => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
     networks:
       - motorx-network
@@ -217,7 +241,7 @@ services:
       VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID}
 
     ports:
-      - "4173:5173"
+      - "127.0.0.1:4173:5173"
 
     depends_on:
       backend:

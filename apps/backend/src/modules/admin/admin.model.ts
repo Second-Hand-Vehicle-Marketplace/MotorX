@@ -1,11 +1,11 @@
 import mongoose, { type Types } from 'mongoose';
 
-export type AdminAuditEvent = 'dealer_approved' | 'dealer_rejected' | 'user_suspended' | 'user_activated' | 'listing_removed';
+export type AdminAuditEvent = 'dealer_approved' | 'dealer_rejected' | 'user_suspended' | 'user_activated' | 'listing_removed' | 'dealer_document_viewed';
 export interface AdminAuditLog { eventType: AdminAuditEvent; actorId: Types.ObjectId; targetId: Types.ObjectId; targetName: string; details: string; createdAt: Date }
 
 const { Schema, model, models } = mongoose;
 const adminAuditLogSchema = new Schema<AdminAuditLog>({
-  eventType: { type: String, enum: ['dealer_approved', 'dealer_rejected', 'user_suspended', 'user_activated', 'listing_removed'], required: true },
+  eventType: { type: String, enum: ['dealer_approved', 'dealer_rejected', 'user_suspended', 'user_activated', 'listing_removed', 'dealer_document_viewed'], required: true },
   actorId: { type: Schema.Types.ObjectId, ref: 'AuthUser', required: true },
   targetId: { type: Schema.Types.ObjectId, required: true },
   targetName: { type: String, required: true, trim: true },

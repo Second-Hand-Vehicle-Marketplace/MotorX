@@ -29,6 +29,7 @@ export const notificationTypes = [
   'upload_high_rejection_rate',
   'listing_removed',
   'account_suspended',
+  'stale_listings',
 ] as const;
 export type NotificationType = (typeof notificationTypes)[number];
 

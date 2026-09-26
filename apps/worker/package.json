@@ -13,11 +13,12 @@
     "ioredis": "^5.4.0",
     "mongoose": "^8.9.0",
     "nodemailer": "^9.1.1",
+    "sharp": "^0.35.4",
     "unzipper": "^0.12.3",
     "zod": "^3.24.0"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
+    "@types/node": "^24.13.6",
     "@types/nodemailer": "^6.4.17",
     "@types/unzipper": "^0.10.11",
     "tsx": "^4.19.0",

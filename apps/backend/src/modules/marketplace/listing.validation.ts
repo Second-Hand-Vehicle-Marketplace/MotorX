@@ -1,5 +1,8 @@
 import { z } from 'zod';
 import {
+  BULK_LISTING_MAX_IDS,
+  BULK_PRICE_REDUCTION_MAX_PERCENT,
+  bulkListingActions,
   busAttributesSchema,
   carAttributesSchema,
   carBodyTypes,
@@ -16,7 +19,9 @@ import {
 
 const currentYear = new Date().getFullYear();
 
-export const listListingsQuerySchema = z.object({
+const objectIdSchema = z.string().regex(/^[a-f\d]{24}$/i);
+
+const listingsQueryFields = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   search: z.string().trim().max(120).optional(),
@@ -36,7 +41,9 @@ export const listListingsQuerySchema = z.object({
   fuelType: z.string().trim().optional(),
   transmission: z.string().trim().optional(),
   sortBy: z.enum(['newest', 'price-asc', 'price-desc', 'year-desc', 'mileage-asc']).optional(),
-}).superRefine((query, context) => {
+});
+
+function rangesInOrder(query: z.infer<typeof listingsQueryFields>, context: z.RefinementCtx) {
   const ranges = [
     ['yearMin', query.yearMin, 'yearMax', query.yearMax],
     ['priceMin', query.priceMin, 'priceMax', query.priceMax],
@@ -47,6 +54,28 @@ export const listListingsQuerySchema = z.object({
       context.addIssue({ code: z.ZodIssueCode.custom, path: [maximumName], message: `${maximumName} must be greater than or equal to ${minimumName}.` });
     }
   }
+}
+
+export const listListingsQuerySchema = listingsQueryFields.superRefine(rangesInOrder);
+
+// The dealer's own list can also show only stale stock, or only one CSV upload's listings.
+export const listMyListingsQuerySchema = listingsQueryFields.extend({
+  stale: z.enum(['true', 'false']).transform((value) => value === 'true').optional(),
+  uploadJobId: objectIdSchema.optional(),
+}).superRefine(rangesInOrder);
+
+export const bulkListingActionBodySchema = z.object({
+  action: z.enum(bulkListingActions),
+  listingIds: z.array(objectIdSchema).min(1).max(BULK_LISTING_MAX_IDS).optional(),
+  uploadJobId: objectIdSchema.optional(),
+  percent: z.number().int().min(1).max(BULK_PRICE_REDUCTION_MAX_PERCENT).optional(),
+}).superRefine((body, context) => {
+  if ((body.listingIds === undefined) === (body.uploadJobId === undefined))
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['listingIds'], message: 'Choose listings, or one upload, but not both.' });
+  if (body.action === 'reduce-price' && body.percent === undefined)
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['percent'], message: 'Choose how many percent to reduce the price by.' });
+  if (body.action !== 'reduce-price' && body.percent !== undefined)
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['percent'], message: 'A percentage only applies to reduce-price.' });
 });
 
 // commonListingFieldsSchema + vehicleDetailsSchema (discriminated on category) come from
@@ -55,7 +84,7 @@ export const createListingBodySchema = commonListingFieldsSchema
   .and(vehicleDetailsSchema)
   .and(z.object({ status: z.enum(['draft', 'active']).default('draft') }));
 
-export const listingIdParamsSchema = z.object({ listingId: z.string().regex(/^[a-f\d]{24}$/i) });
+export const listingIdParamsSchema = z.object({ listingId: objectIdSchema });
 
 // Category is immutable after creation. `attributes` is accepted loosely here (its exact shape
 // depends on the listing's existing category, which is only known once loaded in the service),
@@ -76,6 +105,7 @@ export const updateListingBodySchema = z.object({
 export const updateListingStatusBodySchema = z.object({ status: z.enum(['active', 'sold', 'archived']) });
 const listingImageKeySchema = z.string().regex(/^[a-f\d]{24}-[0-9a-f-]{36}\.(jpg|png|webp)$/i);
 export const listingImageKeyParamsSchema = listingIdParamsSchema.extend({ imageKey: listingImageKeySchema });
+export const publicListingImageKeyParamsSchema = z.object({ imageKey: listingImageKeySchema });
 export const listingImageMetadataSchema = z.object({ alt: z.string().trim().max(200).optional() });
 export const reorderListingImagesBodySchema = z.object({ imageKeys: z.array(z.string().trim().min(1)).min(1).max(30) });
 
@@ -92,5 +122,7 @@ export function validateAttributesForCategory(category: VehicleCategory, mergedA
 }
 
 export type ListListingsQuery = z.infer<typeof listListingsQuerySchema>;
+export type ListMyListingsQuery = z.infer<typeof listMyListingsQuerySchema>;
+export type BulkListingActionBody = z.infer<typeof bulkListingActionBodySchema>;
 export type CreateListingBody = z.infer<typeof createListingBodySchema>;
 export type UpdateListingBody = z.infer<typeof updateListingBodySchema>;

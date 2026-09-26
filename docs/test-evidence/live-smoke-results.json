@@ -1,0 +1,146 @@
+{
+  "api": "http://127.0.0.1:3000",
+  "frontend": "http://127.0.0.1:4173",
+  "recordedAt": "2026-09-26T04:51:56Z",
+  "passed": 16,
+  "failed": 1,
+  "skipped": 0,
+  "checks": [
+    {
+      "check": "API liveness",
+      "url": "{API}/health/live",
+      "status": 200,
+      "ok": true,
+      "ms": 15,
+      "detail": ""
+    },
+    {
+      "check": "API readiness (database reachable)",
+      "url": "{API}/health/ready",
+      "status": 200,
+      "ok": true,
+      "ms": 90,
+      "detail": ""
+    },
+    {
+      "check": "Public browse returns only active listings",
+      "url": "{API}/api/v1/listings?limit=12",
+      "status": 200,
+      "ok": true,
+      "ms": 222,
+      "detail": "31 active listings"
+    },
+    {
+      "check": "Structured filter holds (price <= 8,000,000)",
+      "url": "{API}/api/v1/listings?priceMax=8000000&limit=20",
+      "status": 200,
+      "ok": true,
+      "ms": 149,
+      "detail": "18 results"
+    },
+    {
+      "check": "Natural-language search",
+      "url": "{API}/api/v1/search?q=automatic%20car%20under%2010%20million&limit=10",
+      "status": 200,
+      "ok": true,
+      "ms": 99,
+      "detail": "mode=structured, 12 results"
+    },
+    {
+      "check": "Invalid listing ID is rejected, not a server error",
+      "url": "{API}/api/v1/listings/not-an-id",
+      "status": 400,
+      "ok": true,
+      "ms": 6,
+      "detail": ""
+    },
+    {
+      "check": "Dealer-only route requires sign-in",
+      "url": "{API}/api/v1/listings/mine",
+      "status": 401,
+      "ok": true,
+      "ms": 4,
+      "detail": ""
+    },
+    {
+      "check": "Admin-only route requires sign-in",
+      "url": "{API}/api/v1/admin/stats",
+      "status": 401,
+      "ok": true,
+      "ms": 5,
+      "detail": ""
+    },
+    {
+      "check": "Recommendations reject a malformed list",
+      "url": "{API}/api/v1/listings/recommendations?viewed=bad",
+      "status": 400,
+      "ok": true,
+      "ms": 18,
+      "detail": ""
+    },
+    {
+      "check": "Vehicle details include the dealer profile",
+      "url": "{API}/api/v1/listings/6ab4e2071006e22630c2089f",
+      "status": 200,
+      "ok": true,
+      "ms": 173,
+      "detail": "dealer=yes"
+    },
+    {
+      "check": "Similar vehicles exclude the vehicle itself",
+      "url": "{API}/api/v1/listings/6ab4e2071006e22630c2089f/similar?limit=6",
+      "status": 200,
+      "ok": true,
+      "ms": 168,
+      "detail": "6 similar"
+    },
+    {
+      "check": "Recommendations leave out viewed vehicles",
+      "url": "{API}/api/v1/listings/recommendations?viewed=6ab4e2071006e22630c2089f,6ab4e2071006e22630c208a0&limit=6",
+      "status": 200,
+      "ok": true,
+      "ms": 165,
+      "detail": "basedOn=2, 6 recommended"
+    },
+    {
+      "check": "Every active listing photo loads",
+      "url": "{listing photo URLs}",
+      "status": null,
+      "ok": false,
+      "ms": 0,
+      "detail": "1/23 main photos load; not loading: 22 from 13.207.143.45:3000"
+    },
+    {
+      "check": "Small photo copies load",
+      "url": "{thumb URLs}",
+      "status": null,
+      "ok": true,
+      "ms": 0,
+      "detail": "1/1 small copies load"
+    },
+    {
+      "check": "Frontend serves / (single-page app)",
+      "url": "{WEB}/",
+      "status": 200,
+      "ok": true,
+      "ms": 11,
+      "detail": "app shell"
+    },
+    {
+      "check": "Frontend serves /marketplace (single-page app)",
+      "url": "{WEB}/marketplace",
+      "status": 200,
+      "ok": true,
+      "ms": 28,
+      "detail": "app shell"
+    },
+    {
+      "check": "Frontend serves /compare (single-page app)",
+      "url": "{WEB}/compare",
+      "status": 200,
+      "ok": true,
+      "ms": 6,
+      "detail": "app shell"
+    }
+  ]
+}

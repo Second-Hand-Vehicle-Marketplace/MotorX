@@ -1,82 +1,211 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { LISTING_IMAGE_ASPECT_RATIO, vehicleCategories, type VehicleCategory } from '@motorx/shared-contracts';
+import type { BulkListingAction, BulkListingActionResult } from '@motorx/shared-contracts';
+import { LISTING_IMAGE_ASPECT_RATIO, vehicleCategories } from '@motorx/shared-contracts';
 import { listingApi } from '@/features/listings/services/listingApi';
-import { formatMileage, formatPrice } from '@/shared/utils/formatters';
-import { getMileageKm } from '@/features/listings/utils/vehicleAttributes';
 import { ListingStatusBadge } from '@/features/listings/components/ListingStatusBadge';
+import { ListingPhoto } from '@/features/listings/components/ListingPhoto';
+import { ReducePriceDialog } from '@/features/listings/components/ReducePriceDialog';
+import type { Listing } from '@/features/listings/types/listing.types';
+import { getMileageKm } from '@/features/listings/utils/vehicleAttributes';
+import { ResponsiveTable } from '@/shared/components/ResponsiveTable';
+import { formatMileage, formatPrice } from '@/shared/utils/formatters';
 
 const TABLE_THUMB_WIDTH = 44;
 const TABLE_THUMB_HEIGHT = Math.round(TABLE_THUMB_WIDTH / LISTING_IMAGE_ASPECT_RATIO);
+const PAGE_SIZE = 20;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+type View = 'all' | 'stale' | 'archived';
+const views: View[] = ['all', 'stale', 'archived'];
+
+const pastTense: Record<BulkListingAction, string> = {
+  publish: 'published', 'mark-sold': 'marked sold', archive: 'archived', 'confirm-available': 'confirmed as still available', 'reduce-price': 're-priced', delete: 'deleted',
+};
+
+// "Published 5 listings. 2 were skipped because the action does not apply to their status."
+export function describeBulkResult(result: BulkListingActionResult) {
+  const done = `${result.updated} listing${result.updated === 1 ? '' : 's'} ${pastTense[result.action]}.`;
+  return result.skipped ? `${done} ${result.skipped} skipped because the action does not apply to their current status.` : done;
+}
+
+function daysSince(value: string | null | undefined) {
+  return value ? Math.floor((Date.now() - new Date(value).getTime()) / DAY_MS) : null;
+}
 
 export const ListingManager: React.FC = () => {
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState<VehicleCategory | 'all'>('all');
-  const [view, setView] = useState<'active' | 'archived'>('active');
-  const [page, setPage] = useState(1);
-  const [pendingActionId, setPendingActionId] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useState('');
-  const [actionError, setActionError] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view: View = views.includes(searchParams.get('view') as View) ? searchParams.get('view') as View : 'all';
+  const statusFilter = searchParams.get('status') ?? 'all';
+  const categoryFilter = searchParams.get('category') ?? 'all';
+  const page = Math.max(1, Number(searchParams.get('page')) || 1);
+  const [search, setSearch] = useState(searchParams.get('q') ?? '');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [priceDialogFor, setPriceDialogFor] = useState<Listing[] | null>(null);
   const queryClient = useQueryClient();
+
+  // Updates the URL (so views, filters and pages survive reloads and can be linked to), resetting the page.
+  const setParams = (changes: Record<string, string | undefined>) => {
+    const next = new URLSearchParams(searchParams);
+    for (const [key, value] of Object.entries(changes)) { if (value) next.set(key, value); else next.delete(key); }
+    if (!('page' in changes)) next.delete('page');
+    setSearchParams(next, { replace: true });
+  };
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => { if ((searchParams.get('q') ?? '') !== search.trim()) setParams({ q: search.trim() || undefined }); }, 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  // A selection only makes sense for the rows on screen.
+  useEffect(() => { setSelected(new Set()); }, [view, statusFilter, categoryFilter, page, searchParams.get('q')]);
+
   const statsQuery = useQuery({ queryKey: ['my-listing-stats'], queryFn: () => listingApi.getMyListingStats() });
-  const query = useQuery({ queryKey: ['my-listings', page, search, statusFilter, categoryFilter, view], queryFn: () => listingApi.getMyListings(page, 20, { search: search.trim() || undefined, status: view === 'archived' ? 'archived' : statusFilter === 'all' ? undefined : statusFilter, category: categoryFilter === 'all' ? undefined : categoryFilter }) });
+  const filters = {
+    search: searchParams.get('q') || undefined,
+    status: view === 'archived' ? 'archived' : view === 'all' && statusFilter !== 'all' ? statusFilter : undefined,
+    stale: view === 'stale' ? true : undefined,
+    category: categoryFilter === 'all' ? undefined : categoryFilter,
+  };
+  const query = useQuery({ queryKey: ['my-listings', view, page, filters], queryFn: () => listingApi.getMyListings(page, PAGE_SIZE, filters) });
   const listings = query.data?.data ?? [];
-  const totalPages = query.data?.totalPages ?? 1;
-  const isActionPending = (listingId: string) => pendingActionId === listingId;
+  const totalPages = Math.max(1, query.data?.totalPages ?? 1);
+  const stats = statsQuery.data;
+  const staleDays = stats?.staleAfterDays ?? 60;
 
-  const refreshInventory = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['my-listings'] }),
-      queryClient.invalidateQueries({ queryKey: ['my-listing-stats'] }),
-      queryClient.invalidateQueries({ queryKey: ['listings'] }),
-    ]);
-  };
+  const refresh = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['my-listings'] }),
+    queryClient.invalidateQueries({ queryKey: ['my-listing-stats'] }),
+    queryClient.invalidateQueries({ queryKey: ['listings'] }),
+  ]);
 
-  const changeStatus = async (id: string, status: 'active' | 'sold' | 'archived') => {
-    setPendingActionId(id);
-    setActionError('');
-    setActionMessage('');
+  const run = async (action: BulkListingAction, ids: string[], percent?: number) => {
+    setBusy(true); setMessage(null);
     try {
-      await listingApi.updateListingStatus(id, { status });
-      await refreshInventory();
-      setActionMessage(`Listing marked as ${status}.`);
-    } catch (requestError) {
-      setActionError(requestError instanceof Error ? requestError.message : 'Could not update the listing.');
+      const result = await listingApi.bulkAction({ action, listingIds: ids, ...(percent ? { percent } : {}) });
+      setMessage({ kind: 'success', text: describeBulkResult(result) });
+      setSelected(new Set());
+      await refresh();
+    } catch (error) {
+      setMessage({ kind: 'error', text: error instanceof Error ? error.message : 'The change could not be saved.' });
+      throw error;
     } finally {
-      setPendingActionId(null);
+      setBusy(false);
     }
   };
-
-  const deleteVehicle = async (id: string, title: string) => {
-    if (!window.confirm(`Permanently delete "${title}"? This cannot be undone.`)) return;
-    setPendingActionId(id);
-    setActionError('');
-    setActionMessage('');
-    try {
-      await listingApi.deleteListing(id);
-      await refreshInventory();
-      setActionMessage(`Deleted ${title}.`);
-    } catch (requestError) {
-      setActionError(requestError instanceof Error ? requestError.message : 'Could not delete the listing.');
-    } finally {
-      setPendingActionId(null);
-    }
+  const runSafely = (action: BulkListingAction, ids: string[]) => { void run(action, ids).catch(() => undefined); };
+  const deleteForever = (ids: string[]) => {
+    if (!window.confirm(`Permanently delete ${ids.length === 1 ? 'this listing' : `${ids.length} listings`}? This cannot be undone.`)) return;
+    runSafely('delete', ids);
   };
+
+  const selectedIds = [...selected];
+  const allOnPageSelected = listings.length > 0 && listings.every((listing) => selected.has(listing.id));
+  const toggleAll = () => setSelected(allOnPageSelected ? new Set() : new Set(listings.map((listing) => listing.id)));
+  const toggleOne = (id: string) => setSelected((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+
+  const tab = (value: View, label: string, count?: number) => (
+    <button type="button" role="tab" aria-selected={view === value} className={`btn btn-sm ${view === value ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setParams({ view: value === 'all' ? undefined : value, status: undefined })}>
+      {label}{count !== undefined ? ` (${count})` : ''}
+    </button>
+  );
 
   return <div>
     <div className="page-header"><div><h1 className="page-title">Manage Inventory</h1><p className="page-subtitle">Review, edit, and publish your vehicle listings.</p></div><Link to="/dealer/listings/new" className="btn btn-primary">+ Add New Vehicle</Link></div>
-    {actionError && <div role="alert" className="glass-card" style={{ padding: '1rem', color: 'var(--color-error)', marginBottom: '1rem' }}>{actionError}</div>}
-    {actionMessage && <div role="status" className="glass-card" style={{ padding: '1rem', color: 'var(--color-success)', marginBottom: '1rem' }}>{actionMessage}</div>}
-    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-      <button className={`btn btn-sm ${view === 'active' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => { setView('active'); setPage(1); }}>My Listings</button>
-      <button className={`btn btn-sm ${view === 'archived' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => { setView('archived'); setPage(1); }}>Archived ({statsQuery.data?.archived ?? '—'})</button>
+
+    {view !== 'stale' && (stats?.stale ?? 0) > 0 && (
+      <div className="stale-banner" role="status">
+        <span><strong>{stats!.stale} listing{stats!.stale === 1 ? " hasn't" : "s haven't"} been updated in {staleDays} days.</strong> Buyers may call about cars already sold.</span>
+        <button type="button" className="btn btn-sm btn-secondary" onClick={() => setParams({ view: 'stale', status: undefined })}>Review now</button>
+      </div>
+    )}
+
+    <div className="listing-tabs" role="tablist" aria-label="Listing views">
+      {tab('all', 'My Listings')}
+      {tab('stale', 'Needs attention', stats?.stale)}
+      {tab('archived', 'Archived', stats?.archived)}
     </div>
-    <div className="glass-card" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem' }}><input className="form-input" placeholder="Search listings…" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />{view === 'active' && <select className="form-select" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}><option value="all">All statuses</option><option value="draft">Draft</option><option value="active">Active</option><option value="sold">Sold</option></select>}</div>
-    <div className="glass-card" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem' }}><input className="form-input" placeholder="Search listings…" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />{view === 'active' && <select className="form-select" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}><option value="all">All statuses</option><option value="draft">Draft</option><option value="active">Active</option><option value="sold">Sold</option></select>}<select className="form-select" value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value as VehicleCategory | 'all'); setPage(1); }}><option value="all">All categories</option>{vehicleCategories.filter((category) => category !== 'other').map((category) => <option key={category} value={category}>{category.replace('_', ' ')}</option>)}</select></div>
+
+    {view === 'stale' && <p className="listing-view-help">Active listings not confirmed for {staleDays} days, oldest first. Mark them sold, archive them, reduce the price, or confirm they are still available.</p>}
+
+    <div className="glass-card listing-filters">
+      <input className="form-input" type="search" aria-label="Search listings" placeholder="Search listings…" value={search} onChange={(e) => setSearch(e.target.value)} />
+      {view === 'all' && <select className="form-select" aria-label="Status" value={statusFilter} onChange={(e) => setParams({ status: e.target.value === 'all' ? undefined : e.target.value })}><option value="all">All statuses</option><option value="draft">Draft</option><option value="active">Active</option><option value="sold">Sold</option></select>}
+      <select className="form-select" aria-label="Vehicle type" value={categoryFilter} onChange={(e) => setParams({ category: e.target.value === 'all' ? undefined : e.target.value })}><option value="all">All vehicle types</option>{vehicleCategories.map((category) => <option key={category} value={category}>{category.split('_').map((word) => word[0]!.toUpperCase() + word.slice(1)).join(' ')}</option>)}</select>
+    </div>
+
+    {message && <div role={message.kind === 'error' ? 'alert' : 'status'} className={`listing-message listing-message-${message.kind}`}>{message.text}</div>}
+
+    {selected.size > 0 && (
+      <div className="bulk-bar" role="region" aria-label="Bulk actions">
+        <span className="bulk-bar-count">{selected.size} selected</span>
+        <div className="bulk-bar-actions">
+          {view === 'archived' ? (
+            <button type="button" className="btn btn-danger btn-sm" disabled={busy} onClick={() => deleteForever(selectedIds)}>Delete permanently</button>
+          ) : (
+            <>
+              {view === 'all' && <button type="button" className="btn btn-success btn-sm" disabled={busy} onClick={() => runSafely('publish', selectedIds)}>Publish</button>}
+              <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => runSafely('confirm-available', selectedIds)}>Still available</button>
+              <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => setPriceDialogFor(listings.filter((listing) => selected.has(listing.id)))}>Reduce price</button>
+              <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => runSafely('mark-sold', selectedIds)}>Mark sold</button>
+              <button type="button" className="btn btn-danger btn-sm" disabled={busy} onClick={() => runSafely('archive', selectedIds)}>Archive</button>
+            </>
+          )}
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSelected(new Set())}>Clear</button>
+        </div>
+      </div>
+    )}
+
     {query.isLoading && <div className="loading-spinner" style={{ margin: '3rem auto', display: 'block' }} />}
-    {query.isError && <div className="glass-card" style={{ padding: '1rem', color: 'var(--color-error)' }}>Could not load your listings.</div>}
-    {!query.isLoading && !query.isError && <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}><div className="table-container"><table className="data-table"><thead><tr><th>Vehicle</th><th>Year</th><th>Price</th><th>Mileage</th><th>Status</th><th>Actions</th></tr></thead><tbody>{listings.map((listing) => <tr key={listing.id}><td><div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>{listing.images[0]?.url && <img src={listing.images[0].url} alt="" style={{ width: TABLE_THUMB_WIDTH, height: TABLE_THUMB_HEIGHT, borderRadius: 4, objectFit: 'cover' }} />}<strong>{listing.title}</strong></div></td><td>{listing.year}</td><td>{formatPrice(listing.price, listing.currency)}</td><td>{formatMileage(getMileageKm(listing) ?? 0)}</td><td><ListingStatusBadge status={listing.status} /></td><td><div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}><Link to={`/dealer/listings/${listing.id}/edit`} className="btn btn-ghost btn-sm">Edit</Link>{listing.status === 'active' && <Link to={`/marketplace/${listing.id}`} className="btn btn-ghost btn-sm">Preview</Link>}{listing.status === 'draft' && <button className="btn btn-success btn-sm" onClick={() => void changeStatus(listing.id, 'active')}>Publish</button>}{listing.status === 'active' && <button className="btn btn-secondary btn-sm" onClick={() => void changeStatus(listing.id, 'sold')}>Mark sold</button>}{listing.status !== 'archived' && <button className="btn btn-danger btn-sm" onClick={() => void changeStatus(listing.id, 'archived')}>Archive</button>}{listing.status === 'archived' && <button className="btn btn-danger btn-sm" onClick={() => void deleteVehicle(listing.id, listing.title)}>Delete</button>}</div></td></tr>)}</tbody></table>{listings.length === 0 && <div className="empty-state"><p>{view === 'archived' ? 'No archived listings.' : 'No listings found.'}</p></div>}<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem' }}><button className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</button><span>Page {page} of {totalPages}</span><button className="btn btn-secondary btn-sm" disabled={page >= totalPages} onClick={() => setPage((current) => current + 1)}>Next</button></div></div></div>}
+    {query.isError && <div className="glass-card" role="alert" style={{ padding: '1rem', color: 'var(--color-error)' }}>Could not load your listings.</div>}
+    {!query.isLoading && !query.isError && <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="table-container">
+        <ResponsiveTable className="listing-table">
+          <thead><tr>
+            <th><input type="checkbox" aria-label="Select all listings on this page" checked={allOnPageSelected} onChange={toggleAll} disabled={!listings.length} /></th>
+            <th>Vehicle</th><th>Year</th><th>Price</th><th>Mileage</th><th>Status</th><th>Last confirmed</th><th>Actions</th>
+          </tr></thead>
+          <tbody>{listings.map((listing) => {
+            const days = listing.status === 'active' ? daysSince(listing.lastConfirmedAt) : null;
+            const stale = days !== null && days >= staleDays;
+            return <tr key={listing.id} className={selected.has(listing.id) ? 'is-selected' : undefined}>
+              <td className="listing-select-cell"><input type="checkbox" aria-label={`Select ${listing.title}`} checked={selected.has(listing.id)} onChange={() => toggleOne(listing.id)} /></td>
+              <td className="listing-vehicle-cell"><div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>{listing.images[0] && <ListingPhoto image={listing.images[0]} alt="" sizes={`${TABLE_THUMB_WIDTH}px`} style={{ width: TABLE_THUMB_WIDTH, height: TABLE_THUMB_HEIGHT, borderRadius: 4, objectFit: 'cover' }} />}<strong>{listing.title}</strong></div></td>
+              <td>{listing.year}</td>
+              <td>{formatPrice(listing.price, listing.currency)}</td>
+              <td>{formatMileage(getMileageKm(listing) ?? 0)}</td>
+              <td><ListingStatusBadge status={listing.status} /></td>
+              <td>{days === null ? '—' : <span className={stale ? 'stale-age' : undefined}>{days === 0 ? 'Today' : `${days} day${days === 1 ? '' : 's'} ago`}</span>}</td>
+              <td><div className="listing-row-actions">
+                {view === 'stale' ? <>
+                  <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => runSafely('confirm-available', [listing.id])}>Still available</button>
+                  <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => setPriceDialogFor([listing])}>Reduce price</button>
+                  <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => runSafely('mark-sold', [listing.id])}>Mark sold</button>
+                  <button type="button" className="btn btn-danger btn-sm" disabled={busy} onClick={() => runSafely('archive', [listing.id])}>Archive</button>
+                </> : <>
+                  <Link to={`/dealer/listings/${listing.id}/edit`} className="btn btn-ghost btn-sm">Edit</Link>
+                  {listing.status === 'active' && <Link to={`/marketplace/${listing.id}`} className="btn btn-ghost btn-sm">Preview</Link>}
+                  {listing.status === 'draft' && <button type="button" className="btn btn-success btn-sm" disabled={busy} onClick={() => runSafely('publish', [listing.id])}>Publish</button>}
+                  {listing.status === 'active' && <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => runSafely('mark-sold', [listing.id])}>Mark sold</button>}
+                  {listing.status !== 'archived' && <button type="button" className="btn btn-danger btn-sm" disabled={busy} onClick={() => runSafely('archive', [listing.id])}>Archive</button>}
+                  {listing.status === 'archived' && <button type="button" className="btn btn-danger btn-sm" disabled={busy} onClick={() => deleteForever([listing.id])}>Delete</button>}
+                </>}
+              </div></td>
+            </tr>;
+          })}</tbody>
+        </ResponsiveTable>
+        {listings.length === 0 && <div className="empty-state"><p>{view === 'archived' ? 'No archived listings.' : view === 'stale' ? 'Nothing needs attention. Every active listing was confirmed recently.' : 'No listings found.'}</p></div>}
+        <div className="listing-pager">
+          <button type="button" className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => setParams({ page: String(page - 1) })}>Previous</button>
+          <span>Page {page} of {totalPages}</span>
+          <button type="button" className="btn btn-secondary btn-sm" disabled={page >= totalPages} onClick={() => setParams({ page: String(page + 1) })}>Next</button>
+        </div>
+      </div>
+    </div>}
+
+    {priceDialogFor && <ReducePriceDialog listings={priceDialogFor} onClose={() => setPriceDialogFor(null)} onConfirm={(percent) => run('reduce-price', priceDialogFor.map((listing) => listing.id), percent)} />}
   </div>;
 };

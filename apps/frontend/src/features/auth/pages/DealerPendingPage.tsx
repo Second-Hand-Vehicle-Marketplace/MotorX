@@ -26,7 +26,7 @@ export const DealerPendingPage: React.FC = () => {
         <h1>{rejected ? 'Application needs attention' : status === 'approved' ? 'Application approved' : 'Application submitted'}</h1>
         <p>
           {rejected
-            ? 'Your dealer application was not approved. Review the reason below before contacting MotorX support.'
+            ? 'Your dealer application was not approved. Review the reason below, then correct your details and resubmit.'
             : status === 'approved'
               ? 'Your dealership is approved. Sign in again to open the dealer dashboard.'
               : 'Your dealer application has been submitted successfully and is waiting for administrator approval.'}
@@ -35,7 +35,9 @@ export const DealerPendingPage: React.FC = () => {
         {rejected && application?.rejectionReason && <div className="rejection-reason"><span>Reason provided by the administrator</span>{application.rejectionReason}</div>}
         {application?.reviewedAt && <small>Reviewed {new Date(application.reviewedAt).toLocaleString()}</small>}
         <div className="auth-status-actions">
-          {rejected && <Link to="/dealer/apply" className="btn btn-primary">Update and resubmit</Link>}
+          {rejected && (isAuthenticated
+            ? <Link to="/dealer/apply" className="btn btn-primary">Correct and resubmit</Link>
+            : <Link to="/login" className="btn btn-primary">Sign in to resubmit</Link>)}
           {isAuthenticated
             ? <button className="btn btn-primary" onClick={() => void logout()}>Sign Out</button>
             : <Link to="/login" className="btn btn-primary">Return to Sign In</Link>}

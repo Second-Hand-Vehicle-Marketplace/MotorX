@@ -1,15 +1,20 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { randomUUID } from 'node:crypto';
 import type { Readable } from 'node:stream';
 import type { VehicleCategory } from '@motorx/shared-contracts';
 import { env } from '../config/env.js';
 import { Types } from 'mongoose';
 import { workerStorageClient, workerStorageConfig } from '../config/storage.js';
 import { extractCsvBatches, type ExtractedInventoryRow } from '../pipeline/extract.js';
-import { detectExactDuplicates } from '../pipeline/detectDuplicates.js';
+import { createListingDuplicateKey, detectExactDuplicates } from '../pipeline/detectDuplicates.js';
 import { persistRejectedRows, persistValidRows } from '../pipeline/persist.js';
 import { prepareInventoryBatch } from '../pipeline/transform.js';
-import { claimPendingUploadJob, completeUploadJob, failUploadJob, retryUploadJob, updateUploadProgress } from '../repositories/uploadJob.repository.js';
+import { countOpenDealerListings, findImportedRowNumbers } from '../repositories/listing.repository.js';
+import { claimPendingUploadJob, completeUploadJob, failUploadJob, renewUploadLease, retryUploadJob, updateUploadProgress, type ProcessingCounts } from '../repositories/uploadJob.repository.js';
+import { trackLease, untrackLease } from './activeLeases.js';
+import { holdLease, LeaseLostError, type HeldLease } from './jobLease.js';
 import { notifyUploadHighRejectionRate, notifyUploadJobResult } from './notification.service.js';
+import { isTransientError } from './transientError.js';
 
 // A CSV job is flagged to admins as advisory-only once at least a fifth of its records reject.
 const HIGH_REJECTION_RATE_THRESHOLD = 0.2;
@@ -21,46 +26,79 @@ async function downloadInventoryStream(storageKey: string) {
   return object.Body as Readable;
 }
 
-interface ProcessingCounts { processedRecords: number; validRecords: number; rejectedRecords: number; duplicateRecords: number }
-
-// Transforms and persists one batch before advancing durable progress counters.
-async function processInventoryBatch(uploadJobId: string, dealerId: Types.ObjectId, category: VehicleCategory, rows: ExtractedInventoryRow[], processedRecords: number, counts: ProcessingCounts, seenKeys: Set<string>) {
+// Transforms and persists one batch, then checkpoints the cumulative counters. Safe to run
+// again for the same rows: rows an earlier attempt already imported are counted, not re-inserted,
+// and rejected rows are insert-once.
+async function processInventoryBatch(uploadJobId: string, lease: HeldLease, dealerId: Types.ObjectId, category: VehicleCategory, rows: ExtractedInventoryRow[], processedRecords: number, counts: ProcessingCounts, seenKeys: Set<string>) {
+  lease.assertHeld();
+  const jobObjectId = new Types.ObjectId(uploadJobId);
   const firstRowNumber = processedRecords - rows.length + 2;
   const prepared = prepareInventoryBatch(category, rows, firstRowNumber);
-  const duplicateResult = await detectExactDuplicates(prepared.valid, seenKeys);
+
+  const alreadyImported = await findImportedRowNumbers(jobObjectId, prepared.valid.map((row) => row.rowNumber));
+  const resumed = prepared.valid.filter((row) => alreadyImported.has(row.rowNumber));
+  for (const row of resumed) seenKeys.add(createListingDuplicateKey(row.data));
+  const duplicateResult = await detectExactDuplicates(prepared.valid.filter((row) => !alreadyImported.has(row.rowNumber)), seenKeys);
+
+  // Keep the dealer within MAX_LISTINGS_PER_DEALER: rows past the remaining capacity are rejected.
+  const remaining = Math.max(0, env.MAX_LISTINGS_PER_DEALER - await countOpenDealerListings(dealerId));
+  const overLimit = duplicateResult.unique.splice(remaining);
   const rejected = [
-    ...prepared.invalid.map((row) => ({ uploadJobId: new Types.ObjectId(uploadJobId), rowNumber: row.rowNumber, originalData: row.originalData, errors: row.errors, reason: 'validation' as const })),
-    ...duplicateResult.duplicates.map((row) => ({ uploadJobId: new Types.ObjectId(uploadJobId), rowNumber: row.rowNumber, originalData: row.originalData, errors: ['An exact matching listing already exists.'], reason: 'duplicate' as const })),
+    ...overLimit.map((row) => ({ uploadJobId: jobObjectId, rowNumber: row.rowNumber, originalData: row.originalData, errors: [`Listing limit of ${env.MAX_LISTINGS_PER_DEALER} draft and active listings reached.`], reason: 'validation' as const })),
+    ...prepared.invalid.map((row) => ({ uploadJobId: jobObjectId, rowNumber: row.rowNumber, originalData: row.originalData, errors: row.errors, reason: 'validation' as const })),
+    ...duplicateResult.duplicates.map((row) => ({ uploadJobId: jobObjectId, rowNumber: row.rowNumber, originalData: row.originalData, errors: ['An exact matching listing already exists.'], reason: 'duplicate' as const })),
   ];
-  await Promise.all([persistValidRows(dealerId, new Types.ObjectId(uploadJobId), duplicateResult.unique.map((row) => row.data)), persistRejectedRows(rejected)]);
-  counts.processedRecords = processedRecords; counts.validRecords += duplicateResult.unique.length;
-  counts.rejectedRecords += prepared.invalid.length; counts.duplicateRecords += duplicateResult.duplicates.length;
-  await updateUploadProgress(uploadJobId, counts);
+  await Promise.all([persistValidRows(dealerId, jobObjectId, duplicateResult.unique), persistRejectedRows(rejected)]);
+  counts.processedRecords = processedRecords; counts.validRecords += duplicateResult.unique.length + resumed.length;
+  counts.rejectedRecords += prepared.invalid.length + overLimit.length; counts.duplicateRecords += duplicateResult.duplicates.length;
+  if (!(await updateUploadProgress(uploadJobId, lease.owner, counts))) throw new LeaseLostError(uploadJobId);
 }
 
-// Claims, downloads, and extracts one upload while recording failures on the durable job.
+// Claims, downloads, and extracts one upload. A retry resumes after the last checkpoint.
+// Temporary failures hand the job back as pending (BullMQ retries it with backoff); permanent
+// ones, or running out of attempts, fail it and tell the dealer.
 export async function extractInventoryUpload(uploadJobId: string) {
-  const upload = await claimPendingUploadJob(uploadJobId);
-  if (!upload) throw new Error('The upload job is missing or is not pending.');
-  const dealerId = (upload as unknown as { dealerId: Types.ObjectId }).dealerId;
+  const owner = randomUUID();
+  const upload = await claimPendingUploadJob(uploadJobId, owner);
+  if (!upload) {
+    // Already claimed, already terminal, or its lease is still legitimately held by another
+    // attempt — nothing for this BullMQ attempt to do. Recovery of a genuinely stuck job is the
+    // lease reaper's job (apps/worker/src/jobs/reaper.job.ts).
+    console.warn('Upload job claim missed; already claimed, terminal, or lease still active.', { uploadJobId });
+    return { uploadJobId, stage: 'skipped' as const };
+  }
+  const claimed = upload as unknown as { storageKey: string; dealerId: Types.ObjectId; category: VehicleCategory; attemptCount: number } & ProcessingCounts;
+  const dealerId = claimed.dealerId;
+  const lease = holdLease(uploadJobId, owner, renewUploadLease);
+  trackLease(uploadJobId, 'csv', owner);
   try {
-    const claimedUpload = upload as unknown as { storageKey: string; dealerId: Types.ObjectId; category: VehicleCategory };
-    const stream = await downloadInventoryStream(claimedUpload.storageKey);
-    const counts: ProcessingCounts = { processedRecords: 0, validRecords: 0, rejectedRecords: 0, duplicateRecords: 0 };
+    // Resume from the last checkpoint written by an earlier attempt (all zeros on a first attempt).
+    const counts: ProcessingCounts = { processedRecords: claimed.processedRecords ?? 0, validRecords: claimed.validRecords ?? 0, rejectedRecords: claimed.rejectedRecords ?? 0, duplicateRecords: claimed.duplicateRecords ?? 0 };
+    const stream = await downloadInventoryStream(claimed.storageKey);
     const seenKeys = new Set<string>();
-    await extractCsvBatches(stream, env.ETL_BATCH_SIZE, (rows, processed) => processInventoryBatch(uploadJobId, claimedUpload.dealerId, claimedUpload.category, rows, processed, counts, seenKeys));
-    await completeUploadJob(uploadJobId, counts);
+    await extractCsvBatches(stream, env.ETL_BATCH_SIZE, (rows, processed) => processInventoryBatch(uploadJobId, lease, dealerId, claimed.category, rows, processed, counts, seenKeys), counts.processedRecords);
+    lease.assertHeld();
+    if (!(await completeUploadJob(uploadJobId, owner, counts))) throw new LeaseLostError(uploadJobId);
     const status = counts.rejectedRecords > 0 || counts.duplicateRecords > 0 ? 'completedWithErrors' as const : 'completed' as const;
     await notifyUploadJobResult(dealerId, uploadJobId, status, counts);
     const rejectionRate = counts.processedRecords > 0 ? (counts.rejectedRecords + counts.duplicateRecords) / counts.processedRecords : 0;
     if (rejectionRate >= HIGH_REJECTION_RATE_THRESHOLD) await notifyUploadHighRejectionRate(uploadJobId, rejectionRate);
     return { uploadJobId, ...counts, stage: 'completed' as const };
   } catch (error) {
+    if (error instanceof LeaseLostError) {
+      // Another worker owns the job now; it will finish it. Nothing here may touch its state.
+      console.warn(error.message);
+      return { uploadJobId, stage: 'lease-lost' as const };
+    }
     const message = error instanceof Error ? error.message : 'Unknown extraction failure.';
-    const retryable = /s3|storage|timeout|temporar|network|redis|mongo|unavailable/i.test(message);
-    if (retryable) await retryUploadJob(uploadJobId, message);
-    else await failUploadJob(uploadJobId, message);
-    await notifyUploadJobResult(dealerId, uploadJobId, 'failed', undefined, message);
-    throw error;
+    if (isTransientError(error) && claimed.attemptCount < env.JOB_MAX_RECLAIM_ATTEMPTS) {
+      await retryUploadJob(uploadJobId, owner, message);
+      throw error; // BullMQ schedules the next attempt with exponential backoff and jitter.
+    }
+    if (await failUploadJob(uploadJobId, message, owner)) await notifyUploadJobResult(dealerId, uploadJobId, 'failed', undefined, message);
+    return { uploadJobId, stage: 'failed' as const, message };
+  } finally {
+    lease.stop();
+    untrackLease(owner);
   }
 }

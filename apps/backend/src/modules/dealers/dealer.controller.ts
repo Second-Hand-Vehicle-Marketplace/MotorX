@@ -25,6 +25,7 @@ export async function getMyApplication(request: AuthenticatedRequest, response: 
   sendSuccess(response, await getMyDealerApplication(request.localUser!._id));
 }
 
+// Updates the approved dealer's editable business details.
 export async function updateMyProfile(request: AuthenticatedRequest, response: Response) {
   sendSuccess(response, await updateMyDealerProfile(request.localUser!._id, request.body as UpdateDealerProfileBody));
 }

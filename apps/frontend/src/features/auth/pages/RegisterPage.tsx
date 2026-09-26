@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { toDealerApplicationPayload } from '../../dealers/utils/applicationPayload';
+import { getMyDealerApplication, submitDealerApplication } from '../../dealers/services/dealerApi';
+import type { DealerApplication } from '../../dealers/types/dealer.types';
 
 interface RegisterPageProps {
   mode?: 'buyer' | 'dealer';
 }
 
 export const RegisterPage: React.FC<RegisterPageProps> = ({ mode = 'buyer' }) => {
-  const { registerBuyer, registerDealerApplication } = useAuth();
+  const { registerBuyer, registerDealerApplication, user, isAuthenticated, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,6 +48,35 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ mode = 'buyer' }) =>
   }>({});
 
   const isBuyerMode = mode === 'buyer';
+  // A signed-in buyer applies from their existing account (no new account, no password), and a
+  // rejected applicant corrects their previous application here.
+  const signedInApplicant = mode === 'dealer' && isAuthenticated && user?.role === 'buyer';
+  const [rejectedApplication, setRejectedApplication] = useState<DealerApplication | null>(null);
+
+  useEffect(() => {
+    if (mode !== 'dealer' || !isAuthenticated || !user) return;
+    if (user.role !== 'buyer') { navigate(user.role === 'dealer' ? '/dealer' : '/admin', { replace: true }); return; }
+    let active = true;
+    getMyDealerApplication()
+      .then((application) => {
+        if (!active) return;
+        if (application.status !== 'rejected') { navigate('/dealer/application-status', { replace: true }); return; }
+        setRejectedApplication(application);
+        setDealerForm((current) => ({
+          ...current,
+          applicantName: application.representativeName, phone: application.phone, businessName: application.businessName,
+          businessLicense: application.registrationNumber, businessContact: application.businessPhone, businessEmail: application.businessEmail,
+          address: application.address, city: application.city, province: application.province, website: application.website ?? '',
+          dealershipType: application.dealershipType, brandFocus: application.brands.join(', '), businessDescription: application.description,
+          inventoryCount: application.inventoryCount === null ? '' : String(application.inventoryCount),
+        }));
+      })
+      .catch(() => {
+        // No application yet: start from the account's own details.
+        if (active) setDealerForm((current) => ({ ...current, applicantName: current.applicantName || user.displayName || '', phone: current.phone || user.phone || '' }));
+      });
+    return () => { active = false; };
+  }, [mode, isAuthenticated, user, navigate]);
 
   const handleBuyerChange = (field: keyof typeof buyerForm, value: string) => {
     setBuyerForm((prev) => ({ ...prev, [field]: value }));
@@ -86,9 +118,31 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ mode = 'buyer' }) =>
     }
   };
 
+  // Submits (or resubmits) the application from the signed-in buyer's existing account.
+  const submitAsSignedInBuyer = async () => {
+    if (!documents.businessRegistration || !documents.identityProof) {
+      setError('Business registration and identity proof documents are required.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const application = await submitDealerApplication(
+        toDealerApplicationPayload({ ...dealerForm, email: user?.email ?? '', dealershipType: dealerForm.dealershipType as 'new' | 'used' | 'both' }),
+        { businessRegistration: documents.businessRegistration, identityProof: documents.identityProof, additionalDocument: documents.additionalDocument },
+      );
+      await refreshUser().catch(() => undefined);
+      navigate('/dealer/application-status', { state: { email: user?.email, businessName: application.businessName } });
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Could not submit dealer application.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleDealerSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
+    if (signedInApplicant) { await submitAsSignedInBuyer(); return; }
 
     if (dealerForm.password.length < 6) {
       setError('Password must be at least 6 characters long.');
@@ -149,13 +203,23 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ mode = 'buyer' }) =>
       <div className="glass-card auth-registration-card" style={{ maxWidth: isBuyerMode ? 560 : 920 }}>
         <Link to="/" className="auth-brand">Motor<span>X</span></Link>
         <div style={{ marginBottom: '1.5rem' }}>
-          <h1 className="page-title">{isBuyerMode ? 'Create Buyer Account' : 'Dealer Application'}</h1>
+          <h1 className="page-title">{isBuyerMode ? 'Create Buyer Account' : rejectedApplication ? 'Correct and Resubmit Your Application' : 'Dealer Application'}</h1>
           <p className="page-subtitle">
             {isBuyerMode
               ? 'Create a new buyer account and start browsing the marketplace.'
-              : 'Submit your dealership details for admin review before your dealer account is activated.'}
+              : signedInApplicant
+                ? `You are applying with your existing account (${user?.email}). Submit your dealership details for admin review.`
+                : 'Submit your dealership details for admin review before your dealer account is activated.'}
           </p>
         </div>
+
+        {rejectedApplication && (
+          <div className="rejection-reason" style={{ marginBottom: '1rem' }}>
+            <span>Your previous application was not approved{rejectedApplication.reviewedAt ? ` (${new Date(rejectedApplication.reviewedAt).toLocaleDateString()})` : ''}. Reason:</span>
+            {rejectedApplication.rejectionReason ?? 'No reason was provided.'}
+            <small style={{ display: 'block', marginTop: '0.5rem' }}>Your previous answers are filled in below. Correct what the reason mentions, upload the verification documents again, and resubmit.</small>
+          </div>
+        )}
 
         {error && (
           <div className="glass-card" style={{ padding: '0.75rem 1rem', marginBottom: '1rem', borderColor: 'var(--color-error)' }}>
@@ -171,11 +235,11 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ mode = 'buyer' }) =>
             </div>
             <div className="form-group">
               <label className="form-label">Email Address</label>
-              <input type="email" className="form-input" placeholder="name@example.com" value={buyerForm.email} onChange={(e) => handleBuyerChange('email', e.target.value)} required />
+              <input type="email" inputMode="email" autoComplete="email" className="form-input" placeholder="name@example.com" value={buyerForm.email} onChange={(e) => handleBuyerChange('email', e.target.value)} required />
             </div>
             <div className="form-group">
               <label className="form-label">Phone Number</label>
-              <input type="tel" className="form-input" placeholder="+94 77 123 4567" value={buyerForm.phone} onChange={(e) => handleBuyerChange('phone', e.target.value)} required />
+              <input type="tel" autoComplete="tel" className="form-input" placeholder="+94 77 123 4567" value={buyerForm.phone} onChange={(e) => handleBuyerChange('phone', e.target.value)} required />
             </div>
             <div className="form-group">
               <label className="form-label">Password</label>
@@ -213,22 +277,28 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ mode = 'buyer' }) =>
               <label className="form-label">Dealer Representative Name</label>
               <input className="form-input" value={dealerForm.applicantName} onChange={(e) => handleDealerChange('applicantName', e.target.value)} required />
             </div>
-            <div className="form-group">
-              <label className="form-label">Email Address</label>
-              <input type="email" className="form-input" value={dealerForm.email} onChange={(e) => handleDealerChange('email', e.target.value)} required />
-            </div>
+            {!signedInApplicant && (
+              <div className="form-group">
+                <label className="form-label">Email Address</label>
+                <input type="email" inputMode="email" autoComplete="email" className="form-input" value={dealerForm.email} onChange={(e) => handleDealerChange('email', e.target.value)} required />
+              </div>
+            )}
             <div className="form-group">
               <label className="form-label">Phone Number</label>
-              <input type="tel" className="form-input" value={dealerForm.phone} onChange={(e) => handleDealerChange('phone', e.target.value)} required />
+              <input type="tel" autoComplete="tel" className="form-input" value={dealerForm.phone} onChange={(e) => handleDealerChange('phone', e.target.value)} required />
             </div>
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <span className="password-field"><input type={showPassword ? 'text' : 'password'} className="form-input" value={dealerForm.password} onChange={(e) => handleDealerChange('password', e.target.value)} required /><button type="button" className="password-toggle" onClick={() => setShowPassword((value) => !value)}>{showPassword ? 'Hide' : 'Show'}</button></span>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Confirm Password</label>
-              <input type={showPassword ? 'text' : 'password'} className="form-input" value={dealerForm.confirmPassword} onChange={(e) => handleDealerChange('confirmPassword', e.target.value)} required />
-            </div>
+            {!signedInApplicant && (
+              <>
+                <div className="form-group">
+                  <label className="form-label">Password</label>
+                  <span className="password-field"><input type={showPassword ? 'text' : 'password'} className="form-input" value={dealerForm.password} onChange={(e) => handleDealerChange('password', e.target.value)} required /><button type="button" className="password-toggle" onClick={() => setShowPassword((value) => !value)}>{showPassword ? 'Hide' : 'Show'}</button></span>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Confirm Password</label>
+                  <input type={showPassword ? 'text' : 'password'} className="form-input" value={dealerForm.confirmPassword} onChange={(e) => handleDealerChange('confirmPassword', e.target.value)} required />
+                </div>
+              </>
+            )}
 
             <div style={{ gridColumn: '1 / -1', marginTop: '0.5rem' }}>
               <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Dealership Information</h3>
@@ -259,7 +329,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ mode = 'buyer' }) =>
             </div>
             <div className="form-group">
               <label className="form-label">Business Email</label>
-              <input type="email" className="form-input" value={dealerForm.businessEmail} onChange={(e) => handleDealerChange('businessEmail', e.target.value)} required />
+              <input type="email" inputMode="email" autoComplete="work email" className="form-input" value={dealerForm.businessEmail} onChange={(e) => handleDealerChange('businessEmail', e.target.value)} required />
             </div>
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label className="form-label">Dealership Website or Social Page (optional)</label>
@@ -303,9 +373,11 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ mode = 'buyer' }) =>
             </div>
 
             <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-              <Link to="/login" className="btn btn-secondary">Back to Login</Link>
+              {signedInApplicant
+                ? <Link to="/marketplace" className="btn btn-secondary">Cancel</Link>
+                : <Link to="/login" className="btn btn-secondary">Back to Login</Link>}
               <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                {isSubmitting ? 'Submitting...' : 'Submit Dealer Application'}
+                {isSubmitting ? 'Submitting...' : rejectedApplication ? 'Resubmit Application' : 'Submit Dealer Application'}
               </button>
             </div>
           </form>

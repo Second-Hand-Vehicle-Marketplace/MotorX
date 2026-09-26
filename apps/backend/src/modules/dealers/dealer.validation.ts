@@ -20,10 +20,22 @@ export const createDealerApplicationSchema = z.object({
   inventoryCount: z.union([z.literal(''), z.coerce.number().int().min(0).max(100000)]).optional().transform((value) => value === '' ? undefined : value),
 });
 
-export const updateDealerProfileSchema = createDealerApplicationSchema.pick({
-  businessName: true, phone: true, address: true, representativeName: true, city: true, province: true,
-  businessPhone: true, businessEmail: true, website: true, dealershipType: true, brands: true, description: true, inventoryCount: true,
-}).partial();
+// Business details an approved dealer may change. Not included: businessName and
+// registrationNumber, which were verified against documents during review.
+export const updateDealerProfileSchema = z.object({
+  representativeName: z.string().trim().min(2).max(120),
+  phone: z.string().trim().min(7).max(30),
+  address: z.string().trim().min(5).max(300),
+  city: z.string().trim().min(2).max(100),
+  province: z.string().trim().min(2).max(100),
+  businessPhone: z.string().trim().min(7).max(30),
+  businessEmail: z.string().trim().email().max(160),
+  website: z.union([z.literal(''), z.string().trim().url().max(300)]),
+  dealershipType: z.enum(['new', 'used', 'both']),
+  brands: z.array(z.string().trim().min(1).max(60)).max(30),
+  description: z.string().trim().min(20).max(2000),
+  inventoryCount: z.coerce.number().int().min(0).max(100000),
+}).partial().refine((body) => Object.keys(body).length > 0, { message: 'Provide at least one field to update.' });
 
 export const dealerIdParamsSchema = z.object({ dealerId: z.string().regex(/^[a-f\d]{24}$/i) });
 export const rejectionBodySchema = z.object({ reason: z.string().trim().min(3).max(500) });

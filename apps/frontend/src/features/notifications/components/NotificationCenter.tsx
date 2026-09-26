@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { NotificationDto } from '@motorx/shared-contracts';
 import { notificationApi } from '../services/notificationApi';
 
@@ -10,6 +11,12 @@ const typeTone: Record<string, string> = {
   image_processing_failed: 'notification-tone-red',
   image_processing_completed_with_errors: 'notification-tone-amber',
   account_suspended: 'notification-tone-red',
+  stale_listings: 'notification-tone-amber',
+};
+
+// Notifications that lead somewhere: clicking one opens the page where the dealer can act on it.
+const typeLinks: Record<string, string> = {
+  stale_listings: '/dealer/listings?view=stale',
 };
 
 function timeAgo(value: string) {
@@ -20,13 +27,14 @@ function timeAgo(value: string) {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
-const detailLabels: Record<string, string> = { vehicle: 'Vehicle', registrationNumber: 'Reg.', listingId: 'Listing', uploadedAt: 'Uploaded', removedAt: 'Removed', category: 'Category' };
+const detailLabels: Record<string, string> = { staleListings: 'Listings', vehicle: 'Vehicle', registrationNumber: 'Reg.', listingId: 'Listing', uploadedAt: 'Uploaded', removedAt: 'Removed', category: 'Category' };
 
 export const NotificationCenter: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationDto[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const refresh = async () => {
     try {
@@ -45,6 +53,8 @@ export const NotificationCenter: React.FC = () => {
   }, []);
 
   const markRead = async (notification: NotificationDto) => {
+    const link = typeLinks[notification.type];
+    if (link) { setOpen(false); navigate(link); }
     if (notification.read) return;
     setNotifications((current) => current.map((item) => item.id === notification.id ? { ...item, read: true } : item));
     setUnreadCount((current) => Math.max(0, current - 1));

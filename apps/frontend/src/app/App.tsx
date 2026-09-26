@@ -4,6 +4,7 @@ import { AppProviders } from './providers';
 
 // Auth
 import { RoleGuard } from '../features/auth/components/RoleGuard';
+import { EmailVerificationBanner } from '../features/auth/components/EmailVerificationBanner';
 
 // Portals
 const LoginPage = React.lazy(() => import('../features/auth/pages/LoginPage').then((module) => ({ default: module.LoginPage })));
@@ -11,13 +12,14 @@ const RegisterPage = React.lazy(() => import('../features/auth/pages/RegisterPag
 const DealerPendingPage = React.lazy(() => import('../features/auth/pages/DealerPendingPage').then((module) => ({ default: module.DealerPendingPage })));
 const BuyerLayout = React.lazy(() => import('../portals/buyer/layout/BuyerLayout').then((module) => ({ default: module.BuyerLayout })));
 const Marketplace = React.lazy(() => import('../portals/buyer/pages/Marketplace').then((module) => ({ default: module.Marketplace })));
+const ComparePage = React.lazy(() => import('../portals/buyer/pages/ComparePage').then((module) => ({ default: module.ComparePage })));
 const VehicleDetails = React.lazy(() => import('../portals/buyer/pages/VehicleDetails').then((module) => ({ default: module.VehicleDetails })));
 const DealerLayout = React.lazy(() => import('../portals/dealer/layout/DealerLayout').then((module) => ({ default: module.DealerLayout })));
 const DealerDashboard = React.lazy(() => import('../portals/dealer/pages/DealerDashboard').then((module) => ({ default: module.DealerDashboard })));
-const ListingManager = React.lazy(() => import('../portals/dealer/pages/ListingManagerEnhanced').then((module) => ({ default: module.ListingManagerEnhanced })));
+const ListingManager = React.lazy(() => import('../portals/dealer/pages/ListingManager').then((module) => ({ default: module.ListingManager })));
 const ListingForm = React.lazy(() => import('../portals/dealer/pages/ListingForm').then((module) => ({ default: module.ListingForm })));
-const DealerProfile = React.lazy(() => import('../portals/dealer/pages/DealerProfile').then((module) => ({ default: module.DealerProfile })));
 const InventoryUpload = React.lazy(() => import('../portals/dealer/pages/InventoryUpload').then((module) => ({ default: module.InventoryUpload })));
+const DealerProfile = React.lazy(() => import('../portals/dealer/pages/DealerProfile').then((module) => ({ default: module.DealerProfile })));
 const UploadDetails = React.lazy(() => import('../portals/dealer/pages/UploadDetails').then((module) => ({ default: module.UploadDetails })));
 const AdminLayout = React.lazy(() => import('../portals/admin/layout/AdminLayout').then((module) => ({ default: module.AdminLayout })));
 const AdminDashboard = React.lazy(() => import('../portals/admin/pages/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
@@ -32,6 +34,7 @@ export function App() {
   return (
     <AppProviders>
       <BrowserRouter>
+        <EmailVerificationBanner />
         <Suspense fallback={<div role="status" aria-label="Loading page" className="loading-spinner" style={{ display: 'block', margin: '4rem auto' }} />}>
           <Routes>
             {/* Auth Route */}
@@ -48,6 +51,7 @@ export function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/marketplace" element={<Marketplace />} />
               <Route path="/marketplace/:listingId" element={<VehicleDetails />} />
+              <Route path="/compare" element={<ComparePage />} />
             </Route>
 
             {/* Protected Dealer Portal Routes */}
@@ -57,9 +61,9 @@ export function App() {
                 <Route path="/dealer/listings" element={<ListingManager />} />
                 <Route path="/dealer/listings/new" element={<ListingForm />} />
                 <Route path="/dealer/listings/:listingId/edit" element={<ListingForm />} />
-                <Route path="/dealer/profile" element={<DealerProfile />} />
                 <Route path="/dealer/uploads/new" element={<InventoryUpload />} />
                 <Route path="/dealer/uploads/:uploadId" element={<UploadDetails />} />
+                <Route path="/dealer/profile" element={<DealerProfile />} />
               </Route>
             </Route>
 

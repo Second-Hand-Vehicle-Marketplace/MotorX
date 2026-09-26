@@ -10,6 +10,11 @@ on:
       - main
       - dewni
   workflow_dispatch:
+  # Weekly rebuild and rescan of main: new vulnerabilities are published all the
+  # time, so an unchanged image can become vulnerable without any code change.
+  # (deploy.yml ignores scheduled runs, so this never redeploys by itself.)
+  schedule:
+    - cron: "0 3 * * 1"
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -19,6 +24,32 @@ permissions:
   contents: read
 
 jobs:
+  secret-scan:
+    name: Scan for leaked secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out full history
+        uses: actions/checkout@v4
+        with:
+          # Scan every commit: a secret deleted later still lives in history.
+          fetch-depth: 0
+
+      # Pinned by digest so a re-tagged image can never change what runs here.
+      # Known historical findings are listed in .gitleaksignore; rules in .gitleaks.toml.
+      - name: Run Gitleaks
+        run: >-
+          docker run --rm
+          --volume "${{ github.workspace }}:/repo"
+          ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+          git /repo
+          --config /repo/.gitleaks.toml
+          --gitleaks-ignore-path /repo/.gitleaksignore
+          --redact
+          --no-banner
+          --exit-code 1
+
   build-and-test:
     name: Build and test
     runs-on: ubuntu-latest
@@ -51,7 +82,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: package-lock.json
 
@@ -84,6 +115,9 @@ jobs:
       - name: Test worker
         run: npm test --workspace @motorx/worker -- --maxWorkers=1
 
+      - name: Test frontend
+        run: npm test --workspace @motorx/frontend
+
   docker-build:
     name: Build ${{ matrix.component }} image
     needs: build-and-test
@@ -111,3 +145,19 @@ jobs:
           --file ${{ matrix.dockerfile }}
           --tag motorx-${{ matrix.component }}:${{ github.sha }}
           .
+
+      # Scans the OS packages, Node.js itself, and npm packages inside the image,
+      # which npm audit cannot see. Fails on HIGH/CRITICAL issues that already have
+      # a fix; unfixable ones are reported without blocking the release.
+      - name: Scan image for vulnerabilities
+        run: >-
+          docker run --rm
+          --volume /var/run/docker.sock:/var/run/docker.sock
+          aquasec/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969
+          image
+          --scanners vuln
+          --severity HIGH,CRITICAL
+          --ignore-unfixed
+          --exit-code 1
+          --no-progress
+          motorx-${{ matrix.component }}:${{ github.sha }}

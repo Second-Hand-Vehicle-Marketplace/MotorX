@@ -2,10 +2,72 @@ import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { inventoryApi } from '@/features/inventory/services/inventoryApi';
+import { listingApi } from '@/features/listings/services/listingApi';
+import { ResponsiveTable } from '@/shared/components/ResponsiveTable';
 import type { ImageProcessingStatus } from '@/features/inventory/types/inventory.types';
 import { formatDateTime, formatFileSize } from '@/shared/utils/formatters';
 
 const activeImageStatuses = new Set<ImageProcessingStatus>(['pending', 'processing']);
+
+// CSV rows are imported as drafts so the dealer can check them first. This publishes every draft
+// from this upload in one step, instead of opening each listing.
+const PublishDraftsCard: React.FC<{ uploadId: string }> = ({ uploadId }) => {
+  const queryClient = useQueryClient();
+  const draftsQuery = useQuery({ queryKey: ['my-listings', 'upload-drafts', uploadId], queryFn: () => listingApi.getMyListings(1, 1, { status: 'draft', uploadJobId: uploadId }) });
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+  const drafts = draftsQuery.data?.total ?? 0;
+
+  const publishAll = async () => {
+    if (!window.confirm(`Publish all ${drafts} draft listings from this upload? Buyers will see them straight away.`)) return;
+    setIsPublishing(true); setMessage(null);
+    try {
+      const result = await listingApi.bulkAction({ action: 'publish', uploadJobId: uploadId });
+      setMessage({ kind: 'success', text: `${result.updated} listing${result.updated === 1 ? '' : 's'} published.` });
+      await Promise.all([queryClient.invalidateQueries({ queryKey: ['my-listings'] }), queryClient.invalidateQueries({ queryKey: ['my-listing-stats'] })]);
+    } catch (error) {
+      setMessage({ kind: 'error', text: error instanceof Error ? error.message : 'Could not publish these listings.' });
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  if (!drafts && !message) return null;
+  return (
+    <div className="glass-card publish-drafts-card">
+      <div>
+        <h3 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Ready to publish</h3>
+        <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-tertiary)', marginTop: '0.25rem' }}>
+          {drafts ? `${drafts} draft listing${drafts === 1 ? '' : 's'} from this upload ${drafts === 1 ? 'is' : 'are'} not visible to buyers yet.` : 'Every listing from this upload is published.'}
+        </p>
+        {message && <p role={message.kind === 'error' ? 'alert' : 'status'} style={{ marginTop: '0.5rem', color: message.kind === 'error' ? 'var(--color-error)' : 'var(--color-success)' }}>{message.text}</p>}
+      </div>
+      {drafts > 0 && <button type="button" className="btn btn-success" disabled={isPublishing} onClick={() => void publishAll()}>{isPublishing ? 'Publishing…' : `Publish all ${drafts}`}</button>}
+    </div>
+  );
+};
+
+// Re-queues a failed stage and refreshes the job so its new pending status shows immediately.
+const RetryButton: React.FC<{ uploadId: string; stage: 'csv' | 'images' }> = ({ uploadId, stage }) => {
+  const queryClient = useQueryClient();
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [error, setError] = useState('');
+  const retry = async () => {
+    setError(''); setIsRetrying(true);
+    try {
+      await (stage === 'csv' ? inventoryApi.retryUpload(uploadId) : inventoryApi.retryImages(uploadId));
+      await queryClient.invalidateQueries({ queryKey: ['upload', uploadId] });
+    } catch (retryError) {
+      setError(retryError instanceof Error ? retryError.message : 'Could not retry this upload.');
+    } finally { setIsRetrying(false); }
+  };
+  return (
+    <span style={{ display: 'inline-flex', gap: '0.75rem', alignItems: 'center', marginLeft: '0.75rem' }}>
+      <button onClick={() => void retry()} disabled={isRetrying} className="btn btn-secondary btn-sm">{isRetrying ? 'Retrying...' : 'Retry'}</button>
+      {error && <span>{error}</span>}
+    </span>
+  );
+};
 
 const VehiclePhotosCard: React.FC<{ uploadId: string; canUpload: boolean; imageProcessingStatus: ImageProcessingStatus; imageZipFileName: string | null; imagesAttached: number; matchedListings: number; unmatchedFolders: string[]; imageFailureReason: string | null }> = ({
   uploadId, canUpload, imageProcessingStatus, imageZipFileName, imagesAttached, matchedListings, unmatchedFolders, imageFailureReason,
@@ -63,7 +125,7 @@ const VehiclePhotosCard: React.FC<{ uploadId: string; canUpload: boolean; imageP
       )}
 
       {canUpload && imageProcessingStatus === 'failed' && imageFailureReason && (
-        <p style={{ fontSize: '0.8125rem', color: 'var(--color-error)', marginBottom: '1rem' }}>Processing failed: {imageFailureReason}</p>
+        <p style={{ fontSize: '0.8125rem', color: 'var(--color-error)', marginBottom: '1rem' }}>Processing failed: {imageFailureReason}<RetryButton uploadId={uploadId} stage="images" /></p>
       )}
 
       {canUpload && !activeImageStatuses.has(imageProcessingStatus) && (
@@ -91,7 +153,8 @@ export const UploadDetails: React.FC = () => {
     queryKey: ['upload', uploadId],
     queryFn: () => inventoryApi.getUpload(uploadId!),
     enabled: !!uploadId,
-    refetchInterval: (query) => activeImageStatuses.has(query.state.data?.imageProcessingStatus ?? 'none') ? 2_000 : false,
+    // Poll while either stage is queued or running (including after a Retry).
+    refetchInterval: (query) => activeImageStatuses.has(query.state.data?.imageProcessingStatus ?? 'none') || query.state.data?.status === 'pending' || query.state.data?.status === 'processing' ? 2_000 : false,
   });
   const recordsQuery = useQuery({ queryKey: ['upload-rejected-records', uploadId], queryFn: () => inventoryApi.getRejectedRecords(uploadId!, 1, 100), enabled: !!uploadId });
 
@@ -132,7 +195,7 @@ export const UploadDetails: React.FC = () => {
         <div className="stat-card">
           <span className="stat-label">Valid Listings Created</span>
           <div className="stat-value" style={{ color: 'var(--color-success)' }}>{job.validRecords}</div>
-          <span className="stat-change positive">Added to active inventory</span>
+          <span className="stat-change positive">Imported as drafts</span>
         </div>
 
         <div className="stat-card">
@@ -144,9 +207,11 @@ export const UploadDetails: React.FC = () => {
 
       {job.status === 'failed' && job.failureReason && (
         <div className="glass-card" style={{ padding: '1rem', marginBottom: '2rem', color: 'var(--color-error)' }}>
-          Processing failed: {job.failureReason}
+          Processing failed: {job.failureReason}<RetryButton uploadId={job.id} stage="csv" />
         </div>
       )}
+
+      {(job.status === 'completed' || job.status === 'completedWithErrors') && <PublishDraftsCard uploadId={job.id} />}
 
       <VehiclePhotosCard
         uploadId={job.id}
@@ -174,7 +239,7 @@ export const UploadDetails: React.FC = () => {
 
         {rejectedRecords.length > 0 && (
           <div className="table-container">
-            <table className="data-table">
+            <ResponsiveTable>
               <thead>
                 <tr>
                   <th>CSV Row</th>
@@ -203,7 +268,7 @@ export const UploadDetails: React.FC = () => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </ResponsiveTable>
           </div>
         )}
       </div>

@@ -2,59 +2,79 @@ import React, { useEffect, useState } from 'react';
 import { getMyDealerApplication, updateMyDealerProfile } from '@/features/dealers/services/dealerApi';
 import type { DealerApplication } from '@/features/dealers/types/dealer.types';
 
+type ProfileForm = {
+  representativeName: string; phone: string; address: string; city: string; province: string;
+  businessPhone: string; businessEmail: string; website: string; dealershipType: 'new' | 'used' | 'both';
+  brands: string; description: string; inventoryCount: string;
+};
+
+const toForm = (dealer: DealerApplication): ProfileForm => ({
+  representativeName: dealer.representativeName, phone: dealer.phone, address: dealer.address, city: dealer.city, province: dealer.province,
+  businessPhone: dealer.businessPhone, businessEmail: dealer.businessEmail, website: dealer.website ?? '', dealershipType: dealer.dealershipType,
+  brands: dealer.brands.join(', '), description: dealer.description, inventoryCount: dealer.inventoryCount === null ? '' : String(dealer.inventoryCount),
+});
+
+// Lets an approved dealer keep the business details buyers see up to date (FR-DEALER-03).
+// The business name and registration number were verified during review, so they are read-only.
 export const DealerProfile: React.FC = () => {
-  const [profile, setProfile] = useState<DealerApplication | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [dealer, setDealer] = useState<DealerApplication | null>(null);
+  const [form, setForm] = useState<ProfileForm | null>(null);
+  const [status, setStatus] = useState<{ kind: 'error' | 'success'; message: string } | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    void getMyDealerApplication().then(setProfile).catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Could not load your business profile.'));
+    getMyDealerApplication()
+      .then((loaded) => { setDealer(loaded); setForm(toForm(loaded)); })
+      .catch(() => setStatus({ kind: 'error', message: 'Your business profile could not be loaded. Please refresh the page.' }));
   }, []);
 
-  const saveProfile = async (event: React.FormEvent<HTMLFormElement>) => {
+  if (!form || !dealer) return status ? <div className="alert alert-error" role="alert">{status.message}</div> : <div role="status" aria-label="Loading profile" className="loading-spinner" style={{ margin: '3rem auto', display: 'block' }} />;
+
+  const set = (field: keyof ProfileForm) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setForm({ ...form, [field]: event.target.value });
+
+  const save = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!profile) return;
-    setIsSaving(true);
-    setMessage('');
-    setError('');
+    setSaving(true); setStatus(null);
     try {
       const updated = await updateMyDealerProfile({
-        businessName: profile.businessName, phone: profile.phone, address: profile.address,
-        representativeName: profile.representativeName, city: profile.city, province: profile.province,
-        businessPhone: profile.businessPhone, businessEmail: profile.businessEmail,
-        website: profile.website ?? undefined, dealershipType: profile.dealershipType,
-        brands: profile.brands, description: profile.description, inventoryCount: profile.inventoryCount ?? undefined,
+        representativeName: form.representativeName, phone: form.phone, address: form.address, city: form.city, province: form.province,
+        businessPhone: form.businessPhone, businessEmail: form.businessEmail, website: form.website.trim(), dealershipType: form.dealershipType,
+        brands: form.brands.split(',').map((brand) => brand.trim()).filter(Boolean), description: form.description,
+        ...(form.inventoryCount.trim() ? { inventoryCount: Number(form.inventoryCount) } : {}),
       });
-      setProfile(updated);
-      setMessage('Business profile saved.');
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Could not save your business profile.');
-    } finally {
-      setIsSaving(false);
-    }
+      setDealer(updated); setForm(toForm(updated));
+      setStatus({ kind: 'success', message: 'Your business profile was saved. Buyers now see the updated details.' });
+    } catch (error) {
+      setStatus({ kind: 'error', message: error instanceof Error ? error.message : 'Your changes could not be saved.' });
+    } finally { setSaving(false); }
   };
 
-  if (!profile && !error) return <div role="status" className="loading-spinner" style={{ margin: '3rem auto', display: 'block' }} />;
-  if (!profile) return <div role="alert" className="glass-card" style={{ padding: '1rem', color: 'var(--color-error)' }}>{error}</div>;
+  const field = (label: string, name: keyof ProfileForm, props: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
+    <label className="form-group"><span className="form-label">{label}</span><input className="form-input" name={name} value={form[name]} onChange={set(name)} {...props} /></label>
+  );
 
-  const update = <Key extends keyof DealerApplication>(key: Key, value: DealerApplication[Key]) => setProfile({ ...profile, [key]: value });
-  return <div style={{ maxWidth: 760 }}>
-    <div className="page-header"><div><h1 className="page-title">Business Profile</h1><p className="page-subtitle">Keep your dealership contact details current.</p></div></div>
-    {error && <div role="alert" className="glass-card" style={{ padding: '1rem', color: 'var(--color-error)', marginBottom: '1rem' }}>{error}</div>}
-    {message && <div role="status" className="glass-card" style={{ padding: '1rem', color: 'var(--color-success)', marginBottom: '1rem' }}>{message}</div>}
-    <form onSubmit={saveProfile} className="glass-card" style={{ padding: '1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-      <label className="form-group"><span className="form-label">Business name</span><input className="form-input" value={profile.businessName} onChange={(event) => update('businessName', event.target.value)} required /></label>
-      <label className="form-group"><span className="form-label">Representative</span><input className="form-input" value={profile.representativeName} onChange={(event) => update('representativeName', event.target.value)} required /></label>
-      <label className="form-group"><span className="form-label">Phone</span><input className="form-input" value={profile.phone} onChange={(event) => update('phone', event.target.value)} required /></label>
-      <label className="form-group"><span className="form-label">Business email</span><input type="email" className="form-input" value={profile.businessEmail} onChange={(event) => update('businessEmail', event.target.value)} required /></label>
-      <label className="form-group"><span className="form-label">Business phone</span><input className="form-input" value={profile.businessPhone} onChange={(event) => update('businessPhone', event.target.value)} required /></label>
-      <label className="form-group"><span className="form-label">Website</span><input type="url" className="form-input" value={profile.website ?? ''} onChange={(event) => update('website', event.target.value || null)} /></label>
-      <label className="form-group"><span className="form-label">City</span><input className="form-input" value={profile.city} onChange={(event) => update('city', event.target.value)} required /></label>
-      <label className="form-group"><span className="form-label">Province</span><input className="form-input" value={profile.province} onChange={(event) => update('province', event.target.value)} required /></label>
-      <label className="form-group" style={{ gridColumn: '1 / -1' }}><span className="form-label">Address</span><input className="form-input" value={profile.address} onChange={(event) => update('address', event.target.value)} required /></label>
-      <label className="form-group" style={{ gridColumn: '1 / -1' }}><span className="form-label">Business description</span><textarea className="form-textarea" rows={4} value={profile.description} onChange={(event) => update('description', event.target.value)} required /></label>
-      <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end' }}><button type="submit" className="btn btn-primary" disabled={isSaving}>{isSaving ? 'Saving...' : 'Save profile'}</button></div>
-    </form>
-  </div>;
+  return (
+    <div style={{ maxWidth: 900 }}>
+      <div className="page-header"><div><h1 className="page-title">Business Profile</h1><p className="page-subtitle">The contact and business details buyers see on your listings.</p></div></div>
+      {status && <div className={`alert ${status.kind === 'error' ? 'alert-error' : 'alert-success'}`} role={status.kind === 'error' ? 'alert' : 'status'} style={{ marginBottom: '1rem' }}>{status.message}</div>}
+      <form onSubmit={(event) => void save(event)} className="glass-card auth-form-grid" style={{ padding: '1.5rem' }}>
+        <div className="form-group"><span className="form-label">Business name</span><strong>{dealer.businessName}</strong></div>
+        <div className="form-group"><span className="form-label">Registration number</span><strong>{dealer.registrationNumber}</strong></div>
+        <p style={{ gridColumn: '1 / -1', margin: 0, fontSize: '0.8125rem', color: 'var(--color-text-tertiary)' }}>These two were verified during your application review. Contact MotorX support to change them.</p>
+        {field('Representative name', 'representativeName', { required: true, minLength: 2 })}
+        {field('Phone', 'phone', { required: true, minLength: 7, type: 'tel' })}
+        {field('Business phone', 'businessPhone', { required: true, minLength: 7, type: 'tel' })}
+        {field('Business email', 'businessEmail', { required: true, type: 'email' })}
+        <label className="form-group" style={{ gridColumn: '1 / -1' }}><span className="form-label">Business address</span><textarea className="form-textarea" name="address" rows={2} value={form.address} onChange={set('address')} required minLength={5} /></label>
+        {field('City / District', 'city', { required: true, minLength: 2 })}
+        {field('Province', 'province', { required: true, minLength: 2 })}
+        {field('Website or social page (optional)', 'website', { type: 'url', placeholder: 'https://' })}
+        <label className="form-group"><span className="form-label">Type of dealership</span><select className="form-select" name="dealershipType" value={form.dealershipType} onChange={set('dealershipType')}><option value="new">New vehicles</option><option value="used">Used vehicles</option><option value="both">Both</option></select></label>
+        {field('Main brands (comma separated)', 'brands')}
+        {field('Vehicles normally available (optional)', 'inventoryCount', { type: 'number', min: 0 })}
+        <label className="form-group" style={{ gridColumn: '1 / -1' }}><span className="form-label">Business description</span><textarea className="form-textarea" name="description" rows={4} value={form.description} onChange={set('description')} required minLength={20} /></label>
+        <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end' }}><button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Save profile'}</button></div>
+      </form>
+    </div>
+  );
 };

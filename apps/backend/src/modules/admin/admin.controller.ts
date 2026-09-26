@@ -27,13 +27,24 @@ export async function getAdminAuditLogs(request: AuthenticatedRequest, response:
 export async function getAdminUploads(request: AuthenticatedRequest, response: Response) { const result = await getUploadsForAdmin(request.query as unknown as ListAdminUploadsQuery); sendSuccess(response, result.data, { meta: result.meta }); }
 
 // Sends the current operational status snapshot.
-export async function getAdminSystemHealth(_request: AuthenticatedRequest, response: Response) { sendSuccess(response, getSystemHealthForAdmin()); }
+export async function getAdminSystemHealth(_request: AuthenticatedRequest, response: Response) { sendSuccess(response, await getSystemHealthForAdmin()); }
 
 // Sends the pending dealer review queue.
 export async function getAdminDealerApplications(request: AuthenticatedRequest, response: Response) { sendSuccess(response, await getDealerApplicationsForAdmin(request.query as unknown as ListAdminDealerApplicationsQuery)); }
 
 // Streams one protected dealer verification document.
-export async function getAdminDealerDocument(request: AuthenticatedRequest, response: Response) { const document = await getDealerDocumentForAdmin(String(request.params.dealerId), Number(request.params.documentIndex)); const stored = await readDealerDocument(document.key); response.setHeader('Content-Type', stored.contentType); response.setHeader('Content-Disposition', `inline; filename="${document.originalName.replace(/["\r\n]/g, '_')}"`); response.send(stored.bytes); }
+export async function getAdminDealerDocument(request: AuthenticatedRequest, response: Response) {
+  const document = await getDealerDocumentForAdmin(String(request.params.dealerId), Number(request.params.documentIndex), request.localUser!._id);
+  const stored = await readDealerDocument(document.key);
+  response.setHeader('Content-Type', stored.contentType);
+  response.setHeader('Content-Disposition', `inline; filename="${document.originalName.replace(/["\r\n]/g, '_')}"`);
+  // Identity documents must never be kept by the browser or any proxy between it and the API.
+  response.setHeader('Cache-Control', 'no-store, private');
+  response.setHeader('Pragma', 'no-cache');
+  // If the file is ever opened directly rather than through the admin UI, it may not run scripts.
+  response.setHeader('Content-Security-Policy', "sandbox; default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; object-src 'self'");
+  response.send(stored.bytes);
+}
 
 // Approves one pending dealer application.
 export async function approveAdminDealerApplication(request: AuthenticatedRequest, response: Response) { sendSuccess(response, await reviewDealerApplicationAsAdmin(String(request.params.dealerId), request.localUser!._id, 'approved')); }

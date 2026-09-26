@@ -12,6 +12,8 @@ export type ListingStatus = 'active' | 'pending' | 'sold' | 'draft' | 'rejected'
 export interface VehicleImage {
   id: string;
   url: string;
+  // Small (max 800 px) copy for cards and phones; missing for photos stored before small copies existed.
+  thumbUrl?: string;
   alt: string;
   isPrimary: boolean;
 }
@@ -49,6 +51,8 @@ export type Listing = {
   updatedAt?: string;
   location?: string;
   publishedAt?: string | null;
+  // When the dealer last confirmed the listing is current (drives stale-stock reminders).
+  lastConfirmedAt?: string | null;
   sourceUploadJobId?: string;
 } & VehicleDetails;
 

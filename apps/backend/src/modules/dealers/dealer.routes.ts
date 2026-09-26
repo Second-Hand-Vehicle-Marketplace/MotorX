@@ -5,6 +5,7 @@ import { requireRole } from '../../shared/middleware/requireRole.js';
 import { validateRequest } from '../../shared/middleware/validateRequest.js';
 import { verifyFirebaseToken } from '../../shared/middleware/verifyFirebaseToken.js';
 import { asyncHandler } from '../../shared/utils/asyncHandler.js';
+import { dealerApplicationLimiter, uploadConcurrencyGate } from '../../shared/middleware/rateLimits.js';
 import { createApplication, getMyApplication, updateMyProfile } from './dealer.controller.js';
 import { createDealerApplicationSchema, updateDealerProfileSchema } from './dealer.validation.js';
 import { uploadDealerDocuments } from './dealerDocument.middleware.js';
@@ -12,7 +13,8 @@ import { uploadDealerDocuments } from './dealerDocument.middleware.js';
 const authenticated = [verifyFirebaseToken, loadLocalUser, requireAuthenticated] as const;
 export const dealerRouter = Router();
 
-dealerRouter.post('/applications', ...authenticated, requireRole('buyer'), uploadDealerDocuments, validateRequest({ body: createDealerApplicationSchema }), asyncHandler(createApplication));
+// A rejected applicant corrects and resubmits through the same endpoint (see submitDealerApplication).
+dealerRouter.post('/applications', ...authenticated, requireRole('buyer'), dealerApplicationLimiter, uploadConcurrencyGate, uploadDealerDocuments, validateRequest({ body: createDealerApplicationSchema }), asyncHandler(createApplication));
 dealerRouter.get('/me', ...authenticated, asyncHandler(getMyApplication));
-dealerRouter.patch('/me', ...authenticated, requireRole('dealer'), validateRequest({ body: updateDealerProfileSchema }), asyncHandler(updateMyProfile));
+dealerRouter.patch('/me/profile', ...authenticated, requireRole('dealer'), validateRequest({ body: updateDealerProfileSchema }), asyncHandler(updateMyProfile));
 

@@ -1,0 +1,14 @@
+# Gitleaks configuration: the built-in rules plus MotorX-specific allowlists.
+# Run locally: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo --redact
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Credentials read from environment variables are references, not secrets"
+# Applies only when the entire captured secret is an env reference such as
+# `env.S3_SECRET_KEY`, so a hard-coded value (or `env.KEY || 'AIza...'`) is still reported.
+regexTarget = "secret"
+regexes = [
+  '''^(env|process\.env)\.[A-Z0-9_]+$''',
+]

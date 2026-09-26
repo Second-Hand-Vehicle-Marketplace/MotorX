@@ -29,13 +29,23 @@ export const adminDealerIdParamsSchema = z.object({ dealerId: z.string().regex(/
 export const adminDealerDocumentParamsSchema = adminDealerIdParamsSchema.extend({ documentIndex: z.coerce.number().int().min(0).max(2) });
 export const rejectDealerApplicationBodySchema = z.object({ reason: z.string().trim().min(3).max(500) });
 
+// Optional date range (YYYY-MM-DD, inclusive on both days) for activity lists.
+const dateRangeSchema = {
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+};
+
 export const listAdminAuditQuerySchema = z.object({
   ...adminPaginationSchema,
-  eventType: z.enum(['dealer_approved', 'dealer_rejected', 'user_suspended', 'user_activated', 'listing_removed']).optional(),
+  ...dateRangeSchema,
+  eventType: z.enum(['dealer_approved', 'dealer_rejected', 'user_suspended', 'user_activated', 'listing_removed', 'dealer_document_viewed']).optional(),
 });
 
 export const listAdminUploadsQuerySchema = z.object({
   ...adminPaginationSchema,
+  ...dateRangeSchema,
+  // Opens one exact upload (dashboard links).
+  uploadId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
   status: z.enum(['pending', 'processing', 'completed', 'completedWithErrors', 'failed']).optional(),
   dealerId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
 });

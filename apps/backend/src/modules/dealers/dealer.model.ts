@@ -24,7 +24,12 @@ export interface Dealer {
   rejectionReason?: string;
   reviewedBy?: Types.ObjectId;
   reviewedAt?: Date;
-  reviewHistory: Array<{ status: 'approved' | 'rejected'; reason?: string; reviewedBy?: Types.ObjectId; reviewedAt: Date }>;
+  // Set by the worker's retention job when the verification files are deleted from storage.
+  documentsDeletedAt?: Date;
+  // When the current version of the application was (re)submitted; the review queue is ordered by it.
+  submittedAt?: Date;
+  // Earlier rejected submissions, kept when an applicant corrects and resubmits.
+  reviewHistory: Array<{ status: 'rejected'; reason?: string; reviewedBy?: Types.ObjectId; reviewedAt?: Date; submittedAt?: Date }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -60,15 +65,19 @@ const dealerSchema = new Schema<Dealer>({
   rejectionReason: { type: String, trim: true, maxlength: 500 },
   reviewedBy: { type: Schema.Types.ObjectId, ref: 'AuthUser' },
   reviewedAt: Date,
+  documentsDeletedAt: Date,
+  submittedAt: { type: Date, default: Date.now },
   reviewHistory: { type: [{
     _id: false,
-    status: { type: String, enum: ['approved', 'rejected'], required: true },
+    status: { type: String, enum: ['rejected'], required: true },
     reason: { type: String, trim: true, maxlength: 500 },
     reviewedBy: { type: Schema.Types.ObjectId, ref: 'AuthUser' },
-    reviewedAt: { type: Date, required: true },
+    reviewedAt: Date,
+    submittedAt: Date,
   }], default: [] },
 }, { timestamps: true, versionKey: false, collection: 'dealers' });
 
 dealerSchema.index({ status: 1, createdAt: 1 }, { name: 'status_createdAt' });
+dealerSchema.index({ status: 1, submittedAt: 1 }, { name: 'status_submittedAt' });
 
 export const DealerModel: mongoose.Model<Dealer> = models.Dealer ?? model<Dealer>('Dealer', dealerSchema);

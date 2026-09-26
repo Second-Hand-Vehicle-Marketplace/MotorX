@@ -1,0 +1,16 @@
+{
+  "recordedAt": "2026-09-26",
+  "revision": "ffac7f9d5dfc7112ff82cd482f37030bf7874344",
+  "workingTree": "merge of origin/main (aafca89, version4) into dewni2 (48c99be), conflicts resolved and retested; commit the merge with this report",
+  "hostPlatform": "Windows-10-10.0.26200-SP0",
+  "containerRuntime": "Docker Desktop; compose project motorx-test (MongoDB 7 replica set rs0, Redis 7, MinIO)",
+  "nodeInContainers": "v24.21.0",
+  "nodeOnHostForFrontendTests": "v22.19.0",
+  "backend": "docker compose -f compose.yml -f compose.test.yml run --rm backend (vitest, --maxWorkers=1): 147/147 passed, 26 files",
+  "worker": "same stack with RUN_BENCHMARKS=1: 94/94 passed, 14 files (includes 5,000-row benchmark)",
+  "frontend": "npx vitest run in apps/frontend (jsdom): 50/50 passed, 13 files",
+  "build": "npm run build --workspaces --if-present: exit 0",
+  "liveSmoke": "scripts/smoke/live-stack-smoke.py against the running dev stack after the photo migration (real Atlas data, read-only): 16 passed, 1 failed, 0 skipped",
+  "browserE2E": "Manual procedures in the report; not executed at the time of writing",
+  "photoMigration": "26 Sep 2026: node dist/scripts/migrateListingImages.js --keep-legacy -> migrated 90, alreadyMigrated 1, missing 78, failed 0, thumbsCreated 90; second dry run: nothing left to do"
+}

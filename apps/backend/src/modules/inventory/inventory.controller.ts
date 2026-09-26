@@ -2,7 +2,7 @@ import type { Response } from 'express';
 import type { VehicleCategory } from '@motorx/shared-contracts';
 import { sendSuccess } from '../../shared/responses/apiResponse.js';
 import type { AuthenticatedRequest } from '../../shared/types/authenticatedRequest.js';
-import { attachInventoryImagesZip, createInventoryUpload, getDealerUpload, getDealerUploadRejectedRecords, getDealerUploads, getInventoryCsvTemplate } from './inventory.service.js';
+import { attachInventoryImagesZip, createInventoryUpload, getDealerUpload, getDealerUploadRejectedRecords, getDealerUploads, getInventoryCsvTemplate, retryDealerUpload, retryDealerUploadImages } from './inventory.service.js';
 import type { ListInventoryUploadsQuery, ListRejectedRecordsQuery } from './inventory.validation.js';
 
 // Accepts one CSV (for the dealer-selected category) and immediately returns its queued upload job.
@@ -14,6 +14,16 @@ export async function uploadDealerInventory(request: AuthenticatedRequest, respo
 // Accepts one vehicle-photos zip for an already-processed upload job.
 export async function uploadDealerInventoryImages(request: AuthenticatedRequest, response: Response) {
   sendSuccess(response, await attachInventoryImagesZip(request.localUser!._id, String(request.params.uploadId), request.file!), { status: 202 });
+}
+
+// Re-queues this dealer's failed CSV import (resumes from its last checkpoint).
+export async function retryInventoryUpload(request: AuthenticatedRequest, response: Response) {
+  sendSuccess(response, await retryDealerUpload(request.localUser!._id, String(request.params.uploadId)), { status: 202 });
+}
+
+// Re-queues this dealer's failed photo processing for the zip already stored with the upload.
+export async function retryInventoryUploadImages(request: AuthenticatedRequest, response: Response) {
+  sendSuccess(response, await retryDealerUploadImages(request.localUser!._id, String(request.params.uploadId)), { status: 202 });
 }
 
 // Streams a downloadable CSV template (headers + example rows) for the requested category.

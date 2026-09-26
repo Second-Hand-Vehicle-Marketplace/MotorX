@@ -1,4 +1,5 @@
 import type { FilterQuery, SortOrder } from 'mongoose';
+import { publicDealerFilter } from '../marketplace/publicVisibility.js';
 import { ListingModel, type Listing } from '../marketplace/listing.model.js';
 import { env } from '../../config/env.js';
 
@@ -57,7 +58,7 @@ export function buildListingSort(sortBy: SearchFilters['sortBy']): Record<string
 
 // Keeps result-set work bounded through validated pagination and indexed filters.
 export async function listStructuredListings(options: SearchFilters) {
-  const filter = buildListingFilter(options);
+  const filter = { ...buildListingFilter(options), ...await publicDealerFilter() };
   const [documents, total] = await Promise.all([
     ListingModel.find(filter).sort(buildListingSort(options.sortBy)).skip((options.page - 1) * options.limit).limit(options.limit).maxTimeMS(1_800).lean(),
     ListingModel.countDocuments(filter).maxTimeMS(1_800),
@@ -67,7 +68,7 @@ export async function listStructuredListings(options: SearchFilters) {
 
 // Retrieves a bounded lexical pool for application-side hybrid scoring.
 export async function listSearchCandidates(options: SearchFilters, candidateLimit = 300) {
-  const filter = buildListingFilter({ ...options, search: undefined });
+  const filter = { ...buildListingFilter({ ...options, search: undefined }), ...await publicDealerFilter() };
   const [documents, total] = await Promise.all([
     ListingModel.find(filter).sort({ publishedAt: -1, _id: -1 }).limit(candidateLimit).maxTimeMS(1_800).lean(),
     ListingModel.countDocuments(filter).maxTimeMS(1_800),
@@ -90,8 +91,11 @@ function buildVectorFilter(options: SearchFilters) {
 
 // Atlas Vector Search is optional at runtime; callers merge these candidates with lexical ones.
 export async function listVectorCandidates(embedding: number[], options: SearchFilters, candidateLimit = 200) {
+  // dealerId is not a vector-index filter field, so suspended dealers are removed right after the search.
+  const dealerFilter = await publicDealerFilter();
   return ListingModel.aggregate([
     { $vectorSearch: { index: env.ATLAS_VECTOR_INDEX, path: 'embedding', queryVector: embedding, numCandidates: Math.min(candidateLimit * 5, 1_000), limit: candidateLimit, filter: buildVectorFilter(options) } },
+    ...(Object.keys(dealerFilter).length ? [{ $match: dealerFilter }] : []),
     { $addFields: { vectorScore: { $meta: 'vectorSearchScore' } } },
     { $project: { embedding: 0 } },
   ]).option({ maxTimeMS: 4_500 });

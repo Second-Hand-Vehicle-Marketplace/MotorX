@@ -1,12 +1,21 @@
-import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
-import { randomUUID } from 'node:crypto';
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { createHash, randomUUID } from 'node:crypto';
 import { Types } from 'mongoose';
 import * as unzipper from 'unzipper';
-import { normalizeRegistrationNumber } from '@motorx/shared-contracts';
+import { LISTING_IMAGE_OBJECT_PREFIX, LISTING_IMAGE_THUMB_SUBPATH, normalizeRegistrationNumber } from '@motorx/shared-contracts';
+import { env } from '../config/env.js';
 import { workerStorageClient, workerStorageConfig } from '../config/storage.js';
 import { appendListingImages, findListingsByUploadJob, type WorkerListingImage } from '../repositories/listing.repository.js';
-import { claimPendingImageProcessing, completeImageProcessing, failImageProcessing } from '../repositories/uploadJob.repository.js';
+import { claimPendingImageProcessing, completeImageProcessing, failImageProcessing, renewImageLease, retryImageProcessing } from '../repositories/uploadJob.repository.js';
+import { trackLease, untrackLease } from './activeLeases.js';
+import { makeListingThumb, reencodeListingPhoto } from './imageReencode.js';
+import { holdLease, LeaseLostError } from './jobLease.js';
 import { notifyImageProcessingResult } from './notification.service.js';
+import { isTransientError } from './transientError.js';
+
+// The archive itself is unusable (not a zip, too many files, too large when expanded). Retrying
+// cannot help, so the job fails at once instead of spending its retry budget.
+export class InvalidArchiveError extends Error { constructor(message: string) { super(message); this.name = 'InvalidArchiveError'; } }
 
 // Downloads the private zip as one buffer. Bounded by the backend's zip size cap at upload time,
 // so buffering the whole archive here (rather than streaming) keeps the extraction logic simple.
@@ -16,7 +25,12 @@ async function downloadZipBuffer(storageKey: string): Promise<Buffer> {
   return Buffer.from(await object.Body.transformToByteArray());
 }
 
-interface ZipImageEntry { fileName: string; buffer: Buffer; mimeType: string }
+// path is the entry's location inside the zip; contentHash identifies its original bytes.
+// thumb is the small copy for cards and phones (null if it could not be made).
+interface ZipImageEntry { fileName: string; path: string; contentHash: string; buffer: Buffer; thumb: Buffer | null; mimeType: string }
+
+const fullObjectKey = (key: string) => `${LISTING_IMAGE_OBJECT_PREFIX}${key}`;
+const thumbObjectKey = (key: string) => `${LISTING_IMAGE_OBJECT_PREFIX}${LISTING_IMAGE_THUMB_SUBPATH}${key}`;
 
 function imageMimeType(buffer: Buffer): string | undefined {
   if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'image/jpeg';
@@ -25,18 +39,49 @@ function imageMimeType(buffer: Buffer): string | undefined {
   return undefined;
 }
 
-// Extracts image entries from the zip, grouped by the folder immediately containing each image.
-// This supports both RegistrationNumber/photo.jpg and Wrapper/RegistrationNumber/photo.jpg.
-// Root-level files (no folder), non-image files, and oversized images are silently skipped.
+// Reads a zip entry while enforcing limitBytes as it decompresses, rather than after fully
+// inflating it — a hand-crafted entry can lie about its declared size, so the only way to cap
+// actual memory use against a decompression bomb is to stop reading mid-stream once the real
+// byte count crosses the limit, instead of trusting metadata or buffering first.
+function readEntryWithinLimit(entry: unzipper.File, limitBytes: number): Promise<Buffer | null> {
+  return new Promise((resolve, reject) => {
+    const stream = entry.stream();
+    const chunks: Buffer[] = [];
+    let total = 0;
+    let overLimit = false;
+    stream.on('data', (chunk: Buffer) => {
+      if (overLimit) return;
+      total += chunk.length;
+      if (total > limitBytes) {
+        overLimit = true;
+        stream.destroy();
+        resolve(null);
+        return;
+      }
+      chunks.push(chunk);
+    });
+    stream.on('close', () => { if (!overLimit) resolve(Buffer.concat(chunks)); });
+    stream.on('error', (error) => { if (!overLimit) reject(error); });
+  });
+}
+
+// Extracts image entries from the zip, grouped by the folder that directly contains each photo
+// (the vehicle's registration number), so both CAX-1234/photo.jpg and an extra wrapper folder such
+// as Photos/CAX-1234/photo.jpg work. Root-level files (no folder), non-image files, and images that
+// cannot be decoded are skipped — a hand-built zip may contain extras, and one bad file shouldn't
+// fail the whole batch.
 async function extractImageEntries(zipBuffer: Buffer): Promise<Map<string, ZipImageEntry[]>> {
-  const directory = await unzipper.Open.buffer(zipBuffer);
+  let directory: Awaited<ReturnType<typeof unzipper.Open.buffer>>;
+  try { directory = await unzipper.Open.buffer(zipBuffer); }
+  catch (error) { throw new InvalidArchiveError(`The vehicle photos file is not a readable zip archive (${error instanceof Error ? error.message : 'unknown error'}).`); }
   const grouped = new Map<string, ZipImageEntry[]>();
   let entryCount = 0;
   let expandedBytes = 0;
+  let photoFilesInFolders = 0;
   for (const entry of directory.files) {
     if (entry.type !== 'File') continue;
     entryCount += 1;
-    if (entryCount > workerStorageConfig.maxZipEntries) throw new Error('The vehicle photos archive contains too many files.');
+    if (entryCount > workerStorageConfig.maxZipEntries) throw new InvalidArchiveError('The vehicle photos archive contains too many files.');
     // The ZIP spec mandates '/' as the internal path separator, but PowerShell's
     // Compress-Archive (a common way for Windows-based dealers to build this zip) writes '\'
     // instead — normalize both so folder/file grouping works regardless of how the zip was made.
@@ -47,69 +92,111 @@ async function extractImageEntries(zipBuffer: Buffer): Promise<Map<string, ZipIm
     const extension = fileName.split('.').pop() ?? '';
     const mimeType = workerStorageConfig.mimeTypeForExtension(extension);
     if (!mimeType) continue;
-    const declaredSize = Number((entry as unknown as { vars?: { uncompressedSize?: number } }).vars?.uncompressedSize ?? 0);
-    if (declaredSize > workerStorageConfig.maxImageBytes || expandedBytes + declaredSize > workerStorageConfig.maxZipExpandedBytes) throw new Error('The vehicle photos archive exceeds its expanded size limit.');
-    const buffer = await entry.buffer();
+    photoFilesInFolders += 1;
+    const remainingBudget = workerStorageConfig.maxZipExpandedBytes - expandedBytes;
+    const perEntryLimit = Math.max(0, Math.min(workerStorageConfig.maxImageBytes, remainingBudget));
+    const buffer = await readEntryWithinLimit(entry, perEntryLimit);
+    if (buffer === null) throw new InvalidArchiveError('The vehicle photos archive exceeds its expanded size limit.');
     expandedBytes += buffer.length;
-    if (buffer.length > workerStorageConfig.maxImageBytes || expandedBytes > workerStorageConfig.maxZipExpandedBytes) throw new Error('The vehicle photos archive exceeds its expanded size limit.');
-    const actualMimeType = imageMimeType(buffer);
-    if (!actualMimeType) continue;
+    // The bytes decide, not the extension: a PNG saved as .jpg is still a usable photo, and every
+    // photo is re-encoded from its decoded pixels below anyway.
+    if (!imageMimeType(buffer)) continue;
+    // Store only a re-encoded copy; files that fail to decode or exceed the pixel cap are skipped.
+    const webp = await reencodeListingPhoto(buffer);
+    if (!webp) continue;
     const folder = normalizeRegistrationNumber(folderRaw);
     const list = grouped.get(folder) ?? [];
-    list.push({ fileName, buffer, mimeType: actualMimeType });
+    list.push({ fileName, path: segments.join('/'), contentHash: createHash('sha256').update(buffer).digest('hex'), buffer: webp, thumb: await makeListingThumb(webp), mimeType: 'image/webp' });
     grouped.set(folder, list);
   }
+  // No photo file inside any folder means the zip does not follow the required layout. A silent
+  // "completed, 0 photos" would hide that from the dealer, and retrying cannot help.
+  if (photoFilesInFolders === 0) throw new InvalidArchiveError('No vehicle photos were found in the archive. Put each vehicle\'s photos in a folder named exactly like its registration number (e.g. CAX-1234/photo1.jpg), using JPEG, PNG, or WebP files.');
   return grouped;
 }
 
-// Uploads one image buffer to S3 and returns its ListingImage metadata.
-async function uploadImage(listingId: string, order: number, entry: ZipImageEntry): Promise<WorkerListingImage> {
-  const extension = entry.mimeType === 'image/jpeg' ? 'jpg' : entry.mimeType.split('/')[1];
-  const key = `${listingId}-${randomUUID()}.${extension}`;
-  await workerStorageClient.send(new PutObjectCommand({ Bucket: workerStorageConfig.bucket, Key: key, Body: entry.buffer, ContentType: entry.mimeType, CacheControl: 'public, max-age=31536000, immutable' }));
-  return { key, url: `${workerStorageConfig.publicUrl}/${encodeURIComponent(key)}`, alt: entry.fileName, order };
+// The same photo from the same upload always gets the same storage key, so a retry after a crash
+// overwrites the object it already wrote (no orphans) and recognises photos it already attached.
+// Formatted like a UUID to satisfy the public image-key format.
+export function deterministicImageKey(uploadJobId: string, listingId: string, entry: Pick<ZipImageEntry, 'path' | 'contentHash'>) {
+  const hex = createHash('sha256').update(`${uploadJobId}\n${listingId}\n${entry.path}\n${entry.contentHash}`).digest('hex');
+  return `${listingId}-${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}.webp`;
+}
+
+// Uploads one re-encoded photo (and its small copy) under its deterministic key and returns its ListingImage metadata.
+async function uploadImage(key: string, order: number, entry: ZipImageEntry): Promise<WorkerListingImage> {
+  const put = (objectKey: string, body: Buffer) => workerStorageClient.send(new PutObjectCommand({ Bucket: workerStorageConfig.bucket, Key: objectKey, Body: body, ContentType: entry.mimeType, CacheControl: 'public, max-age=31536000, immutable' }));
+  await Promise.all([put(fullObjectKey(key), entry.buffer), ...(entry.thumb ? [put(thumbObjectKey(key), entry.thumb)] : [])]);
+  return {
+    key, url: `${workerStorageConfig.publicUrl}/${encodeURIComponent(key)}`,
+    ...(entry.thumb ? { thumbUrl: `${workerStorageConfig.publicUrl}/${LISTING_IMAGE_THUMB_SUBPATH}${encodeURIComponent(key)}` } : {}),
+    alt: entry.fileName, order,
+  };
 }
 
 // Downloads, extracts, matches, and attaches a vehicle-photos zip to the listings this exact
 // upload job created — matched by normalized registration number (the zip's folder names), so a
-// zip can never attach photos to another dealer's or another job's listings.
+// zip can never attach photos to another dealer's or another job's listings. Safe to retry at
+// any point: photos already attached by an earlier attempt are recognised by their key.
 export async function processInventoryImages(uploadJobId: string) {
-  const job = await claimPendingImageProcessing(uploadJobId);
-  if (!job) throw new Error('The image-processing job is missing or is not pending.');
-  const claimed = job as unknown as { imageZipStorageKey: string; dealerId: Types.ObjectId };
+  const owner = randomUUID();
+  const job = await claimPendingImageProcessing(uploadJobId, owner);
+  if (!job) {
+    // See the matching comment in uploadJob.service.ts's extractInventoryUpload — a claim miss
+    // here is not this attempt's problem to solve; the lease reaper handles genuine recovery.
+    console.warn('Image-processing job claim missed; already claimed, terminal, or lease still active.', { uploadJobId });
+    return { uploadJobId, stage: 'skipped' as const };
+  }
+  const claimed = job as unknown as { imageZipStorageKey: string; dealerId: Types.ObjectId; imageAttemptCount: number };
+  const lease = holdLease(uploadJobId, owner, renewImageLease);
+  trackLease(uploadJobId, 'images', owner);
   try {
     const zipBuffer = await downloadZipBuffer(claimed.imageZipStorageKey);
     const grouped = await extractImageEntries(zipBuffer);
-    // An empty group means every entry was root-level, non-image, or an unsupported format — the
-    // zip's shape didn't match the required "RegistrationNumber/photo.jpg" layout at all, so a
-    // silent 0/0 "completed" result would hide a genuine problem from the dealer.
-    if (grouped.size === 0) throw new Error('No vehicle photos were found in the archive. Each vehicle\'s photos must be inside a folder named exactly like its registration number (e.g. CAX-1234/photo1.jpg), using JPEG, PNG, or WebP files.');
     const listings = await findListingsByUploadJob(new Types.ObjectId(uploadJobId));
     const listingsByRegistration = new Map(listings.map((listing: any) => [listing.normalizedRegistrationNumber as string, listing]));
 
     let imagesAttached = 0; let matchedListings = 0; const unmatchedFolders: string[] = [];
     for (const [folder, entries] of grouped) {
+      lease.assertHeld();
       const listing = listingsByRegistration.get(folder);
       if (!listing) { unmatchedFolders.push(folder); continue; }
       matchedListings += 1;
-      const existingCount = ((listing as any).images as unknown[] | undefined)?.length ?? 0;
-      const capacity = Math.max(0, workerStorageConfig.maxListingImages - existingCount);
-      const accepted = entries.slice(0, capacity);
-      if (!accepted.length) continue;
-      const images = await Promise.all(accepted.map((entry, index) => uploadImage(String((listing as any)._id), existingCount + index, entry)));
+      const listingId = String((listing as any)._id);
+      const existing = ((listing as any).images as Array<{ key: string }> | undefined) ?? [];
+      const existingKeys = new Set(existing.map((image) => image.key));
+      const keyed = entries.map((entry) => ({ entry, key: deterministicImageKey(uploadJobId, listingId, entry) }));
+      const alreadyAttached = keyed.filter(({ key }) => existingKeys.has(key));
+      const capacity = Math.max(0, workerStorageConfig.maxListingImages - existing.length);
+      const toAttach = keyed.filter(({ key }) => !existingKeys.has(key)).slice(0, capacity);
+      imagesAttached += alreadyAttached.length;
+      if (!toAttach.length) continue;
+      const images = await Promise.all(toAttach.map(({ entry, key }, index) => uploadImage(key, existing.length + index, entry)));
       const result = await appendListingImages((listing as any)._id, images, workerStorageConfig.maxListingImages);
-      if (!result || result.modifiedCount !== 1) continue;
-      imagesAttached += images.length;
+      if (result?.modifiedCount === 1) { imagesAttached += images.length; continue; }
+      // Not attached (the listing changed meanwhile): remove the objects so none are left untracked.
+      await Promise.allSettled(images.flatMap(({ key }) => [fullObjectKey(key), thumbObjectKey(key)].map((objectKey) => workerStorageClient.send(new DeleteObjectCommand({ Bucket: workerStorageConfig.bucket, Key: objectKey })))));
     }
 
-    await completeImageProcessing(uploadJobId, { imagesAttached, matchedListings, unmatchedFolders });
+    lease.assertHeld();
+    if (!(await completeImageProcessing(uploadJobId, owner, { imagesAttached, matchedListings, unmatchedFolders }))) throw new LeaseLostError(uploadJobId);
     const status = unmatchedFolders.length > 0 ? 'completedWithErrors' as const : 'completed' as const;
     await notifyImageProcessingResult(claimed.dealerId, status, unmatchedFolders.length);
     return { uploadJobId, imagesAttached, matchedListings, unmatchedFolders, stage: 'completed' as const };
   } catch (error) {
+    if (error instanceof LeaseLostError) {
+      console.warn(error.message);
+      return { uploadJobId, stage: 'lease-lost' as const };
+    }
     const message = error instanceof Error ? error.message : 'Unknown image processing failure.';
-    await failImageProcessing(uploadJobId, message);
-    await notifyImageProcessingResult(claimed.dealerId, 'failed', undefined, message);
-    throw error;
+    if (!(error instanceof InvalidArchiveError) && isTransientError(error) && claimed.imageAttemptCount < env.JOB_MAX_RECLAIM_ATTEMPTS) {
+      await retryImageProcessing(uploadJobId, owner, message);
+      throw error; // BullMQ schedules the next attempt with exponential backoff and jitter.
+    }
+    if (await failImageProcessing(uploadJobId, message, owner)) await notifyImageProcessingResult(claimed.dealerId, 'failed', undefined, message);
+    return { uploadJobId, stage: 'failed' as const, message };
+  } finally {
+    lease.stop();
+    untrackLease(owner);
   }
 }

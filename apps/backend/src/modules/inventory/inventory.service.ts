@@ -5,7 +5,9 @@ import { AppError } from '../../shared/errors/AppError.js';
 import { errorCodes } from '../../shared/errors/errorCodes.js';
 import { buildPaginationMeta } from '../../shared/utils/pagination.js';
 import { enqueueInventoryImages, enqueueInventoryUpload } from './inventory.queue.js';
-import { createUploadJob, deletePendingUploadJob, findDealerUploadJob, listDealerUploadJobs, listRejectedRecordsForUpload, markImageProcessingPending, resetImageProcessing } from './inventory.repository.js';
+import { logger } from '../../config/logger.js';
+import { assertDealerListingCapacity } from '../marketplace/listing.service.js';
+import { createUploadJob, findDealerUploadJob, listDealerUploadJobs, listRejectedRecordsForUpload, markImageProcessingPending, resetFailedImageProcessing, resetFailedUploadJob } from './inventory.repository.js';
 import { deleteInventoryCsv, deleteInventoryImagesZip, storeInventoryCsv, storeInventoryImagesZip } from './inventory.storage.js';
 import type { ListInventoryUploadsQuery, ListRejectedRecordsQuery } from './inventory.validation.js';
 import { validateInventoryCsv, validateInventoryImagesZip } from './inventory.validation.js';
@@ -23,21 +25,36 @@ function serializeUpload(record: Record<string, any>) {
   };
 }
 
+// Enqueues promptly when Redis is reachable. A slow or failed enqueue never fails the request: the
+// MongoDB job is already durable, and the worker re-queues any job left pending too long.
+async function enqueueOrDefer(enqueue: () => Promise<void>, uploadJobId: string) {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    await Promise.race([enqueue(), new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('Queue did not respond within 3 seconds.')), 3_000); })]);
+  } catch (error) {
+    logger.warn({ uploadJobId, message: error instanceof Error ? error.message : String(error) }, 'Enqueue deferred; the worker reconciler will queue this job.');
+  } finally { clearTimeout(timer); }
+}
+
 // Converts a rejected-record document into the dealer-safe API representation.
 function serializeRejectedRecord(record: Record<string, any>) { return { id: String(record._id), uploadJobId: String(record.uploadJobId), rowNumber: record.rowNumber, originalData: record.originalData, errors: record.errors, reason: record.reason, createdAt: record.createdAt }; }
 
-// Stores, records, and enqueues one accepted CSV with compensation on failure.
+// Stores, records, and enqueues one accepted CSV. Once the MongoDB job exists the upload is
+// accepted: if Redis is unavailable the job simply stays pending and the worker's reconciler
+// queues it later, instead of the upload being thrown away.
 export async function createInventoryUpload(dealerId: Types.ObjectId, category: VehicleCategory, file: Express.Multer.File) {
   const validation = validateInventoryCsv(file, category);
   if (!validation.valid) throw new AppError(400, errorCodes.validation, validation.message);
+  // Rows beyond the dealer's remaining capacity are rejected by the worker; a dealer already at
+  // the limit is told now instead of after processing.
+  await assertDealerListingCapacity(dealerId);
   const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
   const storageKey = `inventory/${dealerId}/${randomUUID()}-${safeName}`;
   await storeInventoryCsv(storageKey, file);
   let job;
   try { job = await createUploadJob({ dealerId, category, fileName: file.originalname, fileSize: file.size, storageKey }); }
   catch (error) { await Promise.allSettled([deleteInventoryCsv(storageKey)]); throw error; }
-  try { await enqueueInventoryUpload(job._id.toString()); }
-  catch (error) { await Promise.allSettled([deletePendingUploadJob(job._id.toString(), dealerId), deleteInventoryCsv(storageKey)]); throw error; }
+  await enqueueOrDefer(() => enqueueInventoryUpload(job._id.toString()), job._id.toString());
   return serializeUpload(job.toObject() as Record<string, any>);
 }
 
@@ -60,10 +77,25 @@ export async function attachInventoryImagesZip(dealerId: Types.ObjectId, uploadI
   let job;
   try {
     job = await markImageProcessingPending(uploadId, dealerId, { fileName: file.originalname, storageKey });
-    if (!job) throw new AppError(409, errorCodes.conflict, 'Vehicle photos can only be attached once the CSV upload has finished processing.');
+    if (!job) throw new AppError(409, errorCodes.conflict, 'Vehicle photos can only be attached once the CSV upload has finished processing, and not while earlier photos are still being processed.');
   } catch (error) { await Promise.allSettled([deleteInventoryImagesZip(storageKey)]); throw error; }
-  try { await enqueueInventoryImages(uploadId); }
-  catch (error) { await Promise.allSettled([resetImageProcessing(uploadId, dealerId), deleteInventoryImagesZip(storageKey)]); throw error; }
+  await enqueueOrDefer(() => enqueueInventoryImages(uploadId), uploadId);
+  return serializeUpload(job.toObject() as Record<string, any>);
+}
+
+// Controlled retry of a failed CSV import, owned by this dealer.
+export async function retryDealerUpload(dealerId: Types.ObjectId, uploadId: string) {
+  const job = await resetFailedUploadJob(uploadId, dealerId);
+  if (!job) throw new AppError(409, errorCodes.conflict, 'Only a failed upload can be retried.');
+  await enqueueOrDefer(() => enqueueInventoryUpload(uploadId), uploadId);
+  return serializeUpload(job.toObject() as Record<string, any>);
+}
+
+// Controlled retry of failed photo processing for this dealer's already uploaded zip.
+export async function retryDealerUploadImages(dealerId: Types.ObjectId, uploadId: string) {
+  const job = await resetFailedImageProcessing(uploadId, dealerId);
+  if (!job) throw new AppError(409, errorCodes.conflict, 'Only failed photo processing can be retried.');
+  await enqueueOrDefer(() => enqueueInventoryImages(uploadId), uploadId);
   return serializeUpload(job.toObject() as Record<string, any>);
 }
 

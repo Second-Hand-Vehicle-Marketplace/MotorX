@@ -1,0 +1,9 @@
+# Known, reviewed findings in git history. Each line is a Gitleaks fingerprint.
+# Only add an entry after the secret has been rotated or confirmed harmless.
+
+# Old Firebase Web API key hard-coded as a fallback in commit 1ab0499 (2026-08-13).
+# Removed from the code since, and no longer the key in use. Firebase Web API keys are
+# public by design (they ship in the frontend bundle); it must still be restricted or
+# deleted in Google Cloud Console > APIs & Services > Credentials.
+1ab0499ab108b3599b44bb7424b9e39d7066195a:apps/backend/src/config/firebase.ts:gcp-api-key:5
+1ab0499ab108b3599b44bb7424b9e39d7066195a:apps/frontend/src/config/firebase.ts:gcp-api-key:7
