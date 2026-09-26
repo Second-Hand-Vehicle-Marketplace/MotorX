@@ -18,6 +18,16 @@ describe('inventory normalization', () => {
     expect(row.attributes).toMatchObject({ fuelType: 'plug_in_hybrid', transmission: 'one_speed_automatic', condition: 'brand_new' });
   });
 
+  it('restores a CSV title truncated to a prefix of make and model', () => {
+    const row = normalizeInventoryRow('car', { registrationNumber: 'CAF-1', title: 'Toyota Pre', make: 'Toyota', model: 'Premio', year: '2019', price: '1000000', mileageKm: '100', fuelType: 'petrol', transmission: 'automatic', bodyType: 'sedan', condition: 'used', location: 'Colombo' });
+    expect(row.title).toBe('Toyota Premio');
+  });
+
+  it('preserves a title with additional information instead of replacing it', () => {
+    const row = normalizeInventoryRow('car', { registrationNumber: 'CAF-2', title: 'Toyota Corolla 2020', make: 'Toyota', model: 'Corolla', year: '2020', price: '1000000', mileageKm: '100', fuelType: 'petrol', transmission: 'automatic', bodyType: 'sedan', condition: 'used', location: 'Colombo' });
+    expect(row.title).toBe('Toyota Corolla 2020');
+  });
+
   it('leaves optional powertrain fields unset when the CSV cell is blank', () => {
     const row = normalizeInventoryRow('car', { registrationNumber: 'CAE-2', title: 'EV', make: 'Nissan', model: 'Leaf', year: '2022', price: '1000000', mileageKm: '100', fuelType: 'electric', transmission: 'automatic', bodyType: 'hatchback', condition: 'used', location: 'Galle', engineCapacityCc: '', batteryCapacityKWh: '40', batteryRangeKm: '270' });
     expect(row.attributes).not.toHaveProperty('engineCapacityCc');

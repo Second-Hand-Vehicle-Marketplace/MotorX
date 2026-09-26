@@ -51,8 +51,8 @@ describe('inventory image processing', () => {
   it('matches a zip folder to a listing by normalized registration number and attaches images', async () => {
     mocks.unzipperOpenBuffer.mockResolvedValue({
       files: [
-        fakeEntry('CAX-1234/photo1.jpg', 'File', jpeg),
-        fakeEntry('CAX-1234/photo2.jpg', 'File', jpeg),
+        fakeEntry('CAX-1234/photo1.png', 'File', jpeg),
+        fakeEntry('CAX-1234/photo2.png', 'File', jpeg),
       ]
     });
     const listingId = new Types.ObjectId();
@@ -67,6 +67,16 @@ describe('inventory image processing', () => {
 
   it('groups entries whose zip path uses backslashes (PowerShell Compress-Archive) the same as forward slashes', async () => {
     mocks.unzipperOpenBuffer.mockResolvedValue({ files: [fakeEntry('CAX-1234\\photo1.jpg', 'File', jpeg)] });
+    const listingId = new Types.ObjectId();
+    mocks.findListings.mockResolvedValue([{ _id: listingId, normalizedRegistrationNumber: 'CAX1234', images: [] }]);
+
+    const result = await processInventoryImages(uploadJobId);
+
+    expect(result).toMatchObject({ imagesAttached: 1, matchedListings: 1, unmatchedFolders: [] });
+  });
+
+  it('matches images when the zip contains an extra wrapper folder', async () => {
+    mocks.unzipperOpenBuffer.mockResolvedValue({ files: [fakeEntry('PhotoArchive/CAX-1234/photo.jpg', 'File', jpeg)] });
     const listingId = new Types.ObjectId();
     mocks.findListings.mockResolvedValue([{ _id: listingId, normalizedRegistrationNumber: 'CAX1234', images: [] }]);
 
@@ -246,5 +256,17 @@ describe('inventory image processing', () => {
     expect(deterministicImageKey(uploadJobId, listingId, { path: 'CAX-1234/a.jpg', contentHash: 'abc' })).toBe(key);
     expect(deterministicImageKey(uploadJobId, listingId, { path: 'CAX-1234/a.jpg', contentHash: 'def' })).not.toBe(key);
     expect(key).toMatch(/^[a-f\d]{24}-[0-9a-f-]{36}\.webp$/); // accepted by the public image route
+  });
+
+  it('fails at once with an actionable reason (not a silent 0/0) when no photo is inside a folder', async () => {
+    mocks.unzipperOpenBuffer.mockResolvedValue({ files: [fakeEntry('readme.txt', 'File', Buffer.from('hello')), fakeEntry('photo.jpg', 'File', jpeg)] });
+
+    const result = await processInventoryImages(uploadJobId);
+
+    expect(result).toMatchObject({ stage: 'failed', message: expect.stringContaining('No vehicle photos were found') });
+    expect(mocks.failImage).toHaveBeenCalledWith(uploadJobId, expect.stringContaining('No vehicle photos were found'), expect.any(String));
+    expect(mocks.retryImage).not.toHaveBeenCalled(); // the layout is wrong; retrying cannot help
+    expect(mocks.completeImage).not.toHaveBeenCalled();
+    expect(mocks.findListings).not.toHaveBeenCalled();
   });
 });

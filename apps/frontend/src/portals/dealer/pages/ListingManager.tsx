@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { BulkListingAction, BulkListingActionResult } from '@motorx/shared-contracts';
-import { LISTING_IMAGE_ASPECT_RATIO } from '@motorx/shared-contracts';
+import { LISTING_IMAGE_ASPECT_RATIO, vehicleCategories } from '@motorx/shared-contracts';
 import { listingApi } from '@/features/listings/services/listingApi';
 import { ListingStatusBadge } from '@/features/listings/components/ListingStatusBadge';
 import { ListingPhoto } from '@/features/listings/components/ListingPhoto';
@@ -38,6 +38,7 @@ export const ListingManager: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const view: View = views.includes(searchParams.get('view') as View) ? searchParams.get('view') as View : 'all';
   const statusFilter = searchParams.get('status') ?? 'all';
+  const categoryFilter = searchParams.get('category') ?? 'all';
   const page = Math.max(1, Number(searchParams.get('page')) || 1);
   const [search, setSearch] = useState(searchParams.get('q') ?? '');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -60,13 +61,14 @@ export const ListingManager: React.FC = () => {
   }, [search]);
 
   // A selection only makes sense for the rows on screen.
-  useEffect(() => { setSelected(new Set()); }, [view, statusFilter, page, searchParams.get('q')]);
+  useEffect(() => { setSelected(new Set()); }, [view, statusFilter, categoryFilter, page, searchParams.get('q')]);
 
   const statsQuery = useQuery({ queryKey: ['my-listing-stats'], queryFn: () => listingApi.getMyListingStats() });
   const filters = {
     search: searchParams.get('q') || undefined,
     status: view === 'archived' ? 'archived' : view === 'all' && statusFilter !== 'all' ? statusFilter : undefined,
     stale: view === 'stale' ? true : undefined,
+    category: categoryFilter === 'all' ? undefined : categoryFilter,
   };
   const query = useQuery({ queryKey: ['my-listings', view, page, filters], queryFn: () => listingApi.getMyListings(page, PAGE_SIZE, filters) });
   const listings = query.data?.data ?? [];
@@ -132,6 +134,7 @@ export const ListingManager: React.FC = () => {
     <div className="glass-card listing-filters">
       <input className="form-input" type="search" aria-label="Search listings" placeholder="Search listings…" value={search} onChange={(e) => setSearch(e.target.value)} />
       {view === 'all' && <select className="form-select" aria-label="Status" value={statusFilter} onChange={(e) => setParams({ status: e.target.value === 'all' ? undefined : e.target.value })}><option value="all">All statuses</option><option value="draft">Draft</option><option value="active">Active</option><option value="sold">Sold</option></select>}
+      <select className="form-select" aria-label="Vehicle type" value={categoryFilter} onChange={(e) => setParams({ category: e.target.value === 'all' ? undefined : e.target.value })}><option value="all">All vehicle types</option>{vehicleCategories.map((category) => <option key={category} value={category}>{category.split('_').map((word) => word[0]!.toUpperCase() + word.slice(1)).join(' ')}</option>)}</select>
     </div>
 
     {message && <div role={message.kind === 'error' ? 'alert' : 'status'} className={`listing-message listing-message-${message.kind}`}>{message.text}</div>}

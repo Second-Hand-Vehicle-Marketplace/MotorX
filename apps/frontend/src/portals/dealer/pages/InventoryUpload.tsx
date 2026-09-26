@@ -116,7 +116,7 @@ export const InventoryUpload: React.FC = () => {
             {selectedFile && (
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
                 <button onClick={() => void handleStartUpload()} className="btn btn-primary btn-lg">
-                  Start Upload & ETL Processing
+                  Start Inventory Upload
                 </button>
               </div>
             )}
@@ -128,7 +128,7 @@ export const InventoryUpload: React.FC = () => {
               <div className="progress-fill" style={{ width: `${uploadProgress}%` }} />
             </div>
             <p style={{ fontSize: '0.875rem', color: 'var(--color-text-tertiary)' }}>
-              {uploadProgress}% uploaded — ETL processing continues in the background after upload completes.
+              {uploadProgress}% uploaded — processing continues in the background after upload completes.
             </p>
           </div>
         )}

@@ -65,10 +65,11 @@ function readEntryWithinLimit(entry: unzipper.File, limitBytes: number): Promise
   });
 }
 
-// Extracts image entries from the zip, grouped by their top-level folder name (the dealer's
-// registration number for that vehicle, per apps/frontend's upload instructions). Root-level
-// files (no folder), non-image files, and oversized images are silently skipped — a hand-built
-// zip may legitimately contain extras, and one bad file shouldn't fail the whole batch.
+// Extracts image entries from the zip, grouped by the folder that directly contains each photo
+// (the vehicle's registration number), so both CAX-1234/photo.jpg and an extra wrapper folder such
+// as Photos/CAX-1234/photo.jpg work. Root-level files (no folder), non-image files, and images that
+// cannot be decoded are skipped — a hand-built zip may contain extras, and one bad file shouldn't
+// fail the whole batch.
 async function extractImageEntries(zipBuffer: Buffer): Promise<Map<string, ZipImageEntry[]>> {
   let directory: Awaited<ReturnType<typeof unzipper.Open.buffer>>;
   try { directory = await unzipper.Open.buffer(zipBuffer); }
@@ -76,6 +77,7 @@ async function extractImageEntries(zipBuffer: Buffer): Promise<Map<string, ZipIm
   const grouped = new Map<string, ZipImageEntry[]>();
   let entryCount = 0;
   let expandedBytes = 0;
+  let photoFilesInFolders = 0;
   for (const entry of directory.files) {
     if (entry.type !== 'File') continue;
     entryCount += 1;
@@ -85,18 +87,20 @@ async function extractImageEntries(zipBuffer: Buffer): Promise<Map<string, ZipIm
     // instead — normalize both so folder/file grouping works regardless of how the zip was made.
     const segments = entry.path.split(/[/\\]/).filter(Boolean);
     if (segments.length < 2) continue;
-    const folderRaw = segments[0]!;
+    const folderRaw = segments[segments.length - 2]!;
     const fileName = segments[segments.length - 1]!;
     const extension = fileName.split('.').pop() ?? '';
     const mimeType = workerStorageConfig.mimeTypeForExtension(extension);
     if (!mimeType) continue;
+    photoFilesInFolders += 1;
     const remainingBudget = workerStorageConfig.maxZipExpandedBytes - expandedBytes;
     const perEntryLimit = Math.max(0, Math.min(workerStorageConfig.maxImageBytes, remainingBudget));
     const buffer = await readEntryWithinLimit(entry, perEntryLimit);
     if (buffer === null) throw new InvalidArchiveError('The vehicle photos archive exceeds its expanded size limit.');
     expandedBytes += buffer.length;
-    const actualMimeType = imageMimeType(buffer);
-    if (!actualMimeType || actualMimeType !== mimeType) continue;
+    // The bytes decide, not the extension: a PNG saved as .jpg is still a usable photo, and every
+    // photo is re-encoded from its decoded pixels below anyway.
+    if (!imageMimeType(buffer)) continue;
     // Store only a re-encoded copy; files that fail to decode or exceed the pixel cap are skipped.
     const webp = await reencodeListingPhoto(buffer);
     if (!webp) continue;
@@ -105,6 +109,9 @@ async function extractImageEntries(zipBuffer: Buffer): Promise<Map<string, ZipIm
     list.push({ fileName, path: segments.join('/'), contentHash: createHash('sha256').update(buffer).digest('hex'), buffer: webp, thumb: await makeListingThumb(webp), mimeType: 'image/webp' });
     grouped.set(folder, list);
   }
+  // No photo file inside any folder means the zip does not follow the required layout. A silent
+  // "completed, 0 photos" would hide that from the dealer, and retrying cannot help.
+  if (photoFilesInFolders === 0) throw new InvalidArchiveError('No vehicle photos were found in the archive. Put each vehicle\'s photos in a folder named exactly like its registration number (e.g. CAX-1234/photo1.jpg), using JPEG, PNG, or WebP files.');
   return grouped;
 }
 

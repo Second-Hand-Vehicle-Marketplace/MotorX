@@ -5,10 +5,10 @@ The report, `docs/MotorX_Test_Case_Register.csv` and `automated-test-register.cs
 
 | Artifact | Scope | Observed result |
 | --- | --- | --- |
-| `backend-results.json` | All 25 backend suites: unit, MongoDB/Redis integration and HTTP journeys (isolated Docker test stack) | 143 passed, 0 failed |
-| `worker-results.json` | All 14 worker suites, including the MongoDB job-safety suite and the 5,000-row benchmark (`RUN_BENCHMARKS=1`) | 90 passed, 0 failed |
+| `backend-results.json` | All 26 backend suites: unit, MongoDB/Redis integration and HTTP journeys (isolated Docker test stack) | 147 passed, 0 failed |
+| `worker-results.json` | All 14 worker suites, including the MongoDB job-safety suite and the 5,000-row benchmark (`RUN_BENCHMARKS=1`) | 94 passed, 0 failed |
 | `frontend-results.json` | All 13 frontend component suites (jsdom) | 50 passed, 0 failed |
-| `automated-test-register.csv` | Every automated test above, with its case group, level, status and duration | 283 tests |
+| `automated-test-register.csv` | Every automated test above, with its case group, level, status and duration | 291 tests |
 | `benchmark-output.txt` | Two consecutive runs of the 5,000-row import benchmark | 11.1 s and 11.2 s (target 120 s) |
 | `live-smoke-output.txt`, `live-smoke-results.json` | Read-only smoke test of the running development stack with real data (`scripts/smoke/live-stack-smoke.py`) | 16 passed, 1 failed (22 of 23 active listing photos only existed on an old server, finding F-01) |
 | `build-output.txt` | `npm run build --workspaces --if-present` | Exit code 0 |

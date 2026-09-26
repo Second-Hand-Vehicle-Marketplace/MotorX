@@ -39,8 +39,8 @@ def load(name):
 reports = {'backend': load('backend-results.json'), 'worker': load('worker-results.json'), 'frontend': load('frontend-results.json')}
 smoke = load('live-smoke-results.json')
 meta = load('run-metadata.json')
-assert (reports['backend']['numPassedTests'], reports['backend']['numTotalTests']) == (143, 143)
-assert (reports['worker']['numPassedTests'], reports['worker']['numTotalTests']) == (90, 90)
+assert (reports['backend']['numPassedTests'], reports['backend']['numTotalTests']) == (147, 147)
+assert (reports['worker']['numPassedTests'], reports['worker']['numTotalTests']) == (94, 94)
 assert (reports['frontend']['numPassedTests'], reports['frontend']['numTotalTests']) == (50, 50)
 TOTAL = sum(r['numTotalTests'] for r in reports.values())
 
@@ -88,7 +88,7 @@ table(['Item', 'Value'], [
 h('Revision History')
 table(['Date', 'Version', 'Description', 'Author'], [
     ['21 Sep 2026', '1.0', 'Initial MotorX plan, case register and 77-test automated baseline; integration and end-to-end work planned.', 'Group 23'],
-    [DATE_SHORT, VERSION, f'Re-executed all suites ({TOTAL} tests, all passing) on Node 24 against a real MongoDB replica set, Redis and MinIO. Added HTTP journey integration tests, frontend component tests, the 5,000-record benchmark, the worker crash drill and a live-stack smoke test. Covered new features: mobile layouts, Sinhala/Tamil, similar vehicles, recommendations, compare, stale-stock tools, bulk actions and small photo copies. Updated findings, coverage and risks.', 'Group 23']],
+    [DATE_SHORT, VERSION, f'Re-executed all suites ({TOTAL} tests, all passing) on Node 24 against a real MongoDB replica set, Redis and MinIO. Added HTTP journey integration tests, frontend component tests, the 5,000-record benchmark, the worker crash drill and a live-stack smoke test. Covered new features: mobile layouts, Sinhala/Tamil, similar vehicles, recommendations, compare, stale-stock tools, bulk actions and small photo copies. Merged main (version4) and retested: {TOTAL} tests passing. Updated findings, coverage and risks.', 'Group 23']],
     widths=[0.9, 0.55, 4.25, 1.15])
 h('Table of Contents')
 for item in ['1. Evaluation Mission and Test Motivation', '2. Target Test Items', '3. Test Approach', '3.1 Testing Techniques and Types',
@@ -103,7 +103,7 @@ p('Navigation: section headings appear in Word’s Navigation Pane. The contents
 h('1. Evaluation Mission and Test Motivation')
 p('MotorX connects buyers with dealer-owned second-hand vehicles and removes manual inventory entry through category-specific CSV imports, background processing and ZIP photo attachment. A React/TypeScript interface (with English, Sinhala and Tamil text) calls an Express modular backend; a separate worker processes BullMQ jobs, sends queued emails and runs scheduled maintenance. MongoDB stores application records, Redis backs the queue and rate limits, S3-compatible storage holds files, and Firebase provides authentication. Search combines structured filters with lexical and semantic ranking. [1]–[3]')
 p('Mission: establish, with evidence, whether the submission build supports the essential buyer, dealer and administrator journeys; keeps each dealer’s data private; never loses or duplicates inventory, including when a worker crashes mid-import; and meets the measurable SRS targets. Testing concentrates on the failures that matter most for a marketplace: unauthorized access, lost or duplicated listings, incorrect search results, stale stock shown as available, and visible failures during the demonstration.')
-p(f'This version is both the test plan and the evaluation report for the submission build. {TOTAL} automated tests were executed for it and all passed (backend 143, worker 90, frontend 50). A read-only smoke test also ran against the live application and real data. Browser journeys are fully specified in Section 3.4 but, at the time of writing, have not been executed by a person; they are reported as not executed, never as passed. A planned case is not a passed test.')
+p(f'This version is both the test plan and the evaluation report for the submission build. {TOTAL} automated tests were executed for it and all passed (backend 147, worker 94, frontend 50). A read-only smoke test also ran against the live application and real data. Browser journeys are fully specified in Section 3.4 but, at the time of writing, have not been executed by a person; they are reported as not executed, never as passed. A planned case is not a passed test.')
 p('Source priority: the SRS defines required behavior; the source code at the baseline commit is the implementation under test; the supplied Word template defines the report structure. Features beyond the SRS (mobile layouts, languages, recommendations, compare, stale-stock and bulk tools) are labelled “Extension” and tested to the same standard. Differences between the SRS and the implementation are recorded as findings instead of redefining expected results.')
 
 # ---------------------------------------------------------------- 2
@@ -126,7 +126,7 @@ p('Outside this campaign: payments, financing and chat (not implemented); penetr
 h('3. Test Approach')
 p('Testing runs bottom-up: fast unit and component tests on every change; integration tests against real MongoDB, Redis and object storage; HTTP journey tests that drive the real Express application and database end to end; system-level drills and a smoke test on running stacks; and finally browser journeys performed by a person. Techniques used: equivalence partitioning, boundary values, negative inputs, state-transition testing, two-dealer ownership checks, fault injection (killed worker, Redis down, storage errors) and before/after database inspection. A 200 response alone never counts as a pass; each case checks the persisted state or the visible result.')
 table(['Level', 'What it crosses', 'Tests', 'Result'], [
-    ['Unit / component', 'One function, schema, service or React component; databases, queues, storage and network replaced by fakes (jsdom for the frontend).', '226 in 40 files', 'Executed: 226/226 passed'],
+    ['Unit / component', 'One function, schema, service or React component; databases, queues, storage and network replaced by fakes (jsdom for the frontend).', '234 in 41 files', 'Executed: 234/234 passed'],
     ['Integration — data', 'Repository, service and migration code against a real MongoDB 7 replica set; rate limits against real Redis.', '24 in 8 files', 'Executed: 24/24 passed'],
     ['Integration — HTTP journeys', 'Real Express app, middleware, services and MongoDB through HTTP (supertest). Only Firebase token checks and S3 calls are replaced, because they are external services.', '32 in 3 files', 'Executed: 32/32 passed'],
     ['Performance', 'Real CSV pipeline, MongoDB and MinIO with 5,000 rows.', '1', 'Executed: passed (11.2 s)'],
@@ -210,11 +210,11 @@ unit = [
     ('apps/backend/src/shared/utils/pagination.test.ts', 'Pagination metadata', 'FR-SEARCH-06', 'Partial final page; empty collection.', 'Build pagination metadata.', 'Correct page counts; zero pages when empty.'),
     ('apps/backend/src/shared/middleware/verifyFirebaseToken.test.ts', 'Token verification cache', 'FR-USER-07–09; PSR-08', 'Valid, revoked, expiring and missing tokens.', 'Call the middleware repeatedly with a mocked Firebase Admin SDK.', 'Firebase (with revocation) checked once per cache period; never trusted past token expiry; failures not cached.'),
     ('apps/worker/src/pipeline/extract.test.ts', 'CSV extraction', 'FR-ETL-05–06', 'Multi-batch CSV stream; wrong column count.', 'Stream records and record progress.', 'Bounded batches with cumulative progress; malformed rows fail.'),
-    ('apps/worker/src/pipeline/normalize.test.ts', 'Vehicle normalization', 'FR-ETL-07,23', 'Whitespace, enum aliases, price suffixes, blank optional cells, motorcycle rows.', 'Normalize rows per category.', 'Consistent values; blanks stay unset; category-specific attributes.'),
+    ('apps/worker/src/pipeline/normalize.test.ts', 'Vehicle normalization', 'FR-ETL-07,23', 'Whitespace, enum aliases, price suffixes, blank optional cells, motorcycle rows, titles cut short to a prefix of make and model.', 'Normalize rows per category.', 'Consistent values; blanks stay unset; category-specific attributes; a truncated title such as “Toyota Pre” becomes “Toyota Premio”, while a longer title is kept.'),
     ('apps/worker/src/pipeline/transform.test.ts', 'Batch transformation', 'FR-ETL-08–17; RR-05', 'Mixed valid/invalid rows; electric car row.', 'Prepare a batch with known starting row numbers.', 'Valid rows kept; invalid rows isolated with their CSV row numbers.'),
     ('apps/worker/src/pipeline/validate.test.ts', 'Category and powertrain rules', 'FR-MARKET-03; FR-ETL-08–11', 'Petrol, diesel, hybrid, electric, plug-in hybrid cars and five other categories.', 'Validate valid and invalid combinations.', 'Engine or battery data required as appropriate; field-level errors returned.'),
     ('apps/worker/src/services/uploadJob.service.test.ts', 'CSV ETL orchestration', 'FR-ETL-13–22,31–33; RR-06–08', 'Mocked storage/repositories: mixed rows, malformed CSV, duplicates, temporary storage failure, exhausted attempts, crash mid-import, listing limit, lost lease.', 'Run the import service and inspect writes and counters.', 'Accurate counters; permanent vs temporary failures handled differently; resumes from the last checkpoint with no row imported twice; stops when the lease is lost.'),
-    ('apps/worker/src/services/imageProcessing.service.test.ts', 'ZIP photo processing', 'FR-MARKET-12–16; RR-06; Extension (small copies)', 'ZIPs with slash/backslash paths, unknown folders, root files, oversize entries, fake and huge images, storage errors, retries.', 'Process ZIPs with mocked storage and repositories.', 'Photos matched by normalized plate, cleaned and resized, an 800 px copy stored and linked; unsafe archives fail at once; retries never attach a photo twice.'),
+    ('apps/worker/src/services/imageProcessing.service.test.ts', 'ZIP photo processing', 'FR-MARKET-12–16; RR-06; Extension (small copies)', 'ZIPs with slash/backslash paths, an extra wrapper folder, photos whose extension does not match their content, unknown folders, root files, oversize entries, fake and huge images, storage errors, retries, and a ZIP with no photo in any folder.', 'Process ZIPs with mocked storage and repositories.', 'Photos matched by the folder that contains them (normalized plate), cleaned and resized, an 800 px copy stored and linked; a ZIP with no photos in folders fails at once with instructions; unsafe archives fail at once; retries never attach a photo twice.'),
     ('apps/worker/src/services/jobLease.test.ts', 'Job lease renewal', 'RR-06–08', 'Long-running job; takeover by another worker; renewal error; job end.', 'Hold a lease with fake timers.', 'Lease renewed every third of its duration; loss detected; temporary errors tolerated; renewal stops at the end.'),
     ('apps/worker/src/services/transientError.test.ts', 'Retry classification', 'RR-06–08', 'Network, throttling, 5xx, MongoDB unreachable; missing file, access denied, parse and duplicate errors.', 'Classify each error.', 'Only temporary failures are retried.'),
     ('apps/worker/src/jobs/reaper.job.test.ts', 'Lost-job reconciliation', 'FR-ETL-03; RR-06–08', 'Pending uploads with missing, waiting, delayed or active queue messages; exhausted budgets.', 'Run one reaper cycle with mocked queue.', 'Lost jobs re-queued under the right job ID; jobs with a live message untouched; exhausted jobs failed instead of looping.'),
@@ -233,11 +233,12 @@ unit = [
     ('apps/frontend/src/features/compare/compare.test.tsx', 'Compare vehicles', 'Extension (compare)', 'Four vehicles; two vehicles with different price/year/mileage; one unavailable.', 'Add to compare, open comparison.', 'At most three; full list explained; best price, year and mileage highlighted; unavailable vehicle stated.'),
     ('apps/frontend/src/shared/components/mobileLayout.test.tsx', 'Mobile navigation and card tables', 'UR-01–04; Extension (mobile)', 'Portal with two pages; table with two columns.', 'Open menu, press Escape, choose a page; render a table.', 'Drawer opens with focus inside; closes on Escape (focus returns) and after navigation; every cell labelled with its column.'),
     ('apps/frontend/src/shared/i18n/i18n.test.tsx', 'Sinhala and Tamil', 'Extension (languages)', 'All dictionaries; Tamil browser preference.', 'Compare dictionaries; switch language; reload.', 'Every message translated with identical placeholders; whole site switches, page lang set, choice remembered; Tamil chosen automatically for a Tamil browser.'),
-    ('apps/frontend/src/shared/utils/phone.test.ts', 'WhatsApp number formatting', 'Extension (mobile contact)', 'Local, +94, 9-digit, foreign and invalid numbers.', 'Convert numbers and build links.', 'Sri Lankan numbers get 94; foreign numbers kept; undialable numbers give no link.')]
+    ('apps/frontend/src/shared/utils/phone.test.ts', 'WhatsApp number formatting', 'Extension (mobile contact)', 'Local, +94, 9-digit, foreign and invalid numbers.', 'Convert numbers and build links.', 'Sri Lankan numbers get 94; foreign numbers kept; undialable numbers give no link.'),
+    ('apps/backend/src/modules/inventory/inventory.queue.test.ts', 'Queue publishing for repeat photo uploads', 'FR-UPLOAD-08; RR-06–08', 'Existing queue jobs that are completed, failed, waiting, active or delayed.', 'Publish CSV and photo jobs with a mocked queue.', 'A finished job is removed and queued again under the same ID, so photos attached a second time are processed; a job still waiting or running is never duplicated (finding F-09).')]
 unit_total = 0
 for k, (rel, title, refs, pre, steps, expected) in enumerate(unit, 1):
     unit_total += automated_case(f'UT-{k:02}', rel, title, refs, pre, steps, expected)
-assert unit_total == 226, unit_total
+assert unit_total == 234, unit_total
 p(f'Unit and component result: {unit_total} tests in {len(unit)} files, all passed.')
 
 # ---------------------------------------------------------------- 3.3 integration
@@ -347,8 +348,8 @@ table(['Fixture', 'Contents'], [
     ['Images and documents', 'Generated with sharp (GPS EXIF, rotation, 41 MP bomb) and hand-built PDFs (JavaScript, launch action, embedded file).'],
     ['Browser journeys', 'Synthetic dealer and buyer accounts in the test Firebase project; never real customer documents.']])
 p('Commands used for this report (repository root):')
-code('docker compose -f compose.yml -f compose.test.yml run --rm backend      # 143 backend tests\n'
-     'docker compose -f compose.yml -f compose.test.yml run --rm -e RUN_BENCHMARKS=1 worker   # 90 worker tests incl. benchmark\n'
+code('docker compose -f compose.yml -f compose.test.yml run --rm backend      # 147 backend tests\n'
+     'docker compose -f compose.yml -f compose.test.yml run --rm -e RUN_BENCHMARKS=1 worker   # 94 worker tests incl. benchmark\n'
      'cd apps/frontend; npx vitest run                                          # 50 frontend tests\n'
      'npm run build --workspaces --if-present\n'
      'bash scripts/drills/kill-worker-mid-import.sh                             # crash drill (test stack)\n'
@@ -360,7 +361,7 @@ h('3.7 Entry, Exit and Suspension Criteria', 2)
 table(['Gate', 'Criteria'], [
     ['Entry', 'Baseline commit recorded; dependencies installed; build passes; isolated test stack healthy with a replica-set primary; fixtures and test accounts available.'],
     ['Per-case pass', 'Every expected outcome observed and evidence linked. A partial run, an unavailable dependency or a missing feature is never a pass.'],
-    ['Exit (submission)', 'All automated suites pass (met: 283/283); all Critical and High browser journeys executed and passed; no open Critical/High findings or each one accepted by the team with a workaround; performance evidence for PSR-05 (met) and PSR-01–03 recorded or listed as unmet.'],
+    ['Exit (submission)', 'All automated suites pass (met: 291/291); all Critical and High browser journeys executed and passed; no open Critical/High findings or each one accepted by the team with a workaround; performance evidence for PSR-05 (met) and PSR-01–03 recorded or listed as unmet.'],
     ['Suspend', 'Wrong database or storage target, unreliable fixtures, unavailable critical dependency, suspected data corruption.'],
     ['Resume', 'Cause fixed; isolation rechecked; smoke test passes; affected cases rerun.']])
 p('Severity: Critical = unauthorized access or data loss; High = essential journey blocked or wrong inventory state; Medium = degraded with a workaround; Low = presentation only. Each finding records baseline, case ID, steps, expected and actual results, evidence and severity, and is retested with its neighbouring cases after the fix.')
@@ -400,7 +401,7 @@ for c in cases:
     by_level[lvl][0] += 1
     by_level[lvl][1] += done
 table(['Evaluation item', 'Observed result', 'Interpretation'], [
-    ['Unit / component', f'{len(unit)} files; 226 passed; 0 failed.', 'Business rules, schemas, security helpers, worker services and React components behave as specified.'],
+    ['Unit / component', f'{len(unit)} files; 234 passed; 0 failed.', 'Business rules, schemas, security helpers, worker services and React components behave as specified.'],
     ['Integration — data', '8 files; 24 passed; 0 failed.', 'Real MongoDB constraints, leases, audit, photo URL updates and Redis limits hold.'],
     ['Integration — HTTP journeys', '3 files; 32 passed; 0 failed.', 'Complete API use cases work through all middleware with correct authorization and stored results.'],
     ['Performance (PSR-05)', '5,000 rows in 11.1–11.2 s.', 'Meets the 120 s target by a wide margin on the test laptop.'],
@@ -416,8 +417,10 @@ table(['ID', 'Finding', 'Severity / status', 'Action'], [
     ['F-03', 'Photos uploaded before small copies existed had no 800 px copy, so phones downloaded the full photo.', 'Low / Fixed for all 91 stored photos', 'Migration run on 26 Sep created 90 copies (1 in an earlier attempt); a second run found nothing left to do. Remaining photos follow F-01.'],
     ['F-04', 'SRS FR-NOTIFY-06 asks for completion emails; the implementation emails only failed or partly failed imports (clean completion is in-app only).', 'Medium / Decision needed', 'Team to confirm the policy; test the agreed behavior in IT-13.'],
     ['F-05', 'Sinhala and Tamil text was written without native-speaker review.', 'Medium / Open', 'Review during E2E-13 and record corrections.'],
-    ['F-06', 'Photo retry after a failed upload (v1.0 finding): Create could be pressed again.', 'Low / Mitigated', 'A “Retry images” link now opens the saved listing; a second Create is refused as a duplicate. Confirm in E2E-05.'],
+    ['F-06', 'Photo retry after a failed upload (v1.0 finding): Create could be pressed again.', 'Low / Fixed', 'Merged from main (version4): a retry now updates the saved listing and uploads only the photos still pending (“Retry Uploads”). Confirm in E2E-05.'],
     ['F-07', 'Dealer profile editing and resubmission after rejection were missing in v1.0.', '— / Resolved', 'Implemented and covered by IT-09, UT-31 and UT-32.'],
+    ['F-09', 'Attaching photos to the same upload a second time did nothing: the queue kept the finished job and ignored a new one with the same ID, leaving the status “pending”. Reported by a teammate on main (version4).', 'High / Fixed', 'Finished jobs are now removed and queued again under the same ID (the reaper relies on that ID); covered by UT-41. The teammate’s random-ID fix was not used because it would stop the reaper finding lost jobs.'],
+    ['F-10', 'Merging main (version4) into this branch: 16 files conflicted, because both branches built dealer profile editing, resubmission and listing-manager changes. The automatic merge also produced duplicate code that would not compile and a review-history change that would make approvals fail.', 'High (integration) / Resolved', 'This branch’s tested versions kept for the overlapping features; the teammate’s unique fixes (F-06, F-09, ZIP wrapper folders, empty-ZIP message, title restoration, category filter, archived count) ported with tests; full suites rerun (291/291).'],
     ['F-08', 'The photo migration crashed on its first database write: photo keys contain dots, which MongoDB refused inside the update expression. The dry run and the fake-storage tests could not show this. No data was changed.', 'High (tooling) / Fixed', 'Update rewritten to match keys safely; new real-MongoDB test IT-11; migration then completed (0 failures) and a second run changed nothing.']],
     widths=[0.45, 3.1, 1.25, 2.05])
 
@@ -427,7 +430,7 @@ table(['Requirement area', 'Cases', 'Coverage evidence'], [
     ['FR-USER-01–12 / PSR-08–09', 'UT-15, UT-28–30; IT-08; E2E-01, E2E-11; IT-12 planned', 'Authorization, suspension, cache isolation and token handling executed; real Firebase pending.'],
     ['FR-DEALER-01–13', 'UT-04, UT-05, UT-31, UT-32; IT-01, IT-05, IT-09; E2E-02, E2E-03', 'Application, documents, review, resubmission and profile editing executed at API level; browser pending.'],
     ['FR-MARKET-01–16', 'UT-08–11, UT-21, UT-36; IT-03, IT-04, IT-10; E2E-04, E2E-05, E2E-07', 'Lifecycle, uniqueness, photos and details executed; browser pending; F-01 open.'],
-    ['FR-UPLOAD-01–08', 'UT-06, UT-07, UT-33; IT-14 planned; E2E-06', 'Validation, acceptance, retry and publish-all executed; live queue-to-worker run pending.'],
+    ['FR-UPLOAD-01–08', 'UT-06, UT-07, UT-33, UT-41; IT-14 planned; E2E-06', 'Validation, acceptance, retry and publish-all executed; live queue-to-worker run pending.'],
     ['FR-ETL-01–33 / RR-02–08', 'UT-16–25; IT-03, IT-07; E2E-A1; NF-01', 'Pipeline, leases, idempotency, retries, reaper, crash recovery and throughput executed.'],
     ['FR-SEARCH-01–20', 'UT-12, UT-14; IT-10; E2E-A2, E2E-07; IT-15, NF-06 planned', 'Analysis, filters and live search executed; relevance dataset pending.'],
     ['FR-NOTIFY-01–07', 'UT-25, UT-27; E2E-10, E2E-14; IT-13 planned', 'Outbox retries and reminders executed; real SMTP pending; F-04 decision.'],

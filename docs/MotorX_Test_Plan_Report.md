@@ -10,8 +10,8 @@ Version 2.0 • Group 23 • 26 September 2026
 | Document | Master Test Plan and Test Evaluation Report |
 | Version / date | 2.0 / 26 September 2026 |
 | Prepared for | Group 23 — final submission |
-| Baseline | ffac7f9d5dfc7112ff82cd482f37030bf7874344 (ffac7f9 plus uncommitted fixes: benchmark clean-up order (F-02) and migration URL update (F-08) with its real-MongoDB test; commit them with this report) |
-| Status | 283 automated unit, integration and system tests executed and passed; live-stack smoke executed; browser end-to-end journeys specified for manual execution by the team. |
+| Baseline | ffac7f9d5dfc7112ff82cd482f37030bf7874344 (merge of origin/main (aafca89, version4) into dewni2 (48c99be), conflicts resolved and retested; commit the merge with this report) |
+| Status | 291 automated unit, integration and system tests executed and passed; live-stack smoke executed; browser end-to-end journeys specified for manual execution by the team. |
 | Template | 6 Template for Test plan.docx (Rational Unified Process). Its six main sections and eight technique categories are kept; Sections 3.2–3.8 add the MotorX test cases by level. |
 | Approval | Project team / supervisor review pending; no approval is implied by this report. |
 
@@ -20,7 +20,7 @@ Version 2.0 • Group 23 • 26 September 2026
 | Date | Version | Description | Author |
 | --- | --- | --- | --- |
 | 21 Sep 2026 | 1.0 | Initial MotorX plan, case register and 77-test automated baseline; integration and end-to-end work planned. | Group 23 |
-| 26 Sep 2026 | 2.0 | Re-executed all suites (283 tests, all passing) on Node 24 against a real MongoDB replica set, Redis and MinIO. Added HTTP journey integration tests, frontend component tests, the 5,000-record benchmark, the worker crash drill and a live-stack smoke test. Covered new features: mobile layouts, Sinhala/Tamil, similar vehicles, recommendations, compare, stale-stock tools, bulk actions and small photo copies. Updated findings, coverage and risks. | Group 23 |
+| 26 Sep 2026 | 2.0 | Re-executed all suites (291 tests, all passing) on Node 24 against a real MongoDB replica set, Redis and MinIO. Added HTTP journey integration tests, frontend component tests, the 5,000-record benchmark, the worker crash drill and a live-stack smoke test. Covered new features: mobile layouts, Sinhala/Tamil, similar vehicles, recommendations, compare, stale-stock tools, bulk actions and small photo copies. Merged main (version4) and retested: 291 tests passing. Updated findings, coverage and risks. | Group 23 |
 
 ## Table of Contents
 
@@ -64,7 +64,7 @@ MotorX connects buyers with dealer-owned second-hand vehicles and removes manual
 
 Mission: establish, with evidence, whether the submission build supports the essential buyer, dealer and administrator journeys; keeps each dealer’s data private; never loses or duplicates inventory, including when a worker crashes mid-import; and meets the measurable SRS targets. Testing concentrates on the failures that matter most for a marketplace: unauthorized access, lost or duplicated listings, incorrect search results, stale stock shown as available, and visible failures during the demonstration.
 
-This version is both the test plan and the evaluation report for the submission build. 283 automated tests were executed for it and all passed (backend 143, worker 90, frontend 50). A read-only smoke test also ran against the live application and real data. Browser journeys are fully specified in Section 3.4 but, at the time of writing, have not been executed by a person; they are reported as not executed, never as passed. A planned case is not a passed test.
+This version is both the test plan and the evaluation report for the submission build. 291 automated tests were executed for it and all passed (backend 147, worker 94, frontend 50). A read-only smoke test also ran against the live application and real data. Browser journeys are fully specified in Section 3.4 but, at the time of writing, have not been executed by a person; they are reported as not executed, never as passed. A planned case is not a passed test.
 
 Source priority: the SRS defines required behavior; the source code at the baseline commit is the implementation under test; the supplied Word template defines the report structure. Features beyond the SRS (mobile layouts, languages, recommendations, compare, stale-stock and bulk tools) are labelled “Extension” and tested to the same standard. Differences between the SRS and the implementation are recorded as findings instead of redefining expected results.
 
@@ -92,7 +92,7 @@ Testing runs bottom-up: fast unit and component tests on every change; integrati
 
 | Level | What it crosses | Tests | Result |
 | --- | --- | --- | --- |
-| Unit / component | One function, schema, service or React component; databases, queues, storage and network replaced by fakes (jsdom for the frontend). | 226 in 40 files | Executed: 226/226 passed |
+| Unit / component | One function, schema, service or React component; databases, queues, storage and network replaced by fakes (jsdom for the frontend). | 234 in 41 files | Executed: 234/234 passed |
 | Integration — data | Repository, service and migration code against a real MongoDB 7 replica set; rate limits against real Redis. | 24 in 8 files | Executed: 24/24 passed |
 | Integration — HTTP journeys | Real Express app, middleware, services and MongoDB through HTTP (supertest). Only Firebase token checks and S3 calls are replaced, because they are external services. | 32 in 3 files | Executed: 32/32 passed |
 | Performance | Real CSV pipeline, MongoDB and MinIO with 5,000 rows. | 1 | Executed: passed (11.2 s) |
@@ -376,10 +376,10 @@ Each case below is one test file; its individual tests are listed with their out
 | Field | Test specification |
 | --- | --- |
 | Requirements / priority | FR-ETL-07,23 / High |
-| Preconditions and data | Whitespace, enum aliases, price suffixes, blank optional cells, motorcycle rows. |
+| Preconditions and data | Whitespace, enum aliases, price suffixes, blank optional cells, motorcycle rows, titles cut short to a prefix of make and model. |
 | Procedure | Normalize rows per category. |
-| Expected result | Consistent values; blanks stay unset; category-specific attributes. |
-| Execution status | Executed 26 Sep 2026: 4/4 passed |
+| Expected result | Consistent values; blanks stay unset; category-specific attributes; a truncated title such as “Toyota Pre” becomes “Toyota Premio”, while a longer title is kept. |
+| Execution status | Executed 26 Sep 2026: 6/6 passed |
 | Evidence | apps/worker/src/pipeline/normalize.test.ts; test-evidence/worker-results.json |
 
 #### UT-18 — Batch transformation
@@ -420,10 +420,10 @@ Each case below is one test file; its individual tests are listed with their out
 | Field | Test specification |
 | --- | --- |
 | Requirements / priority | FR-MARKET-12–16; RR-06; Extension (small copies) / High |
-| Preconditions and data | ZIPs with slash/backslash paths, unknown folders, root files, oversize entries, fake and huge images, storage errors, retries. |
+| Preconditions and data | ZIPs with slash/backslash paths, an extra wrapper folder, photos whose extension does not match their content, unknown folders, root files, oversize entries, fake and huge images, storage errors, retries, and a ZIP with no photo in any folder. |
 | Procedure | Process ZIPs with mocked storage and repositories. |
-| Expected result | Photos matched by normalized plate, cleaned and resized, an 800 px copy stored and linked; unsafe archives fail at once; retries never attach a photo twice. |
-| Execution status | Executed 26 Sep 2026: 15/15 passed |
+| Expected result | Photos matched by the folder that contains them (normalized plate), cleaned and resized, an 800 px copy stored and linked; a ZIP with no photos in folders fails at once with instructions; unsafe archives fail at once; retries never attach a photo twice. |
+| Execution status | Executed 26 Sep 2026: 17/17 passed |
 | Evidence | apps/worker/src/services/imageProcessing.service.test.ts; test-evidence/worker-results.json |
 
 #### UT-22 — Job lease renewal
@@ -635,7 +635,18 @@ Each case below is one test file; its individual tests are listed with their out
 | Execution status | Executed 26 Sep 2026: 3/3 passed |
 | Evidence | apps/frontend/src/shared/utils/phone.test.ts; test-evidence/frontend-results.json |
 
-Unit and component result: 226 tests in 40 files, all passed.
+#### UT-41 — Queue publishing for repeat photo uploads
+
+| Field | Test specification |
+| --- | --- |
+| Requirements / priority | FR-UPLOAD-08; RR-06–08 / High |
+| Preconditions and data | Existing queue jobs that are completed, failed, waiting, active or delayed. |
+| Procedure | Publish CSV and photo jobs with a mocked queue. |
+| Expected result | A finished job is removed and queued again under the same ID, so photos attached a second time are processed; a job still waiting or running is never duplicated (finding F-09). |
+| Execution status | Executed 26 Sep 2026: 4/4 passed |
+| Evidence | apps/backend/src/modules/inventory/inventory.queue.test.ts; test-evidence/backend-results.json |
+
+Unit and component result: 234 tests in 41 files, all passed.
 
 ### 3.3 Integration Testing
 
@@ -1089,8 +1100,8 @@ End-to-end tests exercise the whole running system. Two system-level procedures 
 Commands used for this report (repository root):
 
 ```powershell
-docker compose -f compose.yml -f compose.test.yml run --rm backend      # 143 backend tests
-docker compose -f compose.yml -f compose.test.yml run --rm -e RUN_BENCHMARKS=1 worker   # 90 worker tests incl. benchmark
+docker compose -f compose.yml -f compose.test.yml run --rm backend      # 147 backend tests
+docker compose -f compose.yml -f compose.test.yml run --rm -e RUN_BENCHMARKS=1 worker   # 94 worker tests incl. benchmark
 cd apps/frontend; npx vitest run                                          # 50 frontend tests
 npm run build --workspaces --if-present
 bash scripts/drills/kill-worker-mid-import.sh                             # crash drill (test stack)
@@ -1105,7 +1116,7 @@ JSON evidence was produced by adding --reporter=json --outputFile=… to the tes
 | --- | --- |
 | Entry | Baseline commit recorded; dependencies installed; build passes; isolated test stack healthy with a replica-set primary; fixtures and test accounts available. |
 | Per-case pass | Every expected outcome observed and evidence linked. A partial run, an unavailable dependency or a missing feature is never a pass. |
-| Exit (submission) | All automated suites pass (met: 283/283); all Critical and High browser journeys executed and passed; no open Critical/High findings or each one accepted by the team with a workaround; performance evidence for PSR-05 (met) and PSR-01–03 recorded or listed as unmet. |
+| Exit (submission) | All automated suites pass (met: 291/291); all Critical and High browser journeys executed and passed; no open Critical/High findings or each one accepted by the team with a workaround; performance evidence for PSR-05 (met) and PSR-01–03 recorded or listed as unmet. |
 | Suspend | Wrong database or storage target, unreliable fixtures, unavailable critical dependency, suspected data corruption. |
 | Resume | Cause fixed; isolation rechecked; smoke test passes; affected cases rerun. |
 
@@ -1133,8 +1144,8 @@ Severity: Critical = unauthorized access or data loss; High = essential journey 
 | Deliverable | Location |
 | --- | --- |
 | Master test plan and evaluation report | docs/MotorX_Test_Plan_Report.docx (Word, from the supplied template) and docs/MotorX_Test_Plan_Report.md |
-| Case register | docs/MotorX_Test_Case_Register.csv — 78 cases with level, requirements, steps, expected/actual results, tester, date and defect fields |
-| Executed test register | docs/test-evidence/automated-test-register.csv — every automated test (283) with file, status and duration |
+| Case register | docs/MotorX_Test_Case_Register.csv — 79 cases with level, requirements, steps, expected/actual results, tester, date and defect fields |
+| Executed test register | docs/test-evidence/automated-test-register.csv — every automated test (291) with file, status and duration |
 | Raw test results | docs/test-evidence/backend-results.json, worker-results.json, frontend-results.json |
 | Performance and smoke evidence | docs/test-evidence/benchmark-output.txt; live-smoke-output.txt; live-smoke-results.json |
 | Build and environment | docs/test-evidence/build-output.txt; run-metadata.json |
@@ -1145,14 +1156,14 @@ Severity: Critical = unauthorized access or data loss; High = essential journey 
 
 | Evaluation item | Observed result | Interpretation |
 | --- | --- | --- |
-| Unit / component | 40 files; 226 passed; 0 failed. | Business rules, schemas, security helpers, worker services and React components behave as specified. |
+| Unit / component | 41 files; 234 passed; 0 failed. | Business rules, schemas, security helpers, worker services and React components behave as specified. |
 | Integration — data | 8 files; 24 passed; 0 failed. | Real MongoDB constraints, leases, audit, photo URL updates and Redis limits hold. |
 | Integration — HTTP journeys | 3 files; 32 passed; 0 failed. | Complete API use cases work through all middleware with correct authorization and stored results. |
 | Performance (PSR-05) | 5,000 rows in 11.1–11.2 s. | Meets the 120 s target by a wide margin on the test laptop. |
 | Crash recovery (system) | 60,000 rows; recovered in 4 min 43 s; no duplicates. | Lease takeover and checkpoints work with real containers. |
 | Live smoke (system) | 16 passed; 1 failed; 0 skipped. | Running application with real data works end to end; the failure is F-01. |
-| Total automated | 283 executed; 283 passed; 0 failed. | 100% pass rate for executed automated tests. |
-| Case register | UT 40/40 executed; IT 11/15; E2E 2/17; NF 3/6. | Not-executed cases are listed separately and never counted as passed. |
+| Total automated | 291 executed; 291 passed; 0 failed. | 100% pass rate for executed automated tests. |
+| Case register | UT 41/41 executed; IT 11/15; E2E 2/17; NF 3/6. | Not-executed cases are listed separately and never counted as passed. |
 | Browser end-to-end | 0 of 15 executed. | Required before the exit criteria are met. |
 
 Assessment: the automated evidence is strong and fully green, and the running system passed a real-data smoke test apart from one configuration defect. The build is not yet fully accepted because the browser journeys (Section 3.4) have not been executed and F-01 is open. Both can be completed in the time planned in Section 3.8.
@@ -1164,8 +1175,10 @@ Assessment: the automated evidence is strong and fully green, and the running sy
 | F-03 | Photos uploaded before small copies existed had no 800 px copy, so phones downloaded the full photo. | Low / Fixed for all 91 stored photos | Migration run on 26 Sep created 90 copies (1 in an earlier attempt); a second run found nothing left to do. Remaining photos follow F-01. |
 | F-04 | SRS FR-NOTIFY-06 asks for completion emails; the implementation emails only failed or partly failed imports (clean completion is in-app only). | Medium / Decision needed | Team to confirm the policy; test the agreed behavior in IT-13. |
 | F-05 | Sinhala and Tamil text was written without native-speaker review. | Medium / Open | Review during E2E-13 and record corrections. |
-| F-06 | Photo retry after a failed upload (v1.0 finding): Create could be pressed again. | Low / Mitigated | A “Retry images” link now opens the saved listing; a second Create is refused as a duplicate. Confirm in E2E-05. |
+| F-06 | Photo retry after a failed upload (v1.0 finding): Create could be pressed again. | Low / Fixed | Merged from main (version4): a retry now updates the saved listing and uploads only the photos still pending (“Retry Uploads”). Confirm in E2E-05. |
 | F-07 | Dealer profile editing and resubmission after rejection were missing in v1.0. | — / Resolved | Implemented and covered by IT-09, UT-31 and UT-32. |
+| F-09 | Attaching photos to the same upload a second time did nothing: the queue kept the finished job and ignored a new one with the same ID, leaving the status “pending”. Reported by a teammate on main (version4). | High / Fixed | Finished jobs are now removed and queued again under the same ID (the reaper relies on that ID); covered by UT-41. The teammate’s random-ID fix was not used because it would stop the reaper finding lost jobs. |
+| F-10 | Merging main (version4) into this branch: 16 files conflicted, because both branches built dealer profile editing, resubmission and listing-manager changes. The automatic merge also produced duplicate code that would not compile and a review-history change that would make approvals fail. | High (integration) / Resolved | This branch’s tested versions kept for the overlapping features; the teammate’s unique fixes (F-06, F-09, ZIP wrapper folders, empty-ZIP message, title restoration, category filter, archived count) ported with tests; full suites rerun (291/291). |
 | F-08 | The photo migration crashed on its first database write: photo keys contain dots, which MongoDB refused inside the update expression. The dry run and the fake-storage tests could not show this. No data was changed. | High (tooling) / Fixed | Update rewritten to match keys safely; new real-MongoDB test IT-11; migration then completed (0 failures) and a second run changed nothing. |
 
 ### 4.2 Reporting on Test Coverage
@@ -1177,7 +1190,7 @@ Requirement coverage is tracked in the case register (requirement → case → r
 | FR-USER-01–12 / PSR-08–09 | UT-15, UT-28–30; IT-08; E2E-01, E2E-11; IT-12 planned | Authorization, suspension, cache isolation and token handling executed; real Firebase pending. |
 | FR-DEALER-01–13 | UT-04, UT-05, UT-31, UT-32; IT-01, IT-05, IT-09; E2E-02, E2E-03 | Application, documents, review, resubmission and profile editing executed at API level; browser pending. |
 | FR-MARKET-01–16 | UT-08–11, UT-21, UT-36; IT-03, IT-04, IT-10; E2E-04, E2E-05, E2E-07 | Lifecycle, uniqueness, photos and details executed; browser pending; F-01 open. |
-| FR-UPLOAD-01–08 | UT-06, UT-07, UT-33; IT-14 planned; E2E-06 | Validation, acceptance, retry and publish-all executed; live queue-to-worker run pending. |
+| FR-UPLOAD-01–08 | UT-06, UT-07, UT-33, UT-41; IT-14 planned; E2E-06 | Validation, acceptance, retry and publish-all executed; live queue-to-worker run pending. |
 | FR-ETL-01–33 / RR-02–08 | UT-16–25; IT-03, IT-07; E2E-A1; NF-01 | Pipeline, leases, idempotency, retries, reaper, crash recovery and throughput executed. |
 | FR-SEARCH-01–20 | UT-12, UT-14; IT-10; E2E-A2, E2E-07; IT-15, NF-06 planned | Analysis, filters and live search executed; relevance dataset pending. |
 | FR-NOTIFY-01–07 | UT-25, UT-27; E2E-10, E2E-14; IT-13 planned | Outbox retries and reminders executed; real SMTP pending; F-04 decision. |
