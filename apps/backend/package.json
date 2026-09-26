@@ -7,7 +7,7 @@
     "@aws-sdk/client-s3": "^3.699.0",
     "@aws-sdk/s3-request-presigner": "^3.699.0",
     "@motorx/shared-contracts": "*",
-    "bullmq": "^5.30.0",
+    "bullmq": "^6.3.8",
     "cors": "^2.8.5",
     "dotenv": "^16.4.0",
     "express": "^4.21.0",
