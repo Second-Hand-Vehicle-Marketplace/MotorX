@@ -1,5 +1,10 @@
 import mongoose from 'mongoose';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+
+// admin.service.ts also imports the Firebase Admin SDK (used when approving applicants). Its real
+// setup parses the service-account private key at load time and fails on CI's placeholder key,
+// and nothing here talks to Firebase, so replace it like the HTTP journey tests do.
+vi.mock('../../config/firebase.js', () => ({ firebaseAuth: { verifyIdToken: vi.fn(), getUser: vi.fn() } }));
 import { clearTestDb, connectTestDb, disconnectTestDb } from '../../test/db.js';
 import { DealerModel } from '../dealers/dealer.model.js';
 import { AdminAuditLogModel } from './admin.model.js';
