@@ -1,10 +1,16 @@
 {
-  "recordedAt": "2026-09-21T15:45:05.984419+00:00",
-  "revision": "d57b9cc714a2634f0e16c210589d5f236471f841",
-  "platform": "Windows-10-10.0.26200-SP0",
-  "node": "v22.19.0",
-  "buildCommand": "npm.cmd run build --workspaces --if-present",
-  "buildExitCode": 0,
-  "databaseIntegration": "Not executed: Docker daemon access denied in this execution environment.",
-  "browserE2E": "Not executed: no existing browser test suite in repository."
+  "recordedAt": "2026-09-26",
+  "revision": "ffac7f9d5dfc7112ff82cd482f37030bf7874344",
+  "workingTree": "ffac7f9 plus uncommitted fixes: benchmark clean-up order (F-02) and migration URL update (F-08) with its real-MongoDB test; commit them with this report",
+  "hostPlatform": "Windows-10-10.0.26200-SP0",
+  "containerRuntime": "Docker Desktop; compose project motorx-test (MongoDB 7 replica set rs0, Redis 7, MinIO)",
+  "nodeInContainers": "v24.21.0",
+  "nodeOnHostForFrontendTests": "v22.19.0",
+  "backend": "docker compose -f compose.yml -f compose.test.yml run --rm backend (vitest, --maxWorkers=1): 143/143 passed, 25 files",
+  "worker": "same stack with RUN_BENCHMARKS=1: 90/90 passed, 14 files (includes 5,000-row benchmark)",
+  "frontend": "npx vitest run in apps/frontend (jsdom): 50/50 passed, 13 files",
+  "build": "npm run build --workspaces --if-present: exit 0",
+  "liveSmoke": "scripts/smoke/live-stack-smoke.py against the running dev stack after the photo migration (real Atlas data, read-only): 16 passed, 1 failed, 0 skipped",
+  "browserE2E": "Manual procedures in the report; not executed at the time of writing",
+  "photoMigration": "26 Sep 2026: node dist/scripts/migrateListingImages.js --keep-legacy -> migrated 90, alreadyMigrated 1, missing 78, failed 0, thumbsCreated 90; second dry run: nothing left to do"
 }

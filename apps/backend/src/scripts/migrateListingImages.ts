@@ -13,7 +13,7 @@ import mongoose from 'mongoose';
 import { connectDatabase, disconnectDatabase } from '../config/database.js';
 import { storageClient, storageConfig } from '../config/storage.js';
 import { ListingModel } from '../modules/marketplace/listing.model.js';
-import { migrateListingImages } from './listingImageMigration.js';
+import { imageFieldUpdate, migrateListingImages } from './listingImageMigration.js';
 
 const args = new Set(process.argv.slice(2));
 const publicUrl = process.argv.slice(2).find((arg) => arg.startsWith('--public-url='))?.slice('--public-url='.length);
@@ -39,16 +39,8 @@ try {
       await storageClient.send(new PutObjectCommand({ Bucket: storageConfig.bucket, Key: key, Body: body, ContentType: contentType, CacheControl: 'public, max-age=31536000, immutable' }));
     },
     async remove(key) { await storageClient.send(new DeleteObjectCommand({ Bucket: storageConfig.bucket, Key: key })); },
-    async setImageUrls(listingId, urls) {
-      await ListingModel.updateOne({ _id: listingId }, [{
-        $set: { images: { $map: { input: '$images', as: 'image', in: { $mergeObjects: ['$$image', { url: { $ifNull: [{ $getField: { field: '$$image.key', input: urls } }, '$$image.url'] } }] } } } },
-      }]);
-    },
-    async setThumbUrls(listingId, urls) {
-      await ListingModel.updateOne({ _id: listingId }, [{
-        $set: { images: { $map: { input: '$images', as: 'image', in: { $mergeObjects: ['$$image', { thumbUrl: { $ifNull: [{ $getField: { field: '$$image.key', input: urls } }, '$$image.thumbUrl'] } }] } } } },
-      }]);
-    },
+    async setImageUrls(listingId, urls) { await ListingModel.updateOne({ _id: listingId }, imageFieldUpdate('url', urls)); },
+    async setThumbUrls(listingId, urls) { await ListingModel.updateOne({ _id: listingId }, imageFieldUpdate('thumbUrl', urls)); },
     log: (message) => console.warn(message),
   }, { dryRun: args.has('--dry-run'), keepLegacy: args.has('--keep-legacy'), publicUrl });
   console.log(`${args.has('--dry-run') ? '[dry run] ' : ''}Listing image migration finished.`, summary);

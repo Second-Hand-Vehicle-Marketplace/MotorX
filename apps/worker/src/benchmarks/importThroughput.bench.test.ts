@@ -28,9 +28,11 @@ describe.skipIf(!enabled)(`CSV import throughput (${RECORDS} records)`, () => {
 
   beforeAll(async () => {
     await mongoose.connect(uri!, { serverSelectionTimeoutMS: 10_000 });
-    await Promise.all(Object.values(mongoose.connection.collections).map((collection) => collection.deleteMany({})));
     ({ extractInventoryUpload } = await import('../services/uploadJob.service.js'));
     await Promise.all(Object.values(mongoose.models).map((model) => model.init()));
+    // Clear after the models load: before that, no collections are registered and nothing would be
+    // cleared, so a second run would see the first run's listings and reject every row as a duplicate.
+    await Promise.all(Object.values(mongoose.connection.collections).map((collection) => collection.deleteMany({})));
   }, 60_000);
   afterAll(async () => { await mongoose.disconnect(); });
 

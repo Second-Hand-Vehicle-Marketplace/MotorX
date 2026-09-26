@@ -93,3 +93,22 @@ export async function migrateListingImages(deps: MigrationDeps, options: Migrati
   }
   return summary;
 }
+
+// Update pipeline that sets `field` (url or thumbUrl) on each of a listing's images whose key is in
+// `values`, leaving the other images untouched. The values travel as a literal list of {k, v} pairs
+// matched with $filter: photo keys contain dots ("…jpg"), which MongoDB would otherwise read as
+// field paths and refuse.
+export function imageFieldUpdate(field: 'url' | 'thumbUrl', values: Record<string, string>) {
+  const pairs = Object.entries(values).map(([k, v]) => ({ k, v }));
+  const match = { $arrayElemAt: [{ $filter: { input: { $literal: pairs }, as: 'pair', cond: { $eq: ['$$pair.k', '$$image.key'] } } }, 0] };
+  return [{
+    $set: {
+      images: {
+        $map: {
+          input: '$images', as: 'image',
+          in: { $let: { vars: { match }, in: { $cond: [{ $ifNull: ['$$match', false] }, { $mergeObjects: ['$$image', { [field]: '$$match.v' }] }, '$$image'] } } },
+        },
+      },
+    },
+  }];
+}

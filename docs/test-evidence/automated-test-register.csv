@@ -1,78 +1,284 @@
-﻿ID,Group,File,Test,Status,DurationMs,Evidence
-UT-01.01,UT-01,apps/backend/src/test/db.safety.test.ts,test database URI safety accepts the local disposable database,passed,3.0113000000001193,backend-unit-results.json
-UT-01.02,UT-01,apps/backend/src/test/db.safety.test.ts,test database URI safety accepts the Docker disposable database host,passed,0.5833999999999833,backend-unit-results.json
-UT-01.03,UT-01,apps/backend/src/test/db.safety.test.ts,test database URI safety rejects a non-test database before any connection is attempted,passed,1.1700000000000728,backend-unit-results.json
-UT-01.04,UT-01,apps/backend/src/test/db.safety.test.ts,test database URI safety rejects a remote Atlas host unless explicitly enabled,passed,0.5797000000002299,backend-unit-results.json
-UT-01.05,UT-01,apps/backend/src/test/db.safety.test.ts,test database URI safety allows an explicitly approved remote disposable test database,passed,0.3609999999998763,backend-unit-results.json
-UT-01.06,UT-01,apps/backend/src/test/db.safety.test.ts,test database URI safety rejects unsupported URI schemes,passed,0.3338000000003376,backend-unit-results.json
-UT-01.07,UT-01,apps/backend/src/test/db.safety.test.ts,test database URI safety requires TEST_MONGODB_URI and never falls back to MONGODB_URI,passed,0.4412000000002081,backend-unit-results.json
-UT-01.08,UT-01,apps/backend/src/test/db.safety.test.ts,test database URI safety validates the configured test URI before returning it,passed,0.4311999999999898,backend-unit-results.json
-UT-02.01,UT-02,apps/backend/src/modules/admin/admin.validation.test.ts,admin validation applies bounded pagination defaults to admin collections,passed,13.470100000000002,backend-unit-results.json
-UT-02.02,UT-02,apps/backend/src/modules/admin/admin.validation.test.ts,admin validation accepts supported user filters,passed,1.481999999999971,backend-unit-results.json
-UT-02.03,UT-02,apps/backend/src/modules/admin/admin.validation.test.ts,admin validation accepts supported listing filters,passed,1.7153000000000702,backend-unit-results.json
-UT-02.04,UT-02,apps/backend/src/modules/admin/admin.validation.test.ts,admin validation rejects unsupported status values,passed,12.625600000000077,backend-unit-results.json
-UT-03.01,UT-03,apps/backend/src/modules/dealers/dealer.validation.test.ts,dealer application validation normalizes multipart form fields into the dealer application shape,passed,16.267299999999977,backend-unit-results.json
-UT-03.02,UT-03,apps/backend/src/modules/dealers/dealer.validation.test.ts,dealer application validation requires enough information for a meaningful review,passed,5.369299999999839,backend-unit-results.json
-UT-03.03,UT-03,apps/backend/src/modules/dealers/dealer.validation.test.ts,dealer application validation requires a rejection reason,passed,2.031199999999899,backend-unit-results.json
-UT-04.01,UT-04,apps/backend/src/modules/inventory/inventory.validation.test.ts,inventory upload validation accepts a car CSV containing every required header,passed,12.37519999999995,backend-unit-results.json
-UT-04.02,UT-04,apps/backend/src/modules/inventory/inventory.validation.test.ts,inventory upload validation reports missing required headers for the selected category,passed,2.108199999999897,backend-unit-results.json
-UT-04.03,UT-04,apps/backend/src/modules/inventory/inventory.validation.test.ts,"inventory upload validation requires different headers for a different category (motorcycle needs bikeType, not bodyType)",passed,0.7507000000000517,backend-unit-results.json
-UT-04.04,UT-04,apps/backend/src/modules/inventory/inventory.validation.test.ts,inventory upload validation rejects non-CSV extensions and binary content,passed,0.7714000000000851,backend-unit-results.json
-UT-04.05,UT-04,apps/backend/src/modules/inventory/inventory.validation.test.ts,inventory upload validation applies bounded history pagination,passed,14.637699999999995,backend-unit-results.json
-UT-04.06,UT-04,apps/backend/src/modules/inventory/inventory.validation.test.ts,inventory upload validation applies bounded rejected-records pagination,passed,2.5739000000000942,backend-unit-results.json
-UT-05.01,UT-05,apps/backend/src/modules/marketplace/listing.validation.test.ts,"registration number normalization normalizes hyphens, spaces, and casing to the same identity",passed,8.388900000000149,backend-unit-results.json
-UT-05.02,UT-05,apps/backend/src/modules/marketplace/listing.validation.test.ts,listing request validation applies safe pagination defaults,passed,6.339999999999918,backend-unit-results.json
-UT-05.03,UT-05,apps/backend/src/modules/marketplace/listing.validation.test.ts,listing request validation rejects pagination outside its allowed range,passed,6.588199999999915,backend-unit-results.json
-UT-05.04,UT-05,apps/backend/src/modules/marketplace/listing.validation.test.ts,listing request validation parses location and mileage filters and rejects inverted ranges,passed,3.8101999999998952,backend-unit-results.json
-UT-05.05,UT-05,apps/backend/src/modules/marketplace/listing.validation.test.ts,listing request validation requires at least one field when updating a listing,passed,1.4621999999999389,backend-unit-results.json
-UT-05.06,UT-05,apps/backend/src/modules/marketplace/listing.validation.test.ts,listing request validation only accepts statuses controlled by the dealer workflow,passed,1.7953999999999724,backend-unit-results.json
-UT-05.07,UT-05,apps/backend/src/modules/marketplace/listing.validation.test.ts,listing request validation requires at least one image key when reordering,passed,1.8057000000001153,backend-unit-results.json
-UT-05.08,UT-05,apps/backend/src/modules/marketplace/listing.validation.test.ts,create listing category validation accepts a petrol car with engine capacity,passed,2.1573000000000775,backend-unit-results.json
-UT-05.09,UT-05,apps/backend/src/modules/marketplace/listing.validation.test.ts,create listing category validation rejects an electric car missing battery capacity/range,passed,1.5423000000000684,backend-unit-results.json
-UT-05.10,UT-05,apps/backend/src/modules/marketplace/listing.validation.test.ts,create listing category validation rejects a petrol/diesel car missing engine capacity,passed,1.8390000000001692,backend-unit-results.json
-UT-05.11,UT-05,apps/backend/src/modules/marketplace/listing.validation.test.ts,create listing category validation rejects a listing whose attributes belong to the wrong category,passed,0.9448999999999614,backend-unit-results.json
-UT-05.12,UT-05,apps/backend/src/modules/marketplace/listing.validation.test.ts,create listing category validation requires a registration number,passed,0.6570999999999003,backend-unit-results.json
-UT-06.01,UT-06,apps/backend/src/modules/marketplace/listingImage.service.test.ts,listing image signatures accepts supported image headers,passed,7.486900000000105,backend-unit-results.json
-UT-06.02,UT-06,apps/backend/src/modules/marketplace/listingImage.service.test.ts,listing image signatures rejects spoofed and unsupported files,passed,0.9166999999999916,backend-unit-results.json
-UT-07.01,UT-07,apps/backend/src/modules/search/search.queryAnalyzer.test.ts,natural-language search analyzer extracts the SRS-style structured query,passed,16.198200000000043,backend-unit-results.json
-UT-07.02,UT-07,apps/backend/src/modules/search/search.queryAnalyzer.test.ts,natural-language search analyzer corrects common make and model typos,passed,12.774099999999862,backend-unit-results.json
-UT-07.03,UT-07,apps/backend/src/modules/search/search.queryAnalyzer.test.ts,natural-language search analyzer distinguishes mileage from price and extracts year ranges,passed,1.7087999999998829,backend-unit-results.json
-UT-07.04,UT-07,apps/backend/src/modules/search/search.queryAnalyzer.test.ts,search request validation bounds query and pagination work,passed,26.53520000000003,backend-unit-results.json
-UT-07.05,UT-07,apps/backend/src/modules/search/search.queryAnalyzer.test.ts,embedding contract keeps local and provider vectors normalized,passed,3.151499999999942,backend-unit-results.json
-UT-08.01,UT-08,apps/backend/src/shared/utils/pagination.test.ts,buildPaginationMeta calculates the final partial page,passed,5.537000000000035,backend-unit-results.json
-UT-08.02,UT-08,apps/backend/src/shared/utils/pagination.test.ts,buildPaginationMeta returns zero pages for an empty collection,passed,0.7536999999999807,backend-unit-results.json
-UT-09.01,UT-09,apps/worker/src/pipeline/extract.test.ts,CSV extraction streams records in bounded batches and reports cumulative progress,passed,31.708999999999833,worker-results.json
-UT-09.02,UT-09,apps/worker/src/pipeline/extract.test.ts,CSV extraction rejects rows whose column count does not match the header,passed,10.210399999999936,worker-results.json
-UT-10.01,UT-10,apps/worker/src/pipeline/normalize.test.ts,"inventory normalization normalizes common fields, enums, numbers, and supported price suffixes for a car row",passed,7.51319999999987,worker-results.json
-UT-10.02,UT-10,apps/worker/src/pipeline/normalize.test.ts,inventory normalization normalizes hyphenated and underscored enum aliases the same way,passed,0.9943000000000666,worker-results.json
-UT-10.03,UT-10,apps/worker/src/pipeline/normalize.test.ts,inventory normalization leaves optional powertrain fields unset when the CSV cell is blank,passed,2.0974999999998545,worker-results.json
-UT-10.04,UT-10,apps/worker/src/pipeline/normalize.test.ts,inventory normalization builds motorcycle-specific attributes instead of car attributes,passed,0.8496000000000095,worker-results.json
-UT-11.01,UT-11,apps/worker/src/pipeline/transform.test.ts,inventory batch transformation separates valid and invalid rows while retaining CSV row numbers,passed,24.980199999999968,worker-results.json
-UT-11.02,UT-11,apps/worker/src/pipeline/transform.test.ts,inventory batch transformation validates a full electric-car CSV row example end to end,passed,34.218500000000176,worker-results.json
-UT-11.03,UT-11,apps/worker/src/pipeline/transform.test.ts,inventory batch transformation rejects a mixed batch by row without discarding the valid rows in it,passed,2.214300000000094,worker-results.json
-UT-12.01,UT-12,apps/worker/src/pipeline/validate.test.ts,car row validation accepts a petrol car with an engine capacity,passed,18.51650000000018,worker-results.json
-UT-12.02,UT-12,apps/worker/src/pipeline/validate.test.ts,car row validation accepts a diesel car with an engine capacity,passed,1.3519000000001142,worker-results.json
-UT-12.03,UT-12,apps/worker/src/pipeline/validate.test.ts,car row validation accepts a hybrid car with engine capacity and no battery specs,passed,0.9053999999998723,worker-results.json
-UT-12.04,UT-12,apps/worker/src/pipeline/validate.test.ts,car row validation accepts an electric car with battery specs and no engine capacity,passed,2.0985999999998057,worker-results.json
-UT-12.05,UT-12,apps/worker/src/pipeline/validate.test.ts,car row validation accepts a plug-in hybrid with both engine capacity and battery specs,passed,1.9447000000000116,worker-results.json
-UT-12.06,UT-12,apps/worker/src/pipeline/validate.test.ts,car row validation rejects a petrol car missing engine capacity,passed,6.372299999999996,worker-results.json
-UT-12.07,UT-12,apps/worker/src/pipeline/validate.test.ts,car row validation rejects an electric car missing battery capacity and range,passed,18.789199999999937,worker-results.json
-UT-12.08,UT-12,apps/worker/src/pipeline/validate.test.ts,car row validation rejects an invalid body type,passed,7.099799999999959,worker-results.json
-UT-12.09,UT-12,apps/worker/src/pipeline/validate.test.ts,car row validation returns multiple field-level errors for a broadly invalid row,passed,2.684600000000046,worker-results.json
-UT-12.10,UT-12,apps/worker/src/pipeline/validate.test.ts,other category row validation accepts a valid motorcycle,passed,9.270600000000059,worker-results.json
-UT-12.11,UT-12,apps/worker/src/pipeline/validate.test.ts,other category row validation rejects a motorcycle with an invalid bikeType,passed,2.217800000000125,worker-results.json
-UT-12.12,UT-12,apps/worker/src/pipeline/validate.test.ts,other category row validation accepts a valid van,passed,24.009399999999914,worker-results.json
-UT-12.13,UT-12,apps/worker/src/pipeline/validate.test.ts,other category row validation accepts a valid truck,passed,1.0906999999999698,worker-results.json
-UT-12.14,UT-12,apps/worker/src/pipeline/validate.test.ts,other category row validation rejects a truck missing engine capacity for a combustion fuel type,passed,2.50669999999991,worker-results.json
-UT-12.15,UT-12,apps/worker/src/pipeline/validate.test.ts,other category row validation accepts a valid three-wheeler,passed,0.9252999999998792,worker-results.json
-UT-12.16,UT-12,apps/worker/src/pipeline/validate.test.ts,other category row validation accepts an electric three-wheeler without engine capacity,passed,3.5878999999999905,worker-results.json
-UT-12.17,UT-12,apps/worker/src/pipeline/validate.test.ts,other category row validation accepts a valid bus,passed,0.5425000000000182,worker-results.json
-UT-13.01,UT-13,apps/worker/src/services/imageProcessing.service.test.ts,inventory image processing matches a zip folder to a listing by normalized registration number and attaches images,passed,9.302999999999884,worker-results.json
-UT-13.02,UT-13,apps/worker/src/services/imageProcessing.service.test.ts,inventory image processing groups entries whose zip path uses backslashes (PowerShell Compress-Archive) the same as forward slashes,passed,1.01720000000023,worker-results.json
-UT-13.03,UT-13,apps/worker/src/services/imageProcessing.service.test.ts,inventory image processing records a folder that matches no listing from this upload job as unmatched,passed,0.8434999999999491,worker-results.json
-UT-13.04,UT-13,apps/worker/src/services/imageProcessing.service.test.ts,inventory image processing skips root-level files with no folder and non-image files,passed,1.5531000000000859,worker-results.json
-UT-13.05,UT-13,apps/worker/src/services/imageProcessing.service.test.ts,"inventory image processing caps attached images at the configured per-listing limit, accounting for existing images",passed,1.9654999999997926,worker-results.json
-UT-13.06,UT-13,apps/worker/src/services/imageProcessing.service.test.ts,inventory image processing marks the job failed when the zip cannot be downloaded,passed,3.3087000000000444,worker-results.json
-UT-14.01,UT-14,apps/worker/src/services/uploadJob.service.test.ts,"inventory upload ETL service persists valid rows, records invalid rows, and completes with accurate counters",passed,31.9692,worker-results.json
-UT-14.02,UT-14,apps/worker/src/services/uploadJob.service.test.ts,inventory upload ETL service marks the durable upload as failed when CSV parsing fails,passed,12.145500000000084,worker-results.json
-UT-14.03,UT-14,apps/worker/src/services/uploadJob.service.test.ts,inventory upload ETL service routes duplicate registration numbers to rejected records instead of listings,passed,6.620800000000145,worker-results.json
+﻿ID,Group,Level,File,Test,Status,DurationMs,Evidence
+UT-01.01,UT-01,UT,apps/backend/src/test/db.safety.test.ts,test database URI safety accepts the local disposable database,passed,3.4,backend-results.json
+UT-01.02,UT-01,UT,apps/backend/src/test/db.safety.test.ts,test database URI safety accepts the Docker disposable database host,passed,0.5,backend-results.json
+UT-01.03,UT-01,UT,apps/backend/src/test/db.safety.test.ts,test database URI safety rejects a non-test database before any connection is attempted,passed,1.4,backend-results.json
+UT-01.04,UT-01,UT,apps/backend/src/test/db.safety.test.ts,test database URI safety rejects a remote Atlas host unless explicitly enabled,passed,0.5,backend-results.json
+UT-01.05,UT-01,UT,apps/backend/src/test/db.safety.test.ts,test database URI safety allows an explicitly approved remote disposable test database,passed,0.5,backend-results.json
+UT-01.06,UT-01,UT,apps/backend/src/test/db.safety.test.ts,test database URI safety rejects unsupported URI schemes,passed,0.4,backend-results.json
+UT-01.07,UT-01,UT,apps/backend/src/test/db.safety.test.ts,test database URI safety requires TEST_MONGODB_URI and never falls back to MONGODB_URI,passed,0.3,backend-results.json
+UT-01.08,UT-01,UT,apps/backend/src/test/db.safety.test.ts,test database URI safety validates the configured test URI before returning it,passed,0.3,backend-results.json
+UT-02.01,UT-02,UT,apps/backend/src/config/mongoUri.test.ts,findProductionMongoUriProblems accepts an Atlas SRV URI naming the production database,passed,2.8,backend-results.json
+UT-02.02,UT-02,UT,apps/backend/src/config/mongoUri.test.ts,findProductionMongoUriProblems accepts a standard URI with TLS enabled,passed,0.6,backend-results.json
+UT-02.03,UT-02,UT,apps/backend/src/config/mongoUri.test.ts,findProductionMongoUriProblems rejects unencrypted and local connections,passed,1.1,backend-results.json
+UT-02.04,UT-02,UT,apps/backend/src/config/mongoUri.test.ts,findProductionMongoUriProblems rejects SRV URIs that explicitly disable TLS,passed,1.8,backend-results.json
+UT-02.05,UT-02,UT,apps/backend/src/config/mongoUri.test.ts,findProductionMongoUriProblems rejects the non-production database motorx_test,passed,0.5,backend-results.json
+UT-02.06,UT-02,UT,apps/backend/src/config/mongoUri.test.ts,findProductionMongoUriProblems rejects the non-production database motorx-dev,passed,0.3,backend-results.json
+UT-02.07,UT-02,UT,apps/backend/src/config/mongoUri.test.ts,findProductionMongoUriProblems rejects the non-production database motorx_development,passed,0.2,backend-results.json
+UT-02.08,UT-02,UT,apps/backend/src/config/mongoUri.test.ts,findProductionMongoUriProblems rejects the non-production database local,passed,0.2,backend-results.json
+UT-02.09,UT-02,UT,apps/backend/src/config/mongoUri.test.ts,findProductionMongoUriProblems requires an explicit database name,passed,0.6,backend-results.json
+UT-02.10,UT-02,UT,apps/backend/src/config/mongoUri.test.ts,findProductionMongoUriProblems rejects strings that are not MongoDB URIs,passed,0.6,backend-results.json
+UT-03.01,UT-03,UT,apps/backend/src/modules/admin/admin.validation.test.ts,admin validation applies bounded pagination defaults to admin collections,passed,5.8,backend-results.json
+UT-03.02,UT-03,UT,apps/backend/src/modules/admin/admin.validation.test.ts,admin validation accepts supported user filters,passed,0.7,backend-results.json
+UT-03.03,UT-03,UT,apps/backend/src/modules/admin/admin.validation.test.ts,admin validation accepts supported listing filters,passed,0.9,backend-results.json
+UT-03.04,UT-03,UT,apps/backend/src/modules/admin/admin.validation.test.ts,admin validation rejects unsupported status values,passed,1.5,backend-results.json
+UT-04.01,UT-04,UT,apps/backend/src/modules/dealers/dealer.validation.test.ts,dealer application validation normalizes multipart form fields into the dealer application shape,passed,8.0,backend-results.json
+UT-04.02,UT-04,UT,apps/backend/src/modules/dealers/dealer.validation.test.ts,dealer application validation requires enough information for a meaningful review,passed,2.4,backend-results.json
+UT-04.03,UT-04,UT,apps/backend/src/modules/dealers/dealer.validation.test.ts,dealer application validation requires a rejection reason,passed,0.9,backend-results.json
+UT-05.01,UT-05,UT,apps/backend/src/modules/dealers/dealerDocument.content.test.ts,"detectDocumentType identifies files by their bytes, not their name or declared type",passed,7.2,backend-results.json
+UT-05.02,UT-05,UT,apps/backend/src/modules/dealers/dealerDocument.content.test.ts,sanitizeDealerDocument accepts a plain PDF unchanged,passed,2.3,backend-results.json
+UT-05.03,UT-05,UT,apps/backend/src/modules/dealers/dealerDocument.content.test.ts,sanitizeDealerDocument rejects a PDF containing JavaScript,passed,1.7,backend-results.json
+UT-05.04,UT-05,UT,apps/backend/src/modules/dealers/dealerDocument.content.test.ts,sanitizeDealerDocument rejects a PDF containing a launch action,passed,0.4,backend-results.json
+UT-05.05,UT-05,UT,apps/backend/src/modules/dealers/dealerDocument.content.test.ts,sanitizeDealerDocument rejects a PDF containing an embedded file,passed,0.3,backend-results.json
+UT-05.06,UT-05,UT,apps/backend/src/modules/dealers/dealerDocument.content.test.ts,sanitizeDealerDocument does not mistake /JSON-like names for scripts,passed,0.7,backend-results.json
+UT-05.07,UT-05,UT,apps/backend/src/modules/dealers/dealerDocument.content.test.ts,sanitizeDealerDocument rejects an executable renamed to .pdf,passed,0.6,backend-results.json
+UT-05.08,UT-05,UT,apps/backend/src/modules/dealers/dealerDocument.content.test.ts,sanitizeDealerDocument re-encodes image documents and strips their metadata,passed,11.6,backend-results.json
+UT-05.09,UT-05,UT,apps/backend/src/modules/dealers/dealerDocument.content.test.ts,sanitizeDealerDocument rejects a file that only starts like a JPEG,passed,2.3,backend-results.json
+UT-06.01,UT-06,UT,apps/backend/src/modules/inventory/inventory.validation.test.ts,inventory upload validation accepts a car CSV containing every required header,passed,4.6,backend-results.json
+UT-06.02,UT-06,UT,apps/backend/src/modules/inventory/inventory.validation.test.ts,inventory upload validation reports missing required headers for the selected category,passed,0.8,backend-results.json
+UT-06.03,UT-06,UT,apps/backend/src/modules/inventory/inventory.validation.test.ts,"inventory upload validation requires different headers for a different category (motorcycle needs bikeType, not bodyType)",passed,0.4,backend-results.json
+UT-06.04,UT-06,UT,apps/backend/src/modules/inventory/inventory.validation.test.ts,inventory upload validation rejects non-CSV extensions and binary content,passed,0.4,backend-results.json
+UT-06.05,UT-06,UT,apps/backend/src/modules/inventory/inventory.validation.test.ts,inventory upload validation applies bounded history pagination,passed,2.6,backend-results.json
+UT-06.06,UT-06,UT,apps/backend/src/modules/inventory/inventory.validation.test.ts,inventory upload validation applies bounded rejected-records pagination,passed,0.6,backend-results.json
+UT-07.01,UT-07,UT,apps/backend/src/modules/inventory/inventory.service.test.ts,inventory upload acceptance queues the job straight away when Redis is available,passed,5.4,backend-results.json
+UT-07.02,UT-07,UT,apps/backend/src/modules/inventory/inventory.service.test.ts,"inventory upload acceptance keeps the accepted upload (file and job) when Redis is down, for the worker to queue later",passed,2.4,backend-results.json
+UT-07.03,UT-07,UT,apps/backend/src/modules/inventory/inventory.service.test.ts,inventory upload acceptance does not make the dealer wait when Redis hangs instead of refusing,passed,4.4,backend-results.json
+UT-07.04,UT-07,UT,apps/backend/src/modules/inventory/inventory.service.test.ts,inventory upload acceptance tells a dealer at the listing limit before storing anything,passed,0.8,backend-results.json
+UT-07.05,UT-07,UT,apps/backend/src/modules/inventory/inventory.service.test.ts,inventory upload acceptance still removes the stored file if the MongoDB job itself cannot be created,passed,1.4,backend-results.json
+UT-07.06,UT-07,UT,apps/backend/src/modules/inventory/inventory.service.test.ts,controlled retry of failed jobs re-queues a failed CSV import owned by the dealer,passed,0.8,backend-results.json
+UT-07.07,UT-07,UT,apps/backend/src/modules/inventory/inventory.service.test.ts,controlled retry of failed jobs refuses to retry an upload that is not failed (or belongs to another dealer),passed,0.4,backend-results.json
+UT-07.08,UT-07,UT,apps/backend/src/modules/inventory/inventory.service.test.ts,controlled retry of failed jobs re-queues failed photo processing under the images job,passed,0.6,backend-results.json
+UT-08.01,UT-08,UT,apps/backend/src/modules/marketplace/listing.validation.test.ts,"registration number normalization normalizes hyphens, spaces, and casing to the same identity",passed,8.7,backend-results.json
+UT-08.02,UT-08,UT,apps/backend/src/modules/marketplace/listing.validation.test.ts,listing request validation applies safe pagination defaults,passed,3.6,backend-results.json
+UT-08.03,UT-08,UT,apps/backend/src/modules/marketplace/listing.validation.test.ts,listing request validation rejects pagination outside its allowed range,passed,4.4,backend-results.json
+UT-08.04,UT-08,UT,apps/backend/src/modules/marketplace/listing.validation.test.ts,listing request validation parses location and mileage filters and rejects inverted ranges,passed,3.7,backend-results.json
+UT-08.05,UT-08,UT,apps/backend/src/modules/marketplace/listing.validation.test.ts,listing request validation requires at least one field when updating a listing,passed,1.4,backend-results.json
+UT-08.06,UT-08,UT,apps/backend/src/modules/marketplace/listing.validation.test.ts,listing request validation only accepts statuses controlled by the dealer workflow,passed,1.2,backend-results.json
+UT-08.07,UT-08,UT,apps/backend/src/modules/marketplace/listing.validation.test.ts,listing request validation requires at least one image key when reordering,passed,2.1,backend-results.json
+UT-08.08,UT-08,UT,apps/backend/src/modules/marketplace/listing.validation.test.ts,create listing category validation accepts a petrol car with engine capacity,passed,3.2,backend-results.json
+UT-08.09,UT-08,UT,apps/backend/src/modules/marketplace/listing.validation.test.ts,create listing category validation rejects an electric car missing battery capacity/range,passed,1.3,backend-results.json
+UT-08.10,UT-08,UT,apps/backend/src/modules/marketplace/listing.validation.test.ts,create listing category validation rejects a petrol/diesel car missing engine capacity,passed,1.0,backend-results.json
+UT-08.11,UT-08,UT,apps/backend/src/modules/marketplace/listing.validation.test.ts,create listing category validation rejects a listing whose attributes belong to the wrong category,passed,0.8,backend-results.json
+UT-08.12,UT-08,UT,apps/backend/src/modules/marketplace/listing.validation.test.ts,create listing category validation requires a registration number,passed,0.4,backend-results.json
+UT-09.01,UT-09,UT,apps/backend/src/modules/marketplace/listingImage.service.test.ts,listing image signatures accepts supported image headers,passed,2.3,backend-results.json
+UT-09.02,UT-09,UT,apps/backend/src/modules/marketplace/listingImage.service.test.ts,listing image signatures rejects spoofed and unsupported files,passed,0.3,backend-results.json
+UT-10.01,UT-10,UT,apps/backend/src/shared/utils/imageReencode.test.ts,reencodeImage rebuilds a JPEG as WebP and removes EXIF metadata such as GPS location,passed,16.8,backend-results.json
+UT-10.02,UT-10,UT,apps/backend/src/shared/utils/imageReencode.test.ts,"reencodeImage applies EXIF orientation before stripping it, so photos stay upright",passed,16.7,backend-results.json
+UT-10.03,UT-10,UT,apps/backend/src/shared/utils/imageReencode.test.ts,reencodeImage drops data hidden after the image,passed,5.4,backend-results.json
+UT-10.04,UT-10,UT,apps/backend/src/shared/utils/imageReencode.test.ts,reencodeImage refuses an image over the 40 megapixel cap even though the file is small,passed,449.2,backend-results.json
+UT-10.05,UT-10,UT,apps/backend/src/shared/utils/imageReencode.test.ts,reencodeImage refuses content that only starts like an image,passed,2.1,backend-results.json
+UT-10.06,UT-10,UT,apps/backend/src/shared/utils/imageReencode.test.ts,"reencodeImage refuses decodable formats that are not allowed, such as SVG and GIF",passed,5.0,backend-results.json
+UT-10.07,UT-10,UT,apps/backend/src/shared/utils/imageReencode.test.ts,reencodeImage keeps PNG documents as PNG and shrinks them to the requested size,passed,296.3,backend-results.json
+UT-11.01,UT-11,UT,apps/backend/src/scripts/listingImageMigration.test.ts,listing image migration moves old photos under listing-images/ as metadata-free WebP and removes the originals,passed,21.1,backend-results.json
+UT-11.02,UT-11,UT,apps/backend/src/scripts/listingImageMigration.test.ts,listing image migration is safe to run again: already migrated photos are skipped,passed,10.7,backend-results.json
+UT-11.03,UT-11,UT,apps/backend/src/scripts/listingImageMigration.test.ts,listing image migration changes nothing in a dry run,passed,12.1,backend-results.json
+UT-11.04,UT-11,UT,apps/backend/src/scripts/listingImageMigration.test.ts,listing image migration points image URLs at the CDN when asked,passed,10.3,backend-results.json
+UT-11.05,UT-11,UT,apps/backend/src/scripts/listingImageMigration.test.ts,"listing image migration creates a small copy for photos that have none, at most 800 px, and records its URL",passed,194.4,backend-results.json
+UT-11.06,UT-11,UT,apps/backend/src/scripts/listingImageMigration.test.ts,listing image migration reports missing and undecodable objects and leaves them in place,passed,1.9,backend-results.json
+UT-12.01,UT-12,UT,apps/backend/src/modules/search/search.queryAnalyzer.test.ts,natural-language search analyzer extracts the SRS-style structured query,passed,9.1,backend-results.json
+UT-12.02,UT-12,UT,apps/backend/src/modules/search/search.queryAnalyzer.test.ts,natural-language search analyzer corrects common make and model typos,passed,2.1,backend-results.json
+UT-12.03,UT-12,UT,apps/backend/src/modules/search/search.queryAnalyzer.test.ts,natural-language search analyzer distinguishes mileage from price and extracts year ranges,passed,0.6,backend-results.json
+UT-12.04,UT-12,UT,apps/backend/src/modules/search/search.queryAnalyzer.test.ts,search request validation bounds query and pagination work,passed,6.2,backend-results.json
+UT-12.05,UT-12,UT,apps/backend/src/modules/search/search.queryAnalyzer.test.ts,embedding contract keeps local and provider vectors normalized,passed,3.2,backend-results.json
+UT-13.01,UT-13,UT,apps/backend/src/modules/buyers/buyer.similarity.test.ts,vehicle similarity scores the same model above the same make above another make,passed,4.1,backend-results.json
+UT-13.02,UT-13,UT,apps/backend/src/modules/buyers/buyer.similarity.test.ts,vehicle similarity prefers a closer price and year,passed,0.4,backend-results.json
+UT-13.03,UT-13,UT,apps/backend/src/modules/buyers/buyer.similarity.test.ts,"vehicle similarity ignores letter case and spacing in makes, and compares the town part of a location",passed,0.7,backend-results.json
+UT-13.04,UT-13,UT,apps/backend/src/modules/buyers/buyer.similarity.test.ts,vehicle similarity weights the most recently viewed vehicle more than older views,passed,0.5,backend-results.json
+UT-13.05,UT-13,UT,apps/backend/src/modules/buyers/buyer.similarity.test.ts,vehicle similarity keeps the original (newest first) order for equal scores,passed,1.6,backend-results.json
+UT-14.01,UT-14,UT,apps/backend/src/shared/utils/pagination.test.ts,buildPaginationMeta calculates the final partial page,passed,3.2,backend-results.json
+UT-14.02,UT-14,UT,apps/backend/src/shared/utils/pagination.test.ts,buildPaginationMeta returns zero pages for an empty collection,passed,0.3,backend-results.json
+UT-15.01,UT-15,UT,apps/backend/src/shared/middleware/verifyFirebaseToken.test.ts,"verifyFirebaseToken checks a token (including revocation) with Firebase once, then reuses the result",passed,6.1,backend-results.json
+UT-15.02,UT-15,UT,apps/backend/src/shared/middleware/verifyFirebaseToken.test.ts,"verifyFirebaseToken checks with Firebase again after the cache period, so a revoked token stops working",passed,3.2,backend-results.json
+UT-15.03,UT-15,UT,apps/backend/src/shared/middleware/verifyFirebaseToken.test.ts,verifyFirebaseToken never trusts a cached token beyond its own expiry,passed,1.4,backend-results.json
+UT-15.04,UT-15,UT,apps/backend/src/shared/middleware/verifyFirebaseToken.test.ts,verifyFirebaseToken rejects requests without a bearer token and does not cache failures,passed,1.3,backend-results.json
+UT-16.01,UT-16,UT,apps/worker/src/pipeline/extract.test.ts,CSV extraction streams records in bounded batches and reports cumulative progress,passed,9.9,worker-results.json
+UT-16.02,UT-16,UT,apps/worker/src/pipeline/extract.test.ts,CSV extraction rejects rows whose column count does not match the header,passed,4.6,worker-results.json
+UT-17.01,UT-17,UT,apps/worker/src/pipeline/normalize.test.ts,"inventory normalization normalizes common fields, enums, numbers, and supported price suffixes for a car row",passed,3.5,worker-results.json
+UT-17.02,UT-17,UT,apps/worker/src/pipeline/normalize.test.ts,inventory normalization normalizes hyphenated and underscored enum aliases the same way,passed,0.4,worker-results.json
+UT-17.03,UT-17,UT,apps/worker/src/pipeline/normalize.test.ts,inventory normalization leaves optional powertrain fields unset when the CSV cell is blank,passed,0.9,worker-results.json
+UT-17.04,UT-17,UT,apps/worker/src/pipeline/normalize.test.ts,inventory normalization builds motorcycle-specific attributes instead of car attributes,passed,0.3,worker-results.json
+UT-18.01,UT-18,UT,apps/worker/src/pipeline/transform.test.ts,inventory batch transformation separates valid and invalid rows while retaining CSV row numbers,passed,10.7,worker-results.json
+UT-18.02,UT-18,UT,apps/worker/src/pipeline/transform.test.ts,inventory batch transformation validates a full electric-car CSV row example end to end,passed,3.0,worker-results.json
+UT-18.03,UT-18,UT,apps/worker/src/pipeline/transform.test.ts,inventory batch transformation rejects a mixed batch by row without discarding the valid rows in it,passed,0.9,worker-results.json
+UT-19.01,UT-19,UT,apps/worker/src/pipeline/validate.test.ts,car row validation accepts a petrol car with an engine capacity,passed,5.7,worker-results.json
+UT-19.02,UT-19,UT,apps/worker/src/pipeline/validate.test.ts,car row validation accepts a diesel car with an engine capacity,passed,0.5,worker-results.json
+UT-19.03,UT-19,UT,apps/worker/src/pipeline/validate.test.ts,car row validation accepts a hybrid car with engine capacity and no battery specs,passed,0.5,worker-results.json
+UT-19.04,UT-19,UT,apps/worker/src/pipeline/validate.test.ts,car row validation accepts an electric car with battery specs and no engine capacity,passed,0.4,worker-results.json
+UT-19.05,UT-19,UT,apps/worker/src/pipeline/validate.test.ts,car row validation accepts a plug-in hybrid with both engine capacity and battery specs,passed,0.6,worker-results.json
+UT-19.06,UT-19,UT,apps/worker/src/pipeline/validate.test.ts,car row validation rejects a petrol car missing engine capacity,passed,1.1,worker-results.json
+UT-19.07,UT-19,UT,apps/worker/src/pipeline/validate.test.ts,car row validation rejects an electric car missing battery capacity and range,passed,0.6,worker-results.json
+UT-19.08,UT-19,UT,apps/worker/src/pipeline/validate.test.ts,car row validation rejects an invalid body type,passed,0.7,worker-results.json
+UT-19.09,UT-19,UT,apps/worker/src/pipeline/validate.test.ts,car row validation returns multiple field-level errors for a broadly invalid row,passed,1.3,worker-results.json
+UT-19.10,UT-19,UT,apps/worker/src/pipeline/validate.test.ts,other category row validation accepts a valid motorcycle,passed,0.4,worker-results.json
+UT-19.11,UT-19,UT,apps/worker/src/pipeline/validate.test.ts,other category row validation rejects a motorcycle with an invalid bikeType,passed,0.3,worker-results.json
+UT-19.12,UT-19,UT,apps/worker/src/pipeline/validate.test.ts,other category row validation accepts a valid van,passed,0.3,worker-results.json
+UT-19.13,UT-19,UT,apps/worker/src/pipeline/validate.test.ts,other category row validation accepts a valid truck,passed,0.2,worker-results.json
+UT-19.14,UT-19,UT,apps/worker/src/pipeline/validate.test.ts,other category row validation rejects a truck missing engine capacity for a combustion fuel type,passed,0.2,worker-results.json
+UT-19.15,UT-19,UT,apps/worker/src/pipeline/validate.test.ts,other category row validation accepts a valid three-wheeler,passed,0.1,worker-results.json
+UT-19.16,UT-19,UT,apps/worker/src/pipeline/validate.test.ts,other category row validation accepts an electric three-wheeler without engine capacity,passed,0.2,worker-results.json
+UT-19.17,UT-19,UT,apps/worker/src/pipeline/validate.test.ts,other category row validation accepts a valid bus,passed,0.3,worker-results.json
+UT-20.01,UT-20,UT,apps/worker/src/services/uploadJob.service.test.ts,"inventory upload ETL service persists valid rows, records invalid rows, and completes with accurate counters",passed,31.4,worker-results.json
+UT-20.02,UT-20,UT,apps/worker/src/services/uploadJob.service.test.ts,inventory upload ETL service uses one lease-owner token for the claim and every later write,passed,3.9,worker-results.json
+UT-20.03,UT-20,UT,apps/worker/src/services/uploadJob.service.test.ts,inventory upload ETL service fails permanently (and tells the dealer) when the CSV itself cannot be parsed,passed,5.7,worker-results.json
+UT-20.04,UT-20,UT,apps/worker/src/services/uploadJob.service.test.ts,inventory upload ETL service hands a temporary storage failure back as pending and rethrows so BullMQ retries with backoff,passed,2.7,worker-results.json
+UT-20.05,UT-20,UT,apps/worker/src/services/uploadJob.service.test.ts,inventory upload ETL service fails a temporary failure once the durable attempt budget is used up,passed,1.1,worker-results.json
+UT-20.06,UT-20,UT,apps/worker/src/services/uploadJob.service.test.ts,inventory upload ETL service routes duplicate registration numbers to rejected records instead of listings,passed,2.5,worker-results.json
+UT-20.07,UT-20,UT,apps/worker/src/services/uploadJob.service.test.ts,inventory upload ETL service resumes after a crash from the last checkpoint without importing any row twice,passed,9.6,worker-results.json
+UT-20.08,UT-20,UT,apps/worker/src/services/uploadJob.service.test.ts,inventory upload ETL service rejects rows beyond the dealer's listing limit instead of importing them,passed,3.2,worker-results.json
+UT-20.09,UT-20,UT,apps/worker/src/services/uploadJob.service.test.ts,inventory upload ETL service stops without writing when another worker has taken over the lease,passed,3.0,worker-results.json
+UT-21.01,UT-21,UT,apps/worker/src/services/imageProcessing.service.test.ts,inventory image processing matches a zip folder to a listing by normalized registration number and attaches images,passed,29.7,worker-results.json
+UT-21.02,UT-21,UT,apps/worker/src/services/imageProcessing.service.test.ts,inventory image processing groups entries whose zip path uses backslashes (PowerShell Compress-Archive) the same as forward slashes,passed,7.1,worker-results.json
+UT-21.03,UT-21,UT,apps/worker/src/services/imageProcessing.service.test.ts,inventory image processing records a folder that matches no listing from this upload job as unmatched,passed,6.8,worker-results.json
+UT-21.04,UT-21,UT,apps/worker/src/services/imageProcessing.service.test.ts,inventory image processing skips root-level files with no folder and non-image files,passed,7.1,worker-results.json
+UT-21.05,UT-21,UT,apps/worker/src/services/imageProcessing.service.test.ts,"inventory image processing caps attached images at the configured per-listing limit, accounting for existing images",passed,19.4,worker-results.json
+UT-21.06,UT-21,UT,apps/worker/src/services/imageProcessing.service.test.ts,"inventory image processing fails immediately (no retry) on an entry that exceeds the expanded size limit, without buffering it in full",passed,2.6,worker-results.json
+UT-21.07,UT-21,UT,apps/worker/src/services/imageProcessing.service.test.ts,inventory image processing stores a re-encoded WebP with all metadata (including GPS location) removed,passed,8.2,worker-results.json
+UT-21.08,UT-21,UT,apps/worker/src/services/imageProcessing.service.test.ts,inventory image processing skips a file that only starts like a JPEG but cannot be decoded,passed,2.8,worker-results.json
+UT-21.09,UT-21,UT,apps/worker/src/services/imageProcessing.service.test.ts,inventory image processing skips an image above the pixel cap even when the file itself is small,passed,417.5,worker-results.json
+UT-21.10,UT-21,UT,apps/worker/src/services/imageProcessing.service.test.ts,inventory image processing shrinks large photos to the maximum stored dimension,passed,446.1,worker-results.json
+UT-21.11,UT-21,UT,apps/worker/src/services/imageProcessing.service.test.ts,"inventory image processing also stores an 800 px small copy for cards and phones, and links it on the listing",passed,425.3,worker-results.json
+UT-21.12,UT-21,UT,apps/worker/src/services/imageProcessing.service.test.ts,inventory image processing retries a temporary storage failure with backoff instead of failing the job,passed,3.0,worker-results.json
+UT-21.13,UT-21,UT,apps/worker/src/services/imageProcessing.service.test.ts,inventory image processing fails immediately when the upload is not a zip archive at all,passed,1.3,worker-results.json
+UT-21.14,UT-21,UT,apps/worker/src/services/imageProcessing.service.test.ts,inventory image processing is idempotent: a retry after a crash does not attach the same photos again,passed,28.0,worker-results.json
+UT-21.15,UT-21,UT,apps/worker/src/services/imageProcessing.service.test.ts,inventory image processing derives the same key for the same photo and a different key for different content,passed,0.7,worker-results.json
+UT-22.01,UT-22,UT,apps/worker/src/services/jobLease.test.ts,holdLease renews the lease every third of its duration while work continues,passed,9.1,worker-results.json
+UT-22.02,UT-22,UT,apps/worker/src/services/jobLease.test.ts,holdLease reports the lease as lost once another worker owns the job,passed,1.1,worker-results.json
+UT-22.03,UT-22,UT,apps/worker/src/services/jobLease.test.ts,holdLease keeps the lease through a temporary renewal error and tries again next time,passed,1.3,worker-results.json
+UT-22.04,UT-22,UT,apps/worker/src/services/jobLease.test.ts,holdLease stops renewing when the job ends,passed,0.7,worker-results.json
+UT-23.01,UT-23,UT,apps/worker/src/services/transientError.test.ts,isTransientError retries a dropped connection,passed,2.7,worker-results.json
+UT-23.02,UT-23,UT,apps/worker/src/services/transientError.test.ts,isTransientError retries S3 throttling,passed,0.3,worker-results.json
+UT-23.03,UT-23,UT,apps/worker/src/services/transientError.test.ts,isTransientError retries an S3 5xx response,passed,0.2,worker-results.json
+UT-23.04,UT-23,UT,apps/worker/src/services/transientError.test.ts,isTransientError retries an SDK-marked retryable error,passed,0.1,worker-results.json
+UT-23.05,UT-23,UT,apps/worker/src/services/transientError.test.ts,isTransientError retries MongoDB being unreachable,passed,0.1,worker-results.json
+UT-23.06,UT-23,UT,apps/worker/src/services/transientError.test.ts,isTransientError retries a wrapped network error,passed,0.1,worker-results.json
+UT-23.07,UT-23,UT,apps/worker/src/services/transientError.test.ts,isTransientError does not retry a missing file,passed,0.2,worker-results.json
+UT-23.08,UT-23,UT,apps/worker/src/services/transientError.test.ts,isTransientError does not retry access denied,passed,0.1,worker-results.json
+UT-23.09,UT-23,UT,apps/worker/src/services/transientError.test.ts,isTransientError does not retry a CSV parse error,passed,0.2,worker-results.json
+UT-23.10,UT-23,UT,apps/worker/src/services/transientError.test.ts,isTransientError does not retry a duplicate key error,passed,0.2,worker-results.json
+UT-23.11,UT-23,UT,apps/worker/src/services/transientError.test.ts,isTransientError does not retry a programming error,passed,0.1,worker-results.json
+UT-23.12,UT-23,UT,apps/worker/src/services/transientError.test.ts,isTransientError does not retry a non-error value,passed,0.1,worker-results.json
+UT-24.01,UT-24,UT,apps/worker/src/jobs/reaper.job.test.ts,queue reconciliation (reaper) re-queues a pending upload whose queue message was never written (e.g. Redis was down),passed,4.5,worker-results.json
+UT-24.02,UT-24,UT,apps/worker/src/jobs/reaper.job.test.ts,"queue reconciliation (reaper) re-queues photo processing whose BullMQ attempts were exhausted, under the images job id",passed,1.5,worker-results.json
+UT-24.03,UT-24,UT,apps/worker/src/jobs/reaper.job.test.ts,queue reconciliation (reaper) fails a job whose durable attempt budget is used up instead of re-queuing it forever,passed,2.1,worker-results.json
+UT-24.04,UT-24,UT,apps/worker/src/jobs/reaper.job.test.ts,queue reconciliation (reaper) leaves a job alone while its queue message is waiting,passed,0.8,worker-results.json
+UT-24.05,UT-24,UT,apps/worker/src/jobs/reaper.job.test.ts,queue reconciliation (reaper) leaves a job alone while its queue message is delayed,passed,0.5,worker-results.json
+UT-24.06,UT-24,UT,apps/worker/src/jobs/reaper.job.test.ts,queue reconciliation (reaper) leaves a job alone while its queue message is active,passed,0.3,worker-results.json
+UT-25.01,UT-25,UT,apps/worker/src/jobs/emailOutbox.job.test.ts,email outbox sends each due email once and marks it sent,passed,5.9,worker-results.json
+UT-25.02,UT-25,UT,apps/worker/src/jobs/emailOutbox.job.test.ts,email outbox after failed attempt 1 it retries 60000 ms later,passed,1.1,worker-results.json
+UT-25.03,UT-25,UT,apps/worker/src/jobs/emailOutbox.job.test.ts,email outbox after failed attempt 2 it retries 300000 ms later,passed,0.5,worker-results.json
+UT-25.04,UT-25,UT,apps/worker/src/jobs/emailOutbox.job.test.ts,email outbox after failed attempt 4 it retries 7200000 ms later,passed,0.5,worker-results.json
+UT-25.05,UT-25,UT,apps/worker/src/jobs/emailOutbox.job.test.ts,email outbox gives up after the fifth failed attempt and marks the email failed,passed,0.7,worker-results.json
+UT-25.06,UT-25,UT,apps/worker/src/jobs/emailOutbox.job.test.ts,email outbox marks an email failed at once when the recipient account no longer exists,passed,0.6,worker-results.json
+UT-25.07,UT-25,UT,apps/worker/src/jobs/emailOutbox.job.test.ts,email outbox processes a bounded number of emails per cycle,passed,0.9,worker-results.json
+UT-26.01,UT-26,UT,apps/worker/src/jobs/documentRetention.job.test.ts,dealer document retention only looks at decisions made more than 90 days ago,passed,4.0,worker-results.json
+UT-26.02,UT-26,UT,apps/worker/src/jobs/documentRetention.job.test.ts,"dealer document retention deletes every stored file, then clears the record with the deletion date",passed,2.7,worker-results.json
+UT-26.03,UT-26,UT,apps/worker/src/jobs/documentRetention.job.test.ts,"dealer document retention keeps the record when a storage delete fails, so the next cycle retries it",passed,3.0,worker-results.json
+UT-27.01,UT-27,UT,apps/worker/src/jobs/staleListingReminder.job.test.ts,"stale listing reminders counts listings not confirmed for 60 days, and reminds at most once a week",passed,4.1,worker-results.json
+UT-27.02,UT-27,UT,apps/worker/src/jobs/staleListingReminder.job.test.ts,"stale listing reminders reminds each dealer with their own count, only when this worker wins the claim",passed,1.8,worker-results.json
+UT-27.03,UT-27,UT,apps/worker/src/jobs/staleListingReminder.job.test.ts,"stale listing reminders keeps going when one dealer fails, so the others are still reminded",passed,1.0,worker-results.json
+UT-28.01,UT-28,UT,apps/frontend/src/features/auth/components/RoleGuard.test.tsx,RoleGuard sends signed-out visitors to the login page,passed,36.3,frontend-results.json
+UT-28.02,UT-28,UT,apps/frontend/src/features/auth/components/RoleGuard.test.tsx,RoleGuard shows the page to a user with an allowed role,passed,4.1,frontend-results.json
+UT-28.03,UT-28,UT,apps/frontend/src/features/auth/components/RoleGuard.test.tsx,"RoleGuard shows ""Access Restricted"" to a signed-in user without the role",passed,13.9,frontend-results.json
+UT-28.04,UT-28,UT,apps/frontend/src/features/auth/components/RoleGuard.test.tsx,RoleGuard sends an applicant whose dealer application is still pending to the status page,passed,3.6,frontend-results.json
+UT-29.01,UT-29,UT,apps/frontend/src/features/auth/components/EmailVerificationBanner.test.tsx,EmailVerificationBanner is hidden when nobody is signed in or the email is verified,passed,23.6,frontend-results.json
+UT-29.02,UT-29,UT,apps/frontend/src/features/auth/components/EmailVerificationBanner.test.tsx,"EmailVerificationBanner asks an unverified user to verify, and can resend the email",passed,183.6,frontend-results.json
+UT-29.03,UT-29,UT,apps/frontend/src/features/auth/components/EmailVerificationBanner.test.tsx,EmailVerificationBanner disappears once the user has verified,passed,46.2,frontend-results.json
+UT-29.04,UT-29,UT,apps/frontend/src/features/auth/components/EmailVerificationBanner.test.tsx,EmailVerificationBanner explains when the link has not been opened yet,passed,62.7,frontend-results.json
+UT-30.01,UT-30,UT,apps/frontend/src/features/auth/context/AuthProvider.test.tsx,"AuthProvider cached data clears the previous account's cached data on sign-out, so the next user never sees it",passed,153.2,frontend-results.json
+UT-30.02,UT-30,UT,apps/frontend/src/features/auth/context/AuthProvider.test.tsx,AuthProvider cached data clears cached data when a different account signs in on the same browser,passed,13.9,frontend-results.json
+UT-31.01,UT-31,UT,apps/frontend/src/features/auth/pages/RegisterPage.test.tsx,"RegisterPage for a signed-in buyer shows the rejection reason, pre-fills the previous answers, and asks for no password",passed,233.4,frontend-results.json
+UT-31.02,UT-31,UT,apps/frontend/src/features/auth/pages/RegisterPage.test.tsx,RegisterPage for a signed-in buyer resubmits from the existing account with the new documents,passed,236.4,frontend-results.json
+UT-31.03,UT-31,UT,apps/frontend/src/features/auth/pages/RegisterPage.test.tsx,RegisterPage for a signed-in buyer sends an applicant whose application is still pending to the status page,passed,29.7,frontend-results.json
+UT-32.01,UT-32,UT,apps/frontend/src/portals/dealer/pages/DealerProfile.test.tsx,DealerProfile shows the verified business name and registration number as read-only,passed,86.2,frontend-results.json
+UT-32.02,UT-32,UT,apps/frontend/src/portals/dealer/pages/DealerProfile.test.tsx,DealerProfile saves edited details and confirms,passed,386.3,frontend-results.json
+UT-32.03,UT-32,UT,apps/frontend/src/portals/dealer/pages/DealerProfile.test.tsx,DealerProfile shows the server message when saving fails,passed,87.4,frontend-results.json
+UT-33.01,UT-33,UT,apps/frontend/src/portals/dealer/pages/UploadDetails.test.tsx,UploadDetails publishes all of this upload's drafts in one step,passed,280.7,frontend-results.json
+UT-33.02,UT-33,UT,apps/frontend/src/portals/dealer/pages/UploadDetails.test.tsx,UploadDetails shows the failure reason and lets the dealer retry a failed CSV import,passed,92.9,frontend-results.json
+UT-33.03,UT-33,UT,apps/frontend/src/portals/dealer/pages/UploadDetails.test.tsx,UploadDetails lets the dealer retry failed photo processing,passed,61.2,frontend-results.json
+UT-33.04,UT-33,UT,apps/frontend/src/portals/dealer/pages/UploadDetails.test.tsx,UploadDetails shows an error message when the retry is refused,passed,107.1,frontend-results.json
+UT-33.05,UT-33,UT,apps/frontend/src/portals/dealer/pages/UploadDetails.test.tsx,UploadDetails does not offer Retry for an upload that succeeded,passed,39.9,frontend-results.json
+UT-34.01,UT-34,UT,apps/frontend/src/portals/dealer/pages/ListingManager.test.tsx,dealer listing manager reminds the dealer about stale stock and opens the stale list,passed,304.8,frontend-results.json
+UT-34.02,UT-34,UT,apps/frontend/src/portals/dealer/pages/ListingManager.test.tsx,dealer listing manager publishes every selected draft in one request,passed,237.4,frontend-results.json
+UT-34.03,UT-34,UT,apps/frontend/src/portals/dealer/pages/ListingManager.test.tsx,dealer listing manager offers one-click fixes on stale listings and shows how long ago each was confirmed,passed,62.9,frontend-results.json
+UT-34.04,UT-34,UT,apps/frontend/src/portals/dealer/pages/ListingManager.test.tsx,dealer listing manager previews a price cut before applying it,passed,201.6,frontend-results.json
+UT-34.05,UT-34,UT,apps/frontend/src/portals/dealer/pages/ListingManager.test.tsx,dealer listing manager explains skipped listings in plain words,passed,0.5,frontend-results.json
+UT-35.01,UT-35,UT,apps/frontend/src/portals/admin/pages/adminPages.test.tsx,Dealer Approvals opens the tab from the link (?status=approved) instead of always showing pending,passed,61.4,frontend-results.json
+UT-35.02,UT-35,UT,apps/frontend/src/portals/admin/pages/adminPages.test.tsx,"Dealer Approvals highlights and scrolls to the exact application from a dashboard link, and shows earlier rejections",passed,56.6,frontend-results.json
+UT-35.03,UT-35,UT,apps/frontend/src/portals/admin/pages/adminPages.test.tsx,"Admin dashboard says a section is unavailable instead of showing zero or ""none yet"" when it fails to load",passed,29.2,frontend-results.json
+UT-35.04,UT-35,UT,apps/frontend/src/portals/admin/pages/adminPages.test.tsx,Admin dashboard links a waiting application to that exact application,passed,27.8,frontend-results.json
+UT-35.05,UT-35,UT,apps/frontend/src/portals/admin/pages/adminPages.test.tsx,Upload monitoring loads only the linked upload when opened with ?uploadId,passed,124.2,frontend-results.json
+UT-35.06,UT-35,UT,apps/frontend/src/portals/admin/pages/adminPages.test.tsx,Upload monitoring passes the date range and page to the server,passed,33.0,frontend-results.json
+UT-36.01,UT-36,UT,apps/frontend/src/portals/buyer/pages/VehicleDetails.test.tsx,"vehicle page keeps Call, WhatsApp and Email one tap away, with the WhatsApp message ready",passed,244.8,frontend-results.json
+UT-36.02,UT-36,UT,apps/frontend/src/portals/buyer/pages/VehicleDetails.test.tsx,"vehicle page loads the small photo copy on phones, and lets the buyer swipe or tap through photos",passed,169.6,frontend-results.json
+UT-36.03,UT-36,UT,apps/frontend/src/portals/buyer/pages/VehicleDetails.test.tsx,vehicle page ignores a mostly vertical finger movement (the page scrolling),passed,46.6,frontend-results.json
+UT-36.04,UT-36,UT,apps/frontend/src/portals/buyer/pages/VehicleDetails.test.tsx,"vehicle page remembers the vehicle on this device for recommendations, and shows similar vehicles",passed,78.8,frontend-results.json
+UT-37.01,UT-37,UT,apps/frontend/src/features/compare/compare.test.tsx,"compare vehicles collects up to three vehicles, says when the list is full, and opens the comparison",passed,466.6,frontend-results.json
+UT-37.02,UT-37,UT,apps/frontend/src/features/compare/compare.test.tsx,"compare vehicles shows vehicles side by side and highlights the best price, year and mileage",passed,125.2,frontend-results.json
+UT-37.03,UT-37,UT,apps/frontend/src/features/compare/compare.test.tsx,compare vehicles says so when a vehicle is no longer available,passed,15.2,frontend-results.json
+UT-37.04,UT-37,UT,apps/frontend/src/features/compare/compare.test.tsx,compare vehicles picks the best value only when the vehicles differ,passed,0.6,frontend-results.json
+UT-38.01,UT-38,UT,apps/frontend/src/shared/components/mobileLayout.test.tsx,portal navigation on phones and tablets opens the menu as a drawer and moves focus into it,passed,230.2,frontend-results.json
+UT-38.02,UT-38,UT,apps/frontend/src/shared/components/mobileLayout.test.tsx,portal navigation on phones and tablets closes on Escape (focus back on the button) and after choosing a page,passed,245.5,frontend-results.json
+UT-38.03,UT-38,UT,apps/frontend/src/shared/components/mobileLayout.test.tsx,"tables on phones labels every cell with its column heading, so each row can be shown as a card",passed,4.7,frontend-results.json
+UT-39.01,UT-39,UT,apps/frontend/src/shared/i18n/i18n.test.tsx,Sinhala and Tamil support translates every English message (none left empty or with a lost placeholder),passed,16.6,frontend-results.json
+UT-39.02,UT-39,UT,apps/frontend/src/shared/i18n/i18n.test.tsx,Sinhala and Tamil support fills in placeholders and translates vehicle values,passed,0.9,frontend-results.json
+UT-39.03,UT-39,UT,apps/frontend/src/shared/i18n/i18n.test.tsx,"Sinhala and Tamil support switches the whole site language, sets the page lang, and remembers the choice",passed,322.6,frontend-results.json
+UT-39.04,UT-39,UT,apps/frontend/src/shared/i18n/i18n.test.tsx,Sinhala and Tamil support starts in Tamil for a browser that prefers Tamil,passed,13.9,frontend-results.json
+UT-40.01,UT-40,UT,apps/frontend/src/shared/utils/phone.test.ts,"WhatsApp numbers adds the Sri Lankan country code to local numbers, however they are written",passed,2.2,frontend-results.json
+UT-40.02,UT-40,UT,apps/frontend/src/shared/utils/phone.test.ts,WhatsApp numbers keeps foreign numbers and rejects ones that cannot be dialled,passed,0.4,frontend-results.json
+UT-40.03,UT-40,UT,apps/frontend/src/shared/utils/phone.test.ts,WhatsApp numbers builds a link with the message ready to send,passed,0.3,frontend-results.json
+IT-01.01,IT-01,IT,apps/backend/src/modules/dealers/dealer.repository.test.ts,dealer repository creates a pending dealer application and finds it by user id,passed,48.6,backend-results.json
+IT-02.01,IT-02,IT,apps/backend/src/modules/admin/admin.repository.test.ts,admin repository lists pending dealer applications oldest first,passed,81.0,backend-results.json
+IT-03.01,IT-03,IT,apps/backend/src/modules/marketplace/listing.repository.test.ts,listing repository — registration duplicate detection finds an active listing sharing a normalized registration number,passed,39.3,backend-results.json
+IT-03.02,IT-03,IT,apps/backend/src/modules/marketplace/listing.repository.test.ts,listing repository — registration duplicate detection does not treat an archived listing as a blocking duplicate,passed,10.7,backend-results.json
+IT-03.03,IT-03,IT,apps/backend/src/modules/marketplace/listing.repository.test.ts,listing repository — registration duplicate detection excludes the listing being edited from its own duplicate check,passed,10.7,backend-results.json
+IT-03.04,IT-03,IT,apps/backend/src/modules/marketplace/listing.repository.test.ts,listing repository — registration duplicate detection does not match a different registration number,passed,9.1,backend-results.json
+IT-03.05,IT-03,IT,apps/backend/src/modules/marketplace/listing.repository.test.ts,listing repository — registration duplicate detection rejects a second draft/active listing for the same registration number at the DB level,passed,16.0,backend-results.json
+IT-03.06,IT-03,IT,apps/backend/src/modules/marketplace/listing.repository.test.ts,listing repository — registration duplicate detection allows relisting a registration number once the prior listing is archived,passed,14.8,backend-results.json
+IT-04.01,IT-04,IT,apps/backend/src/modules/marketplace/listing.service.test.ts,listing service — updateDealerListing clears the description when updated to null,passed,119.7,backend-results.json
+IT-04.02,IT-04,IT,apps/backend/src/modules/marketplace/listing.service.test.ts,listing service — updateDealerListing still updates the description to a new value,passed,29.7,backend-results.json
+IT-05.01,IT-05,IT,apps/backend/src/modules/admin/admin.documentAccess.test.ts,admin access to dealer verification documents records who viewed which document in the audit log,passed,110.5,backend-results.json
+IT-05.02,IT-05,IT,apps/backend/src/modules/admin/admin.documentAccess.test.ts,"admin access to dealer verification documents answers 410 Gone once documents were deleted by the retention policy, without logging a view",passed,16.2,backend-results.json
+IT-05.03,IT-05,IT,apps/backend/src/modules/admin/admin.documentAccess.test.ts,admin access to dealer verification documents does not log a view for a document index that does not exist,passed,14.6,backend-results.json
+IT-06.01,IT-06,IT,apps/backend/src/shared/middleware/rateLimits.test.ts,rate limits answers 429 in the standard error format once the budget is used up,passed,30.9,backend-results.json
+IT-06.02,IT-06,IT,apps/backend/src/shared/middleware/rateLimits.test.ts,"rate limits lets requests through when the shared store (Redis) is down, instead of blocking the site",passed,9.3,backend-results.json
+IT-06.03,IT-06,IT,apps/backend/src/shared/middleware/rateLimits.test.ts,"rate limits can count only successful requests, so rejected uploads do not use up a quota",passed,8.3,backend-results.json
+IT-06.04,IT-06,IT,apps/backend/src/shared/middleware/rateLimits.test.ts,"rate limits backed by real Redis enforces one shared budget (the default store, as used in production)",passed,12.1,backend-results.json
+IT-06.05,IT-06,IT,apps/backend/src/shared/middleware/rateLimits.test.ts,"upload concurrency gate refuses uploads beyond the in-flight maximum with 503 and Retry-After, then admits again",passed,106.2,backend-results.json
+IT-07.01,IT-07,IT,apps/worker/src/repositories/jobSafety.db.test.ts,job safety guarantees in MongoDB lets only the current lease owner write once an expired lease is taken over,passed,247.4,worker-results.json
+IT-07.02,IT-07,IT,apps/worker/src/repositories/jobSafety.db.test.ts,job safety guarantees in MongoDB does not let a second worker claim a job whose lease is still valid,passed,11.1,worker-results.json
+IT-07.03,IT-07,IT,apps/worker/src/repositories/jobSafety.db.test.ts,job safety guarantees in MongoDB never stores two listings for the same CSV row of the same upload,passed,30.9,worker-results.json
+IT-07.04,IT-07,IT,apps/worker/src/repositories/jobSafety.db.test.ts,"job safety guarantees in MongoDB records each rejected row once, even when the batch is processed again",passed,19.5,worker-results.json
+IT-08.01,IT-08,IT,apps/backend/src/test/accessControl.journey.test.ts,"access control across dealers, roles, and admin actions (HTTP level, no browser) dealer B cannot reach dealer A's data by changing IDs cannot view, edit, change status of, or delete the listing",passed,185.0,backend-results.json
+IT-08.02,IT-08,IT,apps/backend/src/test/accessControl.journey.test.ts,"access control across dealers, roles, and admin actions (HTTP level, no browser) dealer B cannot reach dealer A's data by changing IDs cannot add, delete, or reorder the listing's photos",passed,125.1,backend-results.json
+IT-08.03,IT-08,IT,apps/backend/src/test/accessControl.journey.test.ts,"access control across dealers, roles, and admin actions (HTTP level, no browser) dealer B cannot reach dealer A's data by changing IDs cannot see, retry, or attach photos to the upload",passed,85.1,backend-results.json
+IT-08.04,IT-08,IT,apps/backend/src/test/accessControl.journey.test.ts,"access control across dealers, roles, and admin actions (HTTP level, no browser) dealer B cannot reach dealer A's data by changing IDs does not get the listing or upload in their own lists",passed,76.8,backend-results.json
+IT-08.05,IT-08,IT,apps/backend/src/test/accessControl.journey.test.ts,"access control across dealers, roles, and admin actions (HTTP level, no browser) dealer B cannot reach dealer A's data by changing IDs cannot open the dealer's verification documents",passed,65.3,backend-results.json
+IT-08.06,IT-08,IT,apps/backend/src/test/accessControl.journey.test.ts,"access control across dealers, roles, and admin actions (HTTP level, no browser) public and role boundaries does not show a dealer's draft listing publicly",passed,68.6,backend-results.json
+IT-08.07,IT-08,IT,apps/backend/src/test/accessControl.journey.test.ts,"access control across dealers, roles, and admin actions (HTTP level, no browser) public and role boundaries refuses to serve private storage objects through the public image route",passed,59.6,backend-results.json
+IT-08.08,IT-08,IT,apps/backend/src/test/accessControl.journey.test.ts,"access control across dealers, roles, and admin actions (HTTP level, no browser) public and role boundaries requires sign-in, and the right role, for dealer and admin areas",passed,86.3,backend-results.json
+IT-08.09,IT-08,IT,apps/backend/src/test/accessControl.journey.test.ts,"access control across dealers, roles, and admin actions (HTTP level, no browser) public and role boundaries blocks a suspended account even with a valid token",passed,67.8,backend-results.json
+IT-08.10,IT-08,IT,apps/backend/src/test/accessControl.journey.test.ts,"access control across dealers, roles, and admin actions (HTTP level, no browser) dealer approval requires a verified email refuses approval until the applicant has verified their email, then approves",passed,98.9,backend-results.json
+IT-09.01,IT-09,IT,apps/backend/src/test/dealerLifecycle.journey.test.ts,"dealer lifecycle (HTTP level) suspended dealers disappear from public pages hides the listing from browse, detail, and search while suspended, and shows it again after reactivation",passed,327.3,backend-results.json
+IT-09.02,IT-09,IT,apps/backend/src/test/dealerLifecycle.journey.test.ts,dealer lifecycle (HTTP level) dealer profile editing lets an approved dealer update contact details but not the verified business name or registration number,passed,48.4,backend-results.json
+IT-09.03,IT-09,IT,apps/backend/src/test/dealerLifecycle.journey.test.ts,dealer lifecycle (HTTP level) dealer profile editing validates changes and is only available to approved dealers,passed,68.2,backend-results.json
+IT-09.04,IT-09,IT,apps/backend/src/test/dealerLifecycle.journey.test.ts,dealer lifecycle (HTTP level) applying from an existing account and resubmitting after rejection lets a signed-in buyer apply without creating a new account,passed,64.3,backend-results.json
+IT-09.05,IT-09,IT,apps/backend/src/test/dealerLifecycle.journey.test.ts,"dealer lifecycle (HTTP level) applying from an existing account and resubmitting after rejection lets a rejected applicant correct and resubmit, keeping the earlier decision and replacing the old documents",passed,126.7,backend-results.json
+IT-09.06,IT-09,IT,apps/backend/src/test/dealerLifecycle.journey.test.ts,dealer lifecycle (HTTP level) applying from an existing account and resubmitting after rejection does not let an approved dealer submit another application,passed,36.2,backend-results.json
+IT-09.07,IT-09,IT,apps/backend/src/test/dealerLifecycle.journey.test.ts,dealer lifecycle (HTTP level) admin monitoring filters opens one exact upload and filters uploads and audit events by date,passed,91.4,backend-results.json
+IT-10.01,IT-10,IT,apps/backend/src/test/listingTools.journey.test.ts,"dealer listing tools and buyer discovery (HTTP level) bulk actions publishes every chosen draft in one request, and skips listings the action does not apply to",passed,124.7,backend-results.json
+IT-10.02,IT-10,IT,apps/backend/src/test/listingTools.journey.test.ts,dealer listing tools and buyer discovery (HTTP level) bulk actions publishes all drafts from one CSV upload without listing their IDs,passed,43.5,backend-results.json
+IT-10.03,IT-10,IT,apps/backend/src/test/listingTools.journey.test.ts,"dealer listing tools and buyer discovery (HTTP level) bulk actions never touches another dealer's listings, even when their IDs are sent",passed,56.1,backend-results.json
+IT-10.04,IT-10,IT,apps/backend/src/test/listingTools.journey.test.ts,"dealer listing tools and buyer discovery (HTTP level) bulk actions marks sold, archives, and reduces prices by a percentage",passed,73.5,backend-results.json
+IT-10.05,IT-10,IT,apps/backend/src/test/listingTools.journey.test.ts,"dealer listing tools and buyer discovery (HTTP level) bulk actions deletes only archived listings, and removes their photos and small copies from storage",passed,51.3,backend-results.json
+IT-10.06,IT-10,IT,apps/backend/src/test/listingTools.journey.test.ts,"dealer listing tools and buyer discovery (HTTP level) bulk actions rejects a request mixing chosen IDs with an upload, and a price cut without a percentage",passed,41.5,backend-results.json
+IT-10.07,IT-10,IT,apps/backend/src/test/listingTools.journey.test.ts,dealer listing tools and buyer discovery (HTTP level) bulk actions is for dealers only,passed,22.2,backend-results.json
+IT-10.08,IT-10,IT,apps/backend/src/test/listingTools.journey.test.ts,"dealer listing tools and buyer discovery (HTTP level) stale stock counts and lists active listings not confirmed for 60 days, oldest first",passed,58.5,backend-results.json
+IT-10.09,IT-10,IT,apps/backend/src/test/listingTools.journey.test.ts,dealer listing tools and buyer discovery (HTTP level) stale stock treats listings saved before lastConfirmedAt existed by their last update time,passed,28.9,backend-results.json
+IT-10.10,IT-10,IT,apps/backend/src/test/listingTools.journey.test.ts,"dealer listing tools and buyer discovery (HTTP level) stale stock ""still available"", a price cut, or an edit makes a listing fresh again",passed,179.7,backend-results.json
+IT-10.11,IT-10,IT,apps/backend/src/test/listingTools.journey.test.ts,dealer listing tools and buyer discovery (HTTP level) similar vehicles and recommendations ranks the closest vehicles first and never includes the vehicle itself or hidden listings,passed,76.0,backend-results.json
+IT-10.12,IT-10,IT,apps/backend/src/test/listingTools.journey.test.ts,"dealer listing tools and buyer discovery (HTTP level) similar vehicles and recommendations recommends vehicles like the ones this browser viewed, leaving out the viewed ones",passed,52.2,backend-results.json
+IT-10.13,IT-10,IT,apps/backend/src/test/listingTools.journey.test.ts,dealer listing tools and buyer discovery (HTTP level) similar vehicles and recommendations returns nothing (not an error) when no viewed vehicle can be found,passed,13.7,backend-results.json
+IT-10.14,IT-10,IT,apps/backend/src/test/listingTools.journey.test.ts,dealer listing tools and buyer discovery (HTTP level) similar vehicles and recommendations rejects a malformed viewed list,passed,5.8,backend-results.json
+IT-10.15,IT-10,IT,apps/backend/src/test/listingTools.journey.test.ts,dealer listing tools and buyer discovery (HTTP level) serves the small copy of a photo from the thumbs/ folder,passed,13.3,backend-results.json
+IT-11.01,IT-11,IT,apps/backend/src/scripts/listingImageMigration.db.test.ts,"listing image URL updates (real MongoDB) sets the small-copy URL only on the listed photos, even though their keys contain dots",passed,40.9,backend-results.json
+IT-11.02,IT-11,IT,apps/backend/src/scripts/listingImageMigration.db.test.ts,listing image URL updates (real MongoDB) rewrites photo URLs and keeps every other image field,passed,14.7,backend-results.json
+NF-01.01,NF-01,NF,apps/worker/src/benchmarks/importThroughput.bench.test.ts,CSV import throughput (5000 records) imports 5000 records within 120 s,passed,11400.5,worker-results.json

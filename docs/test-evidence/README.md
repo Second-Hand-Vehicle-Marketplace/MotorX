@@ -1,25 +1,29 @@
 # Test-plan execution evidence
 
-Baseline and environment: see `run-metadata.json`. This evidence was generated while preparing the MotorX test-plan report on 21 September 2026.
+Evidence for `docs/MotorX_Test_Plan_Report` version 2.0 (26 September 2026). Baseline and environment: see `run-metadata.json`.
+The report, `docs/MotorX_Test_Case_Register.csv` and `automated-test-register.csv` are generated from these files by `python docs/build_test_plan.py`.
 
 | Artifact | Scope | Observed result |
 | --- | --- | --- |
-| `backend-unit-results.json` | Eight backend suites excluding database repository tests | 42 passed, 0 failed |
-| `worker-results.json` | Six pipeline and mocked-service suites | 35 passed, 0 failed |
-| `automated-test-register.csv` | Individual outcomes exported from both JSON reports | 77 assertions/test cases |
-| `build-output.txt` | All four workspace builds | Exit code 0 |
-| `run-metadata.json` | Revision, runtime, environment and execution limitations | Informational |
+| `backend-results.json` | All 25 backend suites: unit, MongoDB/Redis integration and HTTP journeys (isolated Docker test stack) | 143 passed, 0 failed |
+| `worker-results.json` | All 14 worker suites, including the MongoDB job-safety suite and the 5,000-row benchmark (`RUN_BENCHMARKS=1`) | 90 passed, 0 failed |
+| `frontend-results.json` | All 13 frontend component suites (jsdom) | 50 passed, 0 failed |
+| `automated-test-register.csv` | Every automated test above, with its case group, level, status and duration | 283 tests |
+| `benchmark-output.txt` | Two consecutive runs of the 5,000-row import benchmark | 11.1 s and 11.2 s (target 120 s) |
+| `live-smoke-output.txt`, `live-smoke-results.json` | Read-only smoke test of the running development stack with real data (`scripts/smoke/live-stack-smoke.py`) | 16 passed, 1 failed (22 of 23 active listing photos only existed on an old server, finding F-01) |
+| `build-output.txt` | `npm run build --workspaces --if-present` | Exit code 0 |
+| `run-metadata.json` | Revision, runtimes, commands and limitations | Informational |
 
-Commands were run from the repository root:
+Commands (repository root):
 
 ```powershell
-npm.cmd test --workspace @motorx/backend -- --exclude "**/*.repository.test.ts" --reporter=json --outputFile=../../docs/test-evidence/backend-unit-results.json
-npm.cmd test --workspace @motorx/worker -- --reporter=json --outputFile=../../docs/test-evidence/worker-results.json
-npm.cmd run build --workspaces --if-present
+docker compose -f compose.yml -f compose.test.yml run --rm backend
+docker compose -f compose.yml -f compose.test.yml run --rm -e RUN_BENCHMARKS=1 worker
+cd apps/frontend; npx vitest run
+npm run build --workspaces --if-present
+python scripts/smoke/live-stack-smoke.py
 ```
 
-Database repository tests were not run: this execution environment could not access the Docker daemon, and this task did not provision a disposable database. Browser, load, performance and recovery tests were not run. Worker service tests mock durable dependencies; they are not proof of real database/queue/storage integration. Frontend and shared-contracts placeholder test scripts do not count as tests.
+JSON files were produced by adding `--reporter=json --outputFile=<path>` to the Vitest commands. The worker crash drill (`scripts/drills/kill-worker-mid-import.sh`) result is recorded in `docs/RESILIENCE.md`.
 
-The report has 48 case groups/scenarios. Its 14 executed unit/component groups summarize the same 77 individual tests; these are not additional tests to add to the total. The three existing database repository files contain six further test cases, with no execution outcome asserted here.
-
-The Word document was checked structurally using python-docx and its case register was checked against the JSON reports. Visual Word/PDF rendering was unavailable because Word automation could not start in this logon session. Review page layout in Word before printing; no PDF rendering is represented as completed.
+Not covered by this evidence: browser end-to-end journeys (report Section 3.4, to be executed manually by the team), real Firebase/SMTP integration, load testing, and code coverage (no coverage tool installed). HTTP journey tests replace the Firebase Admin SDK and the S3 client; they are not evidence about those external services.
