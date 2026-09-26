@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.699.0",
+    "@aws-sdk/client-s3": "^3.1138.0",
     "@motorx/shared-contracts": "*",
-    "axios": "^1.7.9",
+    "axios": "^1.20.0",
     "bullmq": "^5.30.0",
     "csv-parse": "^5.6.0",
     "dotenv": "^16.4.0",
@@ -21,7 +21,7 @@
     "@types/node": "^24.13.6",
     "@types/nodemailer": "^6.4.17",
     "@types/unzipper": "^0.10.11",
-    "tsx": "^4.19.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.7.0",
     "vitest": "^4.1.10"
   },
