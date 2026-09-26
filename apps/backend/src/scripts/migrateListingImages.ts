@@ -6,6 +6,7 @@
 //   node dist/scripts/migrateListingImages.js --public-url=https://cdn.example.com   # also rewrite URLs
 //   add --keep-legacy to leave the original objects in place (delete them later by re-running without it)
 //
+// Also creates the small copy (listing-images/thumbs/) of every photo that lacks one.
 // Safe to stop and re-run: photos already migrated are skipped.
 import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import mongoose from 'mongoose';
@@ -23,7 +24,7 @@ try {
   const summary = await migrateListingImages({
     async *listings() {
       for await (const listing of ListingModel.find({ 'images.0': { $exists: true } }).select('images').lean().cursor()) {
-        yield { id: String(listing._id), images: (listing.images as Array<{ key: string; url: string }>) };
+        yield { id: String(listing._id), images: (listing.images as Array<{ key: string; url: string; thumbUrl?: string }>) };
       }
     },
     async exists(key) {
@@ -41,6 +42,11 @@ try {
     async setImageUrls(listingId, urls) {
       await ListingModel.updateOne({ _id: listingId }, [{
         $set: { images: { $map: { input: '$images', as: 'image', in: { $mergeObjects: ['$$image', { url: { $ifNull: [{ $getField: { field: '$$image.key', input: urls } }, '$$image.url'] } }] } } } },
+      }]);
+    },
+    async setThumbUrls(listingId, urls) {
+      await ListingModel.updateOne({ _id: listingId }, [{
+        $set: { images: { $map: { input: '$images', as: 'image', in: { $mergeObjects: ['$$image', { thumbUrl: { $ifNull: [{ $getField: { field: '$$image.key', input: urls } }, '$$image.thumbUrl'] } }] } } } },
       }]);
     },
     log: (message) => console.warn(message),

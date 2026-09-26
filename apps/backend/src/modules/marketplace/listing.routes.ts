@@ -6,17 +6,18 @@ import { requireRole } from '../../shared/middleware/requireRole.js';
 import { validateRequest } from '../../shared/middleware/validateRequest.js';
 import { verifyFirebaseToken } from '../../shared/middleware/verifyFirebaseToken.js';
 import { asyncHandler } from '../../shared/utils/asyncHandler.js';
-import { createListing, deleteListing, getMyListing, getMyListingStats, listMyListings, updateListing, updateListingStatus } from './listing.controller.js';
-import { createListingBodySchema, listingIdParamsSchema, listListingsQuerySchema, updateListingBodySchema, updateListingStatusBodySchema } from './listing.validation.js';
-import { listingImageKeyParamsSchema, listingImageMetadataSchema, reorderListingImagesBodySchema } from './listing.validation.js';
+import { bulkUpdateListings, createListing, deleteListing, getMyListing, getMyListingStats, listMyListings, updateListing, updateListingStatus } from './listing.controller.js';
+import { bulkListingActionBodySchema, createListingBodySchema, listingIdParamsSchema, listMyListingsQuerySchema, updateListingBodySchema, updateListingStatusBodySchema } from './listing.validation.js';
+import { listingImageKeyParamsSchema, listingImageMetadataSchema, publicListingImageKeyParamsSchema, reorderListingImagesBodySchema } from './listing.validation.js';
 import { uploadSingleListingImage } from './listingImage.middleware.js';
-import { addListingImage, deleteListingImage, getListingImageFile, reorderListingImages } from './listingImage.controller.js';
+import { addListingImage, deleteListingImage, getListingImageFile, getListingThumbFile, reorderListingImages } from './listingImage.controller.js';
 
 export const listingRouter = Router();
 export const listingImageRouter = Router();
 const dealerOnly = [verifyFirebaseToken, loadLocalUser, requireAuthenticated, requireRole('dealer')] as const;
 
-listingRouter.get('/mine', ...dealerOnly, validateRequest({ query: listListingsQuerySchema }), asyncHandler(listMyListings));
+listingRouter.get('/mine', ...dealerOnly, validateRequest({ query: listMyListingsQuerySchema }), asyncHandler(listMyListings));
+listingRouter.post('/mine/bulk', ...dealerOnly, validateRequest({ body: bulkListingActionBodySchema }), asyncHandler(bulkUpdateListings));
 listingRouter.get('/mine/stats', ...dealerOnly, asyncHandler(getMyListingStats));
 listingRouter.get('/mine/:listingId', ...dealerOnly, validateRequest({ params: listingIdParamsSchema }), asyncHandler(getMyListing));
 listingRouter.post('/', ...dealerOnly, validateRequest({ body: createListingBodySchema }), asyncHandler(createListing));
@@ -30,4 +31,5 @@ listingRouter.delete('/:listingId/images/:imageKey', ...dealerOnly,
 listingRouter.patch('/:listingId/images/reorder', ...dealerOnly,
   validateRequest({ params: listingIdParamsSchema, body: reorderListingImagesBodySchema }), asyncHandler(reorderListingImages));
 
-listingImageRouter.get('/:imageKey', validateRequest({ params: listingImageKeyParamsSchema.pick({ imageKey: true }) }), asyncHandler(getListingImageFile));
+listingImageRouter.get('/thumbs/:imageKey', validateRequest({ params: publicListingImageKeyParamsSchema }), asyncHandler(getListingThumbFile));
+listingImageRouter.get('/:imageKey', validateRequest({ params: publicListingImageKeyParamsSchema }), asyncHandler(getListingImageFile));

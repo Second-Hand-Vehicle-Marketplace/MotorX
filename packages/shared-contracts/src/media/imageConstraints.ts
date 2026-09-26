@@ -21,3 +21,11 @@ export const LISTING_IMAGE_OUTPUT_QUALITY = 82;
 // Storage prefix for listing photos (backend uploads, worker zip imports). Private objects such as
 // dealer documents and inventory files use other prefixes, so a CDN can be limited to this one.
 export const LISTING_IMAGE_OBJECT_PREFIX = 'listing-images/';
+
+// Every listing photo also gets a small copy for cards, thumbnails and phone screens, so a
+// phone on mobile data never downloads the full 2560 px photo just to show a 400 px card.
+// 800 px covers a full-width phone screen at 2x pixel density.
+export const LISTING_IMAGE_THUMB_MAX_DIMENSION_PX = 800;
+export const LISTING_IMAGE_THUMB_QUALITY = 75;
+// Small copies live under their own folder inside the listing photo prefix, with the same file name.
+export const LISTING_IMAGE_THUMB_SUBPATH = 'thumbs/';

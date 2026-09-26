@@ -51,7 +51,24 @@ id. See `apps/backend/src/app.ts`.
   `priceMin`/`priceMax`, `sortBy`. Only `status: active` listings are returned.
 - `GET /api/v1/listings/:id` — one active listing, including the owning dealer's public profile
   (`dealer: { businessName, location, phone, email, description, website }` or `null`).
+- `GET /api/v1/listings/:id/similar?limit=6` — up to 12 public listings most like this one (same
+  vehicle type; scored on make, model, body, fuel, transmission, price, year, mileage and town).
+  Never includes the listing itself, non-active listings, or suspended dealers' listings.
+- `GET /api/v1/listings/recommendations?viewed=id1,id2&limit=8` — "Recommended for you". `viewed`
+  is the browser's recently viewed listing IDs, newest first (at most 12, kept on the device only;
+  the server stores nothing about the buyer). Returns `{ listings, basedOn }`; `basedOn: 0` and no
+  listings when none of the IDs is found. The viewed listings themselves are never returned.
 - `GET /api/v1/listings/mine` — the signed-in dealer's own listings, any status. Dealer-only.
+  Also accepts `stale=true` (active listings not confirmed for 60 days, oldest first) and
+  `uploadJobId` (only listings created by that CSV upload).
+- `GET /api/v1/listings/mine/stats` — counts by status plus `stale` and `staleAfterDays` (60).
+- `POST /api/v1/listings/mine/bulk` — one action on many of the dealer's own listings. Body:
+  `{ action, listingIds? (1-500) | uploadJobId?, percent? }` with exactly one of `listingIds` or
+  `uploadJobId`. Actions: `publish` (drafts), `mark-sold` (active), `archive` (draft/active/sold),
+  `confirm-available` (active; resets staleness), `reduce-price` (draft/active; `percent` 1-50,
+  rounded to whole rupees; resets staleness), `delete` (archived; also removes stored photos).
+  Returns `{ action, matched, updated, skipped }`: listings whose status the action does not apply
+  to are skipped, and IDs belonging to another dealer never match. Dealer-only.
 - `POST /api/v1/listings` — creates a listing for the signed-in dealer. Body validated against
   `commonListingFieldsSchema` intersected with the category-discriminated `vehicleDetailsSchema`
   (both from `@motorx/shared-contracts`) — see "Vehicle Categories" below. Dealer-only.
@@ -101,6 +118,19 @@ electric/plug_in_hybrid — are enforced once, in `@motorx/shared-contracts`'s
 Expected response:
 
 - `images[]` entries should include `id`, `url`, `alt`, and `isPrimary`.
+- Each photo also has a small copy (at most 800 px) stored under `listing-images/thumbs/` and
+  served at `GET /api/v1/listing-images/thumbs/:imageKey`; its URL is `images[].thumbUrl` (`null`
+  for photos stored before small copies existed, until `npm run images:migrate` backfills them).
+  Pages use it through `srcset`, so phones and cards never download the full 2560 px photo.
+
+### Stale stock
+
+A listing's `lastConfirmedAt` is set when it is created, edited, published, re-priced, or marked
+"still available". Active listings not confirmed for 60 days (`STALE_LISTING_DAYS`) are stale.
+Listings saved before this field existed fall back to `updatedAt`. The worker checks every 6 hours
+(`STALE_REMINDER_INTERVAL_MS`) and sends each dealer with stale stock one in-app `stale_listings`
+notification at most every 7 days (`STALE_REMINDER_REPEAT_DAYS`). The per-dealer claim is atomic,
+so several worker copies never send duplicates.
 
 ### CSV Uploads
 

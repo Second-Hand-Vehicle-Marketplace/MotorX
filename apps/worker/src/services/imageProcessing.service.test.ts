@@ -188,6 +188,20 @@ describe('inventory image processing', () => {
     expect([width, height]).toEqual([2560, 1536]);
   });
 
+  it('also stores an 800 px small copy for cards and phones, and links it on the listing', async () => {
+    const large = await sharp({ create: { width: 4000, height: 2400, channels: 3, background: '#336699' } }).jpeg().toBuffer();
+    mocks.unzipperOpenBuffer.mockResolvedValue({ files: [fakeEntry('CAX-1234/large.jpg', 'File', large)] });
+    mocks.findListings.mockResolvedValue([{ _id: new Types.ObjectId(), normalizedRegistrationNumber: 'CAX1234', images: [] }]);
+
+    await processInventoryImages(uploadJobId);
+
+    const [full, thumb] = storedObjects();
+    expect(thumb!.Key).toBe(full!.Key.replace('listing-images/', 'listing-images/thumbs/'));
+    expect((await sharp(thumb!.Body).metadata()).width).toBe(800);
+    const [attached] = mocks.appendImages.mock.calls[0]![1] as Array<{ key: string; thumbUrl?: string }>;
+    expect(attached!.thumbUrl).toMatch(new RegExp(`/thumbs/${attached!.key}$`));
+  });
+
   it('retries a temporary storage failure with backoff instead of failing the job', async () => {
     mocks.storageSend.mockRejectedValue(Object.assign(new Error('Service Unavailable'), { name: 'ServiceUnavailable', $metadata: { httpStatusCode: 503 } }));
     await expect(processInventoryImages(uploadJobId)).rejects.toThrow('Service Unavailable');

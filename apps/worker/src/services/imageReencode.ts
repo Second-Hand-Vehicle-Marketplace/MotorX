@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-import { LISTING_IMAGE_MAX_DIMENSION_PX, LISTING_IMAGE_MAX_INPUT_PIXELS, LISTING_IMAGE_OUTPUT_QUALITY } from '@motorx/shared-contracts';
+import { LISTING_IMAGE_MAX_DIMENSION_PX, LISTING_IMAGE_MAX_INPUT_PIXELS, LISTING_IMAGE_OUTPUT_QUALITY, LISTING_IMAGE_THUMB_MAX_DIMENSION_PX, LISTING_IMAGE_THUMB_QUALITY } from '@motorx/shared-contracts';
 
 const decodableFormats = new Set(['jpeg', 'png', 'webp']);
 
@@ -16,6 +16,18 @@ export async function reencodeListingPhoto(input: Buffer): Promise<Buffer | null
       .rotate()
       .resize({ width: LISTING_IMAGE_MAX_DIMENSION_PX, height: LISTING_IMAGE_MAX_DIMENSION_PX, fit: 'inside', withoutEnlargement: true })
       .webp({ quality: LISTING_IMAGE_OUTPUT_QUALITY })
+      .toBuffer();
+  } catch {
+    return null;
+  }
+}
+
+// Makes the small copy (max 800 px) shown on cards and phones from an already cleaned photo.
+export async function makeListingThumb(cleanWebp: Buffer): Promise<Buffer | null> {
+  try {
+    return await sharp(cleanWebp, { limitInputPixels: LISTING_IMAGE_MAX_INPUT_PIXELS })
+      .resize({ width: LISTING_IMAGE_THUMB_MAX_DIMENSION_PX, height: LISTING_IMAGE_THUMB_MAX_DIMENSION_PX, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: LISTING_IMAGE_THUMB_QUALITY })
       .toBuffer();
   } catch {
     return null;

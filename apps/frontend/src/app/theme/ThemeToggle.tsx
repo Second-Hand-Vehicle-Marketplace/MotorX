@@ -20,17 +20,8 @@ export const ThemeToggle: React.FC = () => {
     <button
       type="button"
       onClick={toggleTheme}
-      className="btn btn-secondary btn-icon"
-      style={{
-        position: 'fixed',
-        right: '1rem',
-        bottom: '1rem',
-        zIndex: 1000,
-        borderRadius: 'var(--radius-full)',
-        width: '2.75rem',
-        height: '2.75rem',
-        boxShadow: 'var(--shadow-lg)',
-      }}
+      // Position lives in index.css (.theme-toggle-button) so it can move above the bottom bars.
+      className="btn btn-secondary btn-icon theme-toggle-button"
       aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
     >
       {theme === 'dark' ? <SunIcon /> : <MoonIcon />}

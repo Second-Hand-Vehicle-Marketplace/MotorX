@@ -4,6 +4,7 @@ import type { PaginationMeta } from '@motorx/shared-contracts';
 import { adminApi, type AdminAuditEvent, type AdminAuditLog } from '@/features/admin/services/adminApi';
 import { PagerControls } from '@/shared/components/PagerControls';
 import { formatDateTime } from '@/shared/utils/formatters';
+import { ResponsiveTable } from '@/shared/components/ResponsiveTable';
 
 const eventLabels: Record<AdminAuditEvent, string> = {
   dealer_approved: 'Dealer Approved', dealer_rejected: 'Dealer Rejected', user_suspended: 'User Suspended',
@@ -56,14 +57,14 @@ export const AuditLogs: React.FC = () => {
         <label className="form-group" style={{ minWidth: 150 }}><span className="form-label">To</span><input type="date" className="form-input" value={to} min={from || undefined} onChange={(event) => update({ to: event.target.value })} /></label>
       </div>
       <div className="glass-card" style={{ padding: 0 }}>
-        <div className="table-container"><table className="data-table">
+        <div className="table-container"><ResponsiveTable>
           <thead><tr><th>Event</th><th>Actor</th><th>Target</th><th>Details</th><th>Timestamp</th></tr></thead>
           <tbody>
             {loading && <tr><td colSpan={5}>Loading audit logs...</td></tr>}
             {!loading && !error && logs.length === 0 && <tr><td colSpan={5}>{filtered ? 'No events match these filters.' : 'No administrative events recorded.'}</td></tr>}
             {!loading && logs.map((log) => <tr key={log.id}><td><span className="badge badge-warning">{eventLabels[log.eventType] ?? log.eventType}</span></td><td>{log.actorName}</td><td>{log.targetName}</td><td>{log.details}</td><td>{formatDateTime(log.timestamp)}</td></tr>)}
           </tbody>
-        </table></div>
+        </ResponsiveTable></div>
         <PagerControls meta={meta} label="events" onPage={(next) => update({ page: String(next) })} />
       </div>
     </div>

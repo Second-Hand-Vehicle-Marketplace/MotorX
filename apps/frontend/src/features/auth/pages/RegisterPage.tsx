@@ -235,11 +235,11 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ mode = 'buyer' }) =>
             </div>
             <div className="form-group">
               <label className="form-label">Email Address</label>
-              <input type="email" className="form-input" placeholder="name@example.com" value={buyerForm.email} onChange={(e) => handleBuyerChange('email', e.target.value)} required />
+              <input type="email" inputMode="email" autoComplete="email" className="form-input" placeholder="name@example.com" value={buyerForm.email} onChange={(e) => handleBuyerChange('email', e.target.value)} required />
             </div>
             <div className="form-group">
               <label className="form-label">Phone Number</label>
-              <input type="tel" className="form-input" placeholder="+94 77 123 4567" value={buyerForm.phone} onChange={(e) => handleBuyerChange('phone', e.target.value)} required />
+              <input type="tel" autoComplete="tel" className="form-input" placeholder="+94 77 123 4567" value={buyerForm.phone} onChange={(e) => handleBuyerChange('phone', e.target.value)} required />
             </div>
             <div className="form-group">
               <label className="form-label">Password</label>
@@ -280,12 +280,12 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ mode = 'buyer' }) =>
             {!signedInApplicant && (
               <div className="form-group">
                 <label className="form-label">Email Address</label>
-                <input type="email" className="form-input" value={dealerForm.email} onChange={(e) => handleDealerChange('email', e.target.value)} required />
+                <input type="email" inputMode="email" autoComplete="email" className="form-input" value={dealerForm.email} onChange={(e) => handleDealerChange('email', e.target.value)} required />
               </div>
             )}
             <div className="form-group">
               <label className="form-label">Phone Number</label>
-              <input type="tel" className="form-input" value={dealerForm.phone} onChange={(e) => handleDealerChange('phone', e.target.value)} required />
+              <input type="tel" autoComplete="tel" className="form-input" value={dealerForm.phone} onChange={(e) => handleDealerChange('phone', e.target.value)} required />
             </div>
             {!signedInApplicant && (
               <>
@@ -329,7 +329,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ mode = 'buyer' }) =>
             </div>
             <div className="form-group">
               <label className="form-label">Business Email</label>
-              <input type="email" className="form-input" value={dealerForm.businessEmail} onChange={(e) => handleDealerChange('businessEmail', e.target.value)} required />
+              <input type="email" inputMode="email" autoComplete="work email" className="form-input" value={dealerForm.businessEmail} onChange={(e) => handleDealerChange('businessEmail', e.target.value)} required />
             </div>
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label className="form-label">Dealership Website or Social Page (optional)</label>

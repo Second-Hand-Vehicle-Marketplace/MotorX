@@ -8,8 +8,13 @@ import { addOwnedListingImage, findOwnedListing, removeOwnedListingImage, reorde
 import { serializeListing } from './listing.service.js';
 import { deleteListingImageObject, uploadListingImage } from './listingImage.storage.js';
 import { hasValidImageSignature } from './listingImage.signature.js';
-import { LISTING_IMAGE_MAX_DIMENSION_PX, LISTING_IMAGE_OUTPUT_QUALITY } from '@motorx/shared-contracts';
+import { LISTING_IMAGE_MAX_DIMENSION_PX, LISTING_IMAGE_OUTPUT_QUALITY, LISTING_IMAGE_THUMB_MAX_DIMENSION_PX, LISTING_IMAGE_THUMB_QUALITY } from '@motorx/shared-contracts';
 import { InvalidImageError, reencodeImage } from '../../shared/utils/imageReencode.js';
+
+// Copies one image's stored fields with a new position (keeps the small copy's URL).
+function atPosition(image: ListingImage, order: number): ListingImage {
+  return { key: image.key, url: image.url, ...(image.thumbUrl ? { thumbUrl: image.thumbUrl } : {}), ...(image.alt ? { alt: image.alt } : {}), order };
+}
 
 // Uploads an image and atomically attaches its metadata to an owned listing.
 export async function addDealerListingImage(listingId: string, dealerId: Types.ObjectId, file: Express.Multer.File, alt?: string) {
@@ -20,15 +25,23 @@ export async function addDealerListingImage(listingId: string, dealerId: Types.O
     throw new AppError(409, errorCodes.conflict, `A listing can contain at most ${storageConfig.maxListingImages} images.`);
 
   // Every stored photo is a fresh WebP rebuilt from the decoded pixels, never the uploaded bytes.
+  // A second, small copy is made from the cleaned photo for cards and phone screens.
   let webp: Buffer;
-  try { webp = await reencodeImage(file.buffer, { maxDimension: LISTING_IMAGE_MAX_DIMENSION_PX, output: 'webp', quality: LISTING_IMAGE_OUTPUT_QUALITY }); }
+  let thumb: Buffer;
+  try {
+    webp = await reencodeImage(file.buffer, { maxDimension: LISTING_IMAGE_MAX_DIMENSION_PX, output: 'webp', quality: LISTING_IMAGE_OUTPUT_QUALITY });
+    thumb = await reencodeImage(webp, { maxDimension: LISTING_IMAGE_THUMB_MAX_DIMENSION_PX, output: 'webp', quality: LISTING_IMAGE_THUMB_QUALITY });
+  }
   catch (error) {
     if (error instanceof InvalidImageError) throw new AppError(400, errorCodes.validation, 'The image could not be processed. Upload a valid JPEG, PNG, or WebP photo under 40 megapixels.');
     throw error;
   }
   const key = `${listingId}-${randomUUID()}.webp`;
-  const url = await uploadListingImage(key, webp, 'image/webp');
-  const image: ListingImage = { key, url, ...(alt ? { alt } : {}), order: listing.images.length };
+  let url: string;
+  let thumbUrl: string;
+  try { [url, thumbUrl] = await Promise.all([uploadListingImage(key, webp, 'image/webp'), uploadListingImage(key, thumb, 'image/webp', 'thumb')]); }
+  catch (error) { await deleteListingImageObject(key).catch(() => undefined); throw error; }
+  const image: ListingImage = { key, url, thumbUrl, ...(alt ? { alt } : {}), order: listing.images.length };
   try {
     const updated = await addOwnedListingImage(listingId, dealerId, image, storageConfig.maxListingImages);
     if (!updated) throw new AppError(409, errorCodes.conflict, `A listing can contain at most ${storageConfig.maxListingImages} images.`);
@@ -49,7 +62,7 @@ export async function deleteDealerListingImage(listingId: string, dealerId: Type
   if (!updated) throw new AppError(409, errorCodes.conflict, 'The listing image changed before deletion completed.');
   try { await deleteListingImageObject(imageKey); }
   catch (error) { await restoreOwnedListingImage(listingId, dealerId, image); throw error; }
-  const reordered = updated.images.map((item: ListingImage, order: number) => ({ key: item.key, url: item.url, ...(item.alt ? { alt: item.alt } : {}), order }));
+  const reordered = updated.images.map((item: ListingImage, order: number) => atPosition(item, order));
   const normalized = await reorderOwnedListingImages(listingId, dealerId, reordered);
   return serializeListing((normalized ?? updated).toObject() as ListingRecord);
 }
@@ -62,7 +75,7 @@ export async function reorderDealerListingImages(listingId: string, dealerId: Ty
     throw new AppError(400, errorCodes.validation, 'Image order must contain every image key exactly once.');
   const byKey = new Map<string, ListingImage>(listing.images.map((image: ListingImage) => [image.key, image]));
   if (imageKeys.some((key) => !byKey.has(key))) throw new AppError(400, errorCodes.validation, 'Image order contains an unknown key.');
-  const images = imageKeys.map((key, order) => { const image = byKey.get(key)!; return { key: image.key, url: image.url, ...(image.alt ? { alt: image.alt } : {}), order }; });
+  const images = imageKeys.map((key, order) => atPosition(byKey.get(key)!, order));
   const updated = await reorderOwnedListingImages(listingId, dealerId, images);
   if (!updated) throw new AppError(404, errorCodes.notFound, 'The vehicle listing was not found.');
   return serializeListing(updated.toObject() as ListingRecord);

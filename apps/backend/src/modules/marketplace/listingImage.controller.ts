@@ -3,7 +3,7 @@ import type { Request, Response } from 'express';
 import { sendSuccess } from '../../shared/responses/apiResponse.js';
 import type { AuthenticatedRequest } from '../../shared/types/authenticatedRequest.js';
 import { addDealerListingImage, deleteDealerListingImage, reorderDealerListingImages } from './listingImage.service.js';
-import { getListingImageObject } from './listingImage.storage.js';
+import { getListingImageObject, type ListingImageVariant } from './listingImage.storage.js';
 import { AppError } from '../../shared/errors/AppError.js';
 import { errorCodes } from '../../shared/errors/errorCodes.js';
 
@@ -26,9 +26,14 @@ export async function reorderListingImages(request: AuthenticatedRequest, respon
 // Serves a listing photo from private storage through a public, read-only endpoint. Used locally
 // and as the fallback when no CDN is configured. The file is streamed straight from storage (not
 // held in memory), and a browser that already has it gets 304 Not Modified with no body.
-export async function getListingImageFile(request: Request, response: Response): Promise<void> {
+export function getListingImageFile(request: Request, response: Response) { return sendListingImage(request, response, 'full'); }
+
+// Same as above for the small copy used by cards and phones.
+export function getListingThumbFile(request: Request, response: Response) { return sendListingImage(request, response, 'thumb'); }
+
+async function sendListingImage(request: Request, response: Response, variant: ListingImageVariant): Promise<void> {
   let object;
-  try { object = await getListingImageObject(String(request.params.imageKey), request.header('if-none-match') ?? undefined); }
+  try { object = await getListingImageObject(String(request.params.imageKey), request.header('if-none-match') ?? undefined, variant); }
   catch (error: unknown) {
     if (typeof error === 'object' && error !== null && 'name' in error && (error.name === 'NoSuchKey' || error.name === 'NotFound'))
       throw new AppError(404, errorCodes.notFound, 'The listing image was not found.');

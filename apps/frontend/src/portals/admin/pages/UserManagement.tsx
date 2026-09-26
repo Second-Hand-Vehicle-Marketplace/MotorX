@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { adminApi, type AdminUser } from '@/features/admin/services/adminApi';
 import type { UserRole } from '@/features/auth/types/auth.types';
 import { formatDate } from '@/shared/utils/formatters';
+import { ResponsiveTable } from '@/shared/components/ResponsiveTable';
 
 export const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -46,7 +47,7 @@ export const UserManagement: React.FC = () => {
       </select>
       <button className="btn btn-secondary" type="submit">Search</button>
     </form>
-    <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}><div className="table-container"><table className="data-table">
+    <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}><div className="table-container"><ResponsiveTable>
       <thead><tr><th>User</th><th>Role</th><th>Status</th><th>Created Date</th><th>Last Login</th><th>Actions</th></tr></thead>
       <tbody>
         {loading && <tr><td colSpan={6}>Loading users...</td></tr>}
@@ -59,6 +60,6 @@ export const UserManagement: React.FC = () => {
           <td><button disabled={updatingId === user.id} onClick={() => void toggleStatus(user)} className={`btn btn-sm ${user.status === 'active' ? 'btn-danger' : 'btn-success'}`}>{updatingId === user.id ? 'Saving...' : user.status === 'active' ? 'Suspend' : 'Activate'}</button></td>
         </tr>)}
       </tbody>
-    </table></div></div>
+    </ResponsiveTable></div></div>
   </div>;
 };

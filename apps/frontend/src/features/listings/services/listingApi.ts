@@ -1,6 +1,9 @@
 import type {
   ApiSuccessResponse,
+  BulkListingActionInput,
+  BulkListingActionResult,
   CreateListingInput,
+  DealerListingStatsDto,
   ListingDto,
   ListResponseMeta,
   UpdateListingInput,
@@ -25,11 +28,13 @@ function toListing(dto: ListingDto): Listing {
     images: dto.images.map((image, index) => ({
       id: image.key,
       url: image.url,
+      thumbUrl: image.thumbUrl ?? undefined,
       alt: image.alt ?? dto.title,
       isPrimary: index === 0,
     })),
     status: dto.status,
     publishedAt: dto.publishedAt,
+    lastConfirmedAt: dto.lastConfirmedAt,
     category: dto.category,
     attributes: dto.attributes,
   } as Listing;
@@ -49,15 +54,20 @@ function toPaginatedResponse(
 }
 
 export const listingApi = {
-  async getMyListingStats(): Promise<{ total: number; active: number; draft: number; sold: number; archived: number }> {
-    const response = await apiClient.get<ApiSuccessResponse<{ total: number; active: number; draft: number; sold: number; archived: number }>>('/listings/mine/stats');
+  async getMyListingStats(): Promise<DealerListingStatsDto> {
+    const response = await apiClient.get<ApiSuccessResponse<DealerListingStatsDto>>('/listings/mine/stats');
+    return response.data.data;
+  },
+  // One action on many listings: chosen IDs, or every listing from one CSV upload.
+  async bulkAction(input: BulkListingActionInput): Promise<BulkListingActionResult> {
+    const response = await apiClient.post<ApiSuccessResponse<BulkListingActionResult>>('/listings/mine/bulk', input);
     return response.data.data;
   },
   async getMyListing(id: string): Promise<Listing> {
     const response = await apiClient.get<ApiSuccessResponse<ListingDto>>(`/listings/mine/${id}`);
     return toListing(response.data.data);
   },
-  async getMyListings(page = 1, limit = 20, filters: { search?: string; status?: string; category?: string } = {}): Promise<PaginatedResponse<Listing>> {
+  async getMyListings(page = 1, limit = 20, filters: { search?: string; status?: string; category?: string; stale?: boolean; uploadJobId?: string } = {}): Promise<PaginatedResponse<Listing>> {
     const response = await apiClient.get<ApiSuccessResponse<ListingDto[], ListResponseMeta>>('/listings/mine', {
       params: { page, limit, ...filters },
     });

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { csvTemplatesByCategory, vehicleCategories, type VehicleCategory } from '@motorx/shared-contracts';
 import { inventoryApi } from '@/features/inventory/services/inventoryApi';
 import { formatFileSize, formatDate } from '@/shared/utils/formatters';
+import { ResponsiveTable } from '@/shared/components/ResponsiveTable';
 
 const statusBadgeClass = (status: string) => status === 'completed' ? 'badge-success' : status === 'processing' || status === 'pending' ? 'badge-info' : status === 'completedWithErrors' ? 'badge-warning' : 'badge-error';
 
@@ -140,14 +141,14 @@ export const InventoryUpload: React.FC = () => {
           Leave optional or non-applicable fields blank — for example, an electric vehicle's engine capacity, or a petrol vehicle's battery fields.
         </p>
         <div className="table-container">
-          <table className="data-table">
+          <ResponsiveTable>
             <thead><tr><th>Field</th><th>Required</th><th>Example</th></tr></thead>
             <tbody>
               {template?.fields.map((field) => (
                 <tr key={field.key}><td style={{ fontFamily: 'monospace' }}>{field.key}</td><td>{field.required}</td><td>{field.example || '—'}</td></tr>
               ))}
             </tbody>
-          </table>
+          </ResponsiveTable>
         </div>
       </div>
 
@@ -161,7 +162,7 @@ export const InventoryUpload: React.FC = () => {
 
         {!uploadsQuery.isLoading && uploads.length > 0 && (
           <div className="table-container">
-            <table className="data-table">
+            <ResponsiveTable>
               <thead>
                 <tr>
                   <th>File Name</th>
@@ -196,7 +197,7 @@ export const InventoryUpload: React.FC = () => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </ResponsiveTable>
           </div>
         )}
       </div>

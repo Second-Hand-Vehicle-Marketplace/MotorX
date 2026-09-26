@@ -3,6 +3,7 @@ import { vehicleCategories, type VehicleCategory } from '@motorx/shared-contract
 import { adminApi, type AdminListing } from '@/features/admin/services/adminApi';
 import { formatEnumLabel } from '@/features/listings/utils/vehicleAttributes';
 import { formatDate, formatPrice } from '@/shared/utils/formatters';
+import { ResponsiveTable } from '@/shared/components/ResponsiveTable';
 
 const filterableCategories = vehicleCategories.filter((category) => category !== 'other');
 
@@ -57,7 +58,7 @@ export const ListingMonitoring: React.FC = () => {
       </select>
       <button className="btn btn-secondary" type="submit">Search</button>
     </form>
-    <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}><div className="table-container"><table className="data-table">
+    <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}><div className="table-container"><ResponsiveTable>
       <thead><tr><th>Listing</th><th>Type</th><th>Dealer</th><th>Price</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
       <tbody>
         {loading && <tr><td colSpan={7}>Loading listings...</td></tr>}
@@ -71,6 +72,6 @@ export const ListingMonitoring: React.FC = () => {
           <td><button disabled={listing.status === 'archived' || removingId === listing.id} onClick={() => void removeListing(listing)} className="btn btn-danger btn-sm">{removingId === listing.id ? 'Archiving...' : listing.status === 'archived' ? 'Archived' : 'Remove Listing'}</button></td>
         </tr>)}
       </tbody>
-    </table></div></div>
+    </ResponsiveTable></div></div>
   </div>;
 };

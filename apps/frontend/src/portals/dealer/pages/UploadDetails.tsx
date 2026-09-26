@@ -2,10 +2,50 @@ import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { inventoryApi } from '@/features/inventory/services/inventoryApi';
+import { listingApi } from '@/features/listings/services/listingApi';
+import { ResponsiveTable } from '@/shared/components/ResponsiveTable';
 import type { ImageProcessingStatus } from '@/features/inventory/types/inventory.types';
 import { formatDateTime, formatFileSize } from '@/shared/utils/formatters';
 
 const activeImageStatuses = new Set<ImageProcessingStatus>(['pending', 'processing']);
+
+// CSV rows are imported as drafts so the dealer can check them first. This publishes every draft
+// from this upload in one step, instead of opening each listing.
+const PublishDraftsCard: React.FC<{ uploadId: string }> = ({ uploadId }) => {
+  const queryClient = useQueryClient();
+  const draftsQuery = useQuery({ queryKey: ['my-listings', 'upload-drafts', uploadId], queryFn: () => listingApi.getMyListings(1, 1, { status: 'draft', uploadJobId: uploadId }) });
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+  const drafts = draftsQuery.data?.total ?? 0;
+
+  const publishAll = async () => {
+    if (!window.confirm(`Publish all ${drafts} draft listings from this upload? Buyers will see them straight away.`)) return;
+    setIsPublishing(true); setMessage(null);
+    try {
+      const result = await listingApi.bulkAction({ action: 'publish', uploadJobId: uploadId });
+      setMessage({ kind: 'success', text: `${result.updated} listing${result.updated === 1 ? '' : 's'} published.` });
+      await Promise.all([queryClient.invalidateQueries({ queryKey: ['my-listings'] }), queryClient.invalidateQueries({ queryKey: ['my-listing-stats'] })]);
+    } catch (error) {
+      setMessage({ kind: 'error', text: error instanceof Error ? error.message : 'Could not publish these listings.' });
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  if (!drafts && !message) return null;
+  return (
+    <div className="glass-card publish-drafts-card">
+      <div>
+        <h3 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Ready to publish</h3>
+        <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-tertiary)', marginTop: '0.25rem' }}>
+          {drafts ? `${drafts} draft listing${drafts === 1 ? '' : 's'} from this upload ${drafts === 1 ? 'is' : 'are'} not visible to buyers yet.` : 'Every listing from this upload is published.'}
+        </p>
+        {message && <p role={message.kind === 'error' ? 'alert' : 'status'} style={{ marginTop: '0.5rem', color: message.kind === 'error' ? 'var(--color-error)' : 'var(--color-success)' }}>{message.text}</p>}
+      </div>
+      {drafts > 0 && <button type="button" className="btn btn-success" disabled={isPublishing} onClick={() => void publishAll()}>{isPublishing ? 'Publishing…' : `Publish all ${drafts}`}</button>}
+    </div>
+  );
+};
 
 // Re-queues a failed stage and refreshes the job so its new pending status shows immediately.
 const RetryButton: React.FC<{ uploadId: string; stage: 'csv' | 'images' }> = ({ uploadId, stage }) => {
@@ -155,7 +195,7 @@ export const UploadDetails: React.FC = () => {
         <div className="stat-card">
           <span className="stat-label">Valid Listings Created</span>
           <div className="stat-value" style={{ color: 'var(--color-success)' }}>{job.validRecords}</div>
-          <span className="stat-change positive">Added to active inventory</span>
+          <span className="stat-change positive">Imported as drafts</span>
         </div>
 
         <div className="stat-card">
@@ -170,6 +210,8 @@ export const UploadDetails: React.FC = () => {
           Processing failed: {job.failureReason}<RetryButton uploadId={job.id} stage="csv" />
         </div>
       )}
+
+      {(job.status === 'completed' || job.status === 'completedWithErrors') && <PublishDraftsCard uploadId={job.id} />}
 
       <VehiclePhotosCard
         uploadId={job.id}
@@ -197,7 +239,7 @@ export const UploadDetails: React.FC = () => {
 
         {rejectedRecords.length > 0 && (
           <div className="table-container">
-            <table className="data-table">
+            <ResponsiveTable>
               <thead>
                 <tr>
                   <th>CSV Row</th>
@@ -226,7 +268,7 @@ export const UploadDetails: React.FC = () => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </ResponsiveTable>
           </div>
         )}
       </div>

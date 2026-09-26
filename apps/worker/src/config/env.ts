@@ -42,6 +42,9 @@ const envSchema = z.object({
   // How often queued notification emails are sent.
   EMAIL_OUTBOX_INTERVAL_MS: z.coerce.number().int().min(1_000).default(15_000),
   DOCUMENT_RETENTION_INTERVAL_MS: z.coerce.number().int().min(60_000).default(3_600_000),
+  // How often to look for stale stock, and the minimum days between two reminders to one dealer.
+  STALE_REMINDER_INTERVAL_MS: z.coerce.number().int().min(60_000).default(6 * 3_600_000),
+  STALE_REMINDER_REPEAT_DAYS: z.coerce.number().int().min(1).max(90).default(7),
 }).superRefine((config, context) => {
   // Refuses to consume jobs in production against a local, dev, test, or unencrypted database.
   if (config.NODE_ENV !== 'production') return;

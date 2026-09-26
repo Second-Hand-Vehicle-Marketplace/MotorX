@@ -12,6 +12,8 @@ export type { ListingStatus, VehicleCategory };
 export interface ListingImage {
   key: string;
   url: string;
+  // Small copy for cards and phones (see LISTING_IMAGE_THUMB_MAX_DIMENSION_PX).
+  thumbUrl?: string;
   alt?: string;
   order: number;
 }
@@ -37,6 +39,8 @@ export type Listing = {
   images: ListingImage[];
   status: ListingStatus;
   publishedAt?: Date;
+  // Last time the dealer confirmed this listing is current; older than STALE_LISTING_DAYS = stale stock.
+  lastConfirmedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   embedding?: number[];
@@ -50,6 +54,7 @@ const listingImageSchema = new Schema<ListingImage>(
   {
     key: { type: String, required: true, trim: true },
     url: { type: String, required: true, trim: true },
+    thumbUrl: { type: String, trim: true },
     alt: { type: String, trim: true, maxlength: 200 },
     order: { type: Number, required: true, min: 0 },
   },
@@ -76,6 +81,7 @@ const listingSchema = new Schema<Listing>(
     images: { type: [listingImageSchema], default: [] },
     status: { type: String, enum: listingStatuses, required: true, default: 'draft' },
     publishedAt: { type: Date },
+    lastConfirmedAt: { type: Date },
     embedding: { type: [Number], select: false, default: undefined },
   },
   { timestamps: true, versionKey: false, collection: 'listings' },
@@ -83,6 +89,7 @@ const listingSchema = new Schema<Listing>(
 
 listingSchema.index({ status: 1, publishedAt: -1, _id: -1 }, { name: 'status_publishedAt_id' });
 listingSchema.index({ dealerId: 1, status: 1, createdAt: -1 }, { name: 'dealerId_status_createdAt' });
+listingSchema.index({ dealerId: 1, status: 1, lastConfirmedAt: 1 }, { name: 'dealerId_status_lastConfirmedAt' });
 listingSchema.index({ make: 1, model: 1, year: -1 }, { name: 'make_model_year' });
 listingSchema.index({ sourceUploadJobId: 1 }, { sparse: true, name: 'sourceUploadJobId' });
 listingSchema.index({ sourceUploadJobId: 1, sourceRowNumber: 1 }, { unique: true, partialFilterExpression: { sourceRowNumber: { $exists: true } }, name: 'sourceUploadJobId_sourceRowNumber' });

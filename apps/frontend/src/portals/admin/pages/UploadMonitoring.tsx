@@ -4,6 +4,7 @@ import type { PaginationMeta } from '@motorx/shared-contracts';
 import { adminApi, type AdminUpload, type AdminUser } from '@/features/admin/services/adminApi';
 import { PagerControls } from '@/shared/components/PagerControls';
 import { formatDate } from '@/shared/utils/formatters';
+import { ResponsiveTable } from '@/shared/components/ResponsiveTable';
 
 const statusBadge = (status: AdminUpload['status']) => status === 'completed' ? 'badge-success' : status === 'processing' ? 'badge-info' : status === 'failed' ? 'badge-error' : status === 'completedWithErrors' ? 'badge-warning' : 'badge-neutral';
 
@@ -61,7 +62,7 @@ export const UploadMonitoring: React.FC = () => {
         </div>
       )}
       <div className="glass-card" style={{ padding: 0 }}>
-        <div className="table-container"><table className="data-table">
+        <div className="table-container"><ResponsiveTable>
           <thead><tr><th>Job ID</th><th>Dealership</th><th>File</th><th>Records</th><th>Valid / Rejected</th><th>Status</th><th>Date</th></tr></thead>
           <tbody>
             {loading && <tr><td colSpan={7}>Loading upload jobs...</td></tr>}
@@ -75,7 +76,7 @@ export const UploadMonitoring: React.FC = () => {
               </tr>
             ))}
           </tbody>
-        </table></div>
+        </ResponsiveTable></div>
         {!uploadId && <PagerControls meta={meta} label="uploads" onPage={(next) => update({ page: String(next) })} />}
       </div>
     </div>

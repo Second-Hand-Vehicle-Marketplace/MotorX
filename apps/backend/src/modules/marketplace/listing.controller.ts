@@ -1,7 +1,7 @@
 import type { Response } from 'express';
 import { sendSuccess } from '../../shared/responses/apiResponse.js';
-import { changeDealerListingStatus, createDealerListing, deleteDealerListing, getDealerListing, getDealerListingStats, getDealerListings, updateDealerListing } from './listing.service.js';
-import type { CreateListingBody, ListListingsQuery, UpdateListingBody } from './listing.validation.js';
+import { applyBulkListingAction, changeDealerListingStatus, createDealerListing, deleteDealerListing, getDealerListing, getDealerListingStats, getDealerListings, updateDealerListing } from './listing.service.js';
+import type { BulkListingActionBody, CreateListingBody, ListMyListingsQuery, UpdateListingBody } from './listing.validation.js';
 import type { ListingStatus } from '@motorx/shared-contracts';
 import type { AuthenticatedRequest } from '../../shared/types/authenticatedRequest.js';
 
@@ -13,7 +13,7 @@ export async function createListing(request: AuthenticatedRequest, response: Res
 
 // Sends all listings owned by the authenticated dealer.
 export async function listMyListings(request: AuthenticatedRequest, response: Response): Promise<void> {
-  const result = await getDealerListings(request.localUser!._id, request.query as unknown as ListListingsQuery);
+  const result = await getDealerListings(request.localUser!._id, request.query as unknown as ListMyListingsQuery);
   sendSuccess(response, result.listings, { meta: { pagination: result.pagination } });
 }
 
@@ -34,6 +34,11 @@ export async function updateListing(request: AuthenticatedRequest, response: Res
 // Moves an owned listing through its allowed lifecycle.
 export async function updateListingStatus(request: AuthenticatedRequest, response: Response): Promise<void> {
   sendSuccess(response, await changeDealerListingStatus(String(request.params.listingId), request.localUser!._id, request.body.status as ListingStatus));
+}
+
+// Publishes, marks sold, archives, re-confirms, re-prices, or deletes many owned listings at once.
+export async function bulkUpdateListings(request: AuthenticatedRequest, response: Response): Promise<void> {
+  sendSuccess(response, await applyBulkListingAction(request.localUser!._id, request.body as BulkListingActionBody));
 }
 
 // Permanently deletes an owned listing.

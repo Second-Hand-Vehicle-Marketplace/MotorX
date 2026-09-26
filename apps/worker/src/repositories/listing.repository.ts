@@ -3,7 +3,7 @@ import { normalizeRegistrationNumber, vehicleCategories } from '@motorx/shared-c
 import type { ValidInventoryRow } from '../pipeline/validate.js';
 
 export type ImportableListing = ValidInventoryRow & { dealerId: Types.ObjectId; sourceUploadJobId: Types.ObjectId; sourceRowNumber: number; images: []; status: 'draft'; embedding?: number[] };
-export interface WorkerListingImage { key: string; url: string; alt?: string; order: number }
+export interface WorkerListingImage { key: string; url: string; thumbUrl?: string; alt?: string; order: number }
 
 const listingSchema = new mongoose.Schema({
   dealerId: { type: mongoose.Schema.Types.ObjectId, required: true }, sourceUploadJobId: { type: mongoose.Schema.Types.ObjectId, required: true }, sourceRowNumber: Number,
@@ -58,4 +58,15 @@ export async function appendListingImages(listingId: Types.ObjectId, images: Wor
     { _id: listingId, 'images.key': { $nin: images.map((image) => image.key) }, $expr: { $lte: [{ $add: [{ $size: '$images' }, images.length] }, maximum] } },
     { $push: { images: { $each: images } } },
   );
+}
+
+// Dealers with active listings not confirmed since `cutoff`, with how many. Listings saved before
+// lastConfirmedAt existed fall back to their last update time (same rule as the dealer's stale list).
+export function countStaleListingsByDealer(cutoff: Date, limit: number): Promise<Array<{ _id: Types.ObjectId; count: number }>> {
+  return ListingModel.aggregate([
+    { $match: { status: 'active', $or: [{ lastConfirmedAt: { $lt: cutoff } }, { lastConfirmedAt: { $exists: false }, updatedAt: { $lt: cutoff } }] } },
+    { $group: { _id: '$dealerId', count: { $sum: 1 } } },
+    { $sort: { _id: 1 } },
+    { $limit: limit },
+  ]);
 }

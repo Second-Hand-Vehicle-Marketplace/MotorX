@@ -89,6 +89,8 @@ export interface NotificationDto {
 export interface ListingImageDto {
   key: string;
   url: string;
+  // Small copy (max 800 px) for cards and phones; null for photos stored before small copies existed.
+  thumbUrl: string | null;
   alt: string | null;
   order: number;
 }
@@ -110,6 +112,9 @@ export type ListingDto = {
   images: ListingImageDto[];
   status: ListingStatus;
   publishedAt: string | null;
+  // When the dealer last confirmed the listing is current (published, edited, re-priced, or
+  // marked "still available"). Drives the stale-stock reminders.
+  lastConfirmedAt: string | null;
 } & VehicleDetails;
 
 export type CreateListingInput = {
@@ -145,4 +150,44 @@ export interface UpdateListingStatusInput {
 
 export interface ReorderListingImagesInput {
   imageKeys: string[];
+}
+
+// A published listing the dealer has not touched for this many days counts as stale stock.
+export const STALE_LISTING_DAYS = 60;
+
+// One action applied to many of a dealer's listings at once. Listings that are not in a status
+// the action applies to (e.g. publishing one that is already sold) are skipped, not failed.
+export const bulkListingActions = ['publish', 'mark-sold', 'archive', 'confirm-available', 'reduce-price', 'delete'] as const;
+export type BulkListingAction = (typeof bulkListingActions)[number];
+export const BULK_LISTING_MAX_IDS = 500;
+export const BULK_PRICE_REDUCTION_MAX_PERCENT = 50;
+
+export interface BulkListingActionInput {
+  action: BulkListingAction;
+  // Either the chosen listings, or every listing created by one CSV upload.
+  listingIds?: string[];
+  uploadJobId?: string;
+  // Required for reduce-price: 1 to 50.
+  percent?: number;
+}
+
+export interface BulkListingActionResult {
+  action: BulkListingAction;
+  // Listings found and owned by the dealer.
+  matched: number;
+  // Listings actually changed.
+  updated: number;
+  // Owned listings left unchanged because the action does not apply to their status.
+  skipped: number;
+}
+
+export interface DealerListingStatsDto {
+  total: number;
+  active: number;
+  draft: number;
+  sold: number;
+  archived: number;
+  // Active listings not confirmed for STALE_LISTING_DAYS days.
+  stale: number;
+  staleAfterDays: number;
 }

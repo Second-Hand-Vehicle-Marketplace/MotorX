@@ -1,5 +1,6 @@
 import type { Types } from 'mongoose';
-import type { ListingDto, VehicleCategory } from '@motorx/shared-contracts';
+import type { BulkListingActionResult, DealerListingStatsDto, ListingDto, VehicleCategory } from '@motorx/shared-contracts';
+import { STALE_LISTING_DAYS } from '@motorx/shared-contracts';
 import { composeListingSearchText, normalizeRegistrationNumber } from '@motorx/shared-contracts';
 import { AppError } from '../../shared/errors/AppError.js';
 import { errorCodes } from '../../shared/errors/errorCodes.js';
@@ -10,12 +11,16 @@ import {
   findOwnedListing,
   listDealerListings,
   countDealerListings,
+  countListingsInScope,
   countOpenDealerListings,
+  deleteArchivedListingsInScope,
+  updateListingsInScope,
+  type BulkListingScope,
   transitionOwnedListingStatus,
   updateOwnedListing,
   type ListingRecord,
 } from './listing.repository.js';
-import { validateAttributesForCategory, type CreateListingBody, type ListListingsQuery, type UpdateListingBody } from './listing.validation.js';
+import { validateAttributesForCategory, type BulkListingActionBody, type CreateListingBody, type ListMyListingsQuery, type UpdateListingBody } from './listing.validation.js';
 import { buildPaginationMeta } from '../../shared/utils/pagination.js';
 import { deleteListingImageObject } from './listingImage.storage.js';
 import type { ListingImage } from './listing.model.js';
@@ -29,8 +34,9 @@ export function serializeListing(listing: ListingRecord): ListingDto {
     id: listing._id.toString(), dealerId: listing.dealerId.toString(), registrationNumber: listing.registrationNumber,
     title: listing.title, make: listing.make, model: listing.model, year: listing.year, price: listing.price,
     currency: listing.currency, location: listing.location, description: listing.description ?? null,
-    images: listing.images.slice().sort((a, b) => a.order - b.order).map((image) => ({ ...image, alt: image.alt ?? null })),
+    images: listing.images.slice().sort((a, b) => a.order - b.order).map((image) => ({ key: image.key, url: image.url, thumbUrl: image.thumbUrl ?? null, alt: image.alt ?? null, order: image.order })),
     status: listing.status, publishedAt: listing.publishedAt?.toISOString() ?? null,
+    lastConfirmedAt: (listing.lastConfirmedAt ?? (listing.status === 'active' ? listing.updatedAt : undefined))?.toISOString() ?? null,
     category: listing.category, attributes: listing.attributes,
   } as ListingDto;
 }
@@ -68,7 +74,7 @@ export async function createDealerListing(dealerId: Types.ObjectId, input: Creat
   try {
     const document = await createListingRecord({
       ...input, registrationNumber: input.registrationNumber.trim().toUpperCase(), normalizedRegistrationNumber,
-      dealerId, images: [], embedding, publishedAt: input.status === 'active' ? new Date() : undefined,
+      dealerId, images: [], embedding, publishedAt: input.status === 'active' ? new Date() : undefined, lastConfirmedAt: new Date(),
     });
     return serializeListing(document.toObject() as ListingRecord);
   } catch (error) {
@@ -76,13 +82,59 @@ export async function createDealerListing(dealerId: Types.ObjectId, input: Creat
   }
 }
 
-// Returns every listing owned by the authenticated dealer.
-export async function getDealerListings(dealerId: Types.ObjectId, query: ListListingsQuery) {
-  const { documents, total } = await listDealerListings(dealerId, query.page, query.limit, query);
+const DAY_MS = 24 * 60 * 60 * 1000;
+// Active listings last confirmed before this moment are stale stock.
+export const staleCutoff = (now = new Date()) => new Date(now.getTime() - STALE_LISTING_DAYS * DAY_MS);
+
+// Returns every listing owned by the authenticated dealer (optionally only stale stock, or one upload's listings).
+export async function getDealerListings(dealerId: Types.ObjectId, query: ListMyListingsQuery) {
+  const { stale, ...filters } = query;
+  const { documents, total } = await listDealerListings(dealerId, query.page, query.limit, { ...filters, ...(stale ? { staleBefore: staleCutoff() } : {}) });
   return { listings: documents.map(serializeListing), pagination: buildPaginationMeta(query.page, query.limit, total) };
 }
 
-export function getDealerListingStats(dealerId: Types.ObjectId) { return countDealerListings(dealerId); }
+export async function getDealerListingStats(dealerId: Types.ObjectId): Promise<DealerListingStatsDto> {
+  return { ...await countDealerListings(dealerId, staleCutoff()), staleAfterDays: STALE_LISTING_DAYS };
+}
+
+// Applies one action to many of the dealer's own listings at once. Each listing is only changed
+// when the action applies to its current status (the same lifecycle rules as one-by-one changes);
+// the others are counted as skipped. Another dealer's listing IDs simply never match.
+export async function applyBulkListingAction(dealerId: Types.ObjectId, input: BulkListingActionBody): Promise<BulkListingActionResult> {
+  const scope: BulkListingScope = input.listingIds ? { dealerId, _id: { $in: [...new Set(input.listingIds)] } } : { dealerId, sourceUploadJobId: input.uploadJobId! };
+  const matched = await countListingsInScope(scope);
+  const now = new Date();
+  let updated: number;
+  switch (input.action) {
+    case 'publish':
+      // Drafts already hold their registration number (the uniqueness rule covers drafts and
+      // active listings alike), so publishing a draft can never clash with another listing.
+      updated = await updateListingsInScope(scope, { status: 'draft' }, [{ $set: { status: 'active', publishedAt: { $ifNull: ['$publishedAt', now] }, lastConfirmedAt: now } }]);
+      break;
+    case 'mark-sold':
+      updated = await updateListingsInScope(scope, { status: 'active' }, { $set: { status: 'sold' } });
+      break;
+    case 'archive':
+      updated = await updateListingsInScope(scope, { status: { $in: ['draft', 'active', 'sold'] } }, { $set: { status: 'archived' } });
+      break;
+    case 'confirm-available':
+      updated = await updateListingsInScope(scope, { status: 'active' }, { $set: { lastConfirmedAt: now } });
+      break;
+    case 'reduce-price': {
+      const factor = 1 - input.percent! / 100;
+      updated = await updateListingsInScope(scope, { status: { $in: ['draft', 'active'] }, price: { $gt: 0 } }, [{ $set: { price: { $round: [{ $multiply: ['$price', factor] }, 0] }, lastConfirmedAt: now } }]);
+      break;
+    }
+    case 'delete': {
+      const { deleted, imageKeys } = await deleteArchivedListingsInScope(scope);
+      const results = await Promise.allSettled(imageKeys.map((key) => deleteListingImageObject(key)));
+      for (const result of results) if (result.status === 'rejected') console.error('Failed to delete listing image object.', result.reason);
+      updated = deleted;
+      break;
+    }
+  }
+  return { action: input.action, matched, updated, skipped: matched - updated };
+}
 
 // Returns one listing for its owner, including drafts and archived records for dealer preview/editing.
 export async function getDealerListing(listingId: string, dealerId: Types.ObjectId) {
@@ -127,6 +179,8 @@ export async function updateDealerListing(listingId: string, dealerId: Types.Obj
     catch { unsetEmbedding = true; }
   }
 
+  // Editing a listing is the dealer confirming it is current, so it is no longer stale.
+  update.lastConfirmedAt = new Date();
   const unsetDescription = input.description === null;
   const listing = await updateOwnedListing(listingId, dealerId, update, unsetDescription, unsetEmbedding);
   if (!listing) throw new AppError(404, errorCodes.notFound, 'The vehicle listing was not found.');
@@ -158,6 +212,7 @@ export async function changeDealerListingStatus(listingId: string, dealerId: Typ
     await assertRegistrationNotActivelyListed((existing as unknown as ListingRecord).normalizedRegistrationNumber, listingId);
   }
   const update: Record<string, unknown> = { status: nextStatus };
+  if (nextStatus === 'active') update.lastConfirmedAt = new Date();
   if (nextStatus === 'active' && !existing.publishedAt) update.publishedAt = new Date();
   try {
     const listing = await transitionOwnedListingStatus(listingId, dealerId, currentStatus, update);

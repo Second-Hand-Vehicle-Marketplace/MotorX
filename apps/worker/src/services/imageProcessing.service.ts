@@ -2,13 +2,13 @@ import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sd
 import { createHash, randomUUID } from 'node:crypto';
 import { Types } from 'mongoose';
 import * as unzipper from 'unzipper';
-import { LISTING_IMAGE_OBJECT_PREFIX, normalizeRegistrationNumber } from '@motorx/shared-contracts';
+import { LISTING_IMAGE_OBJECT_PREFIX, LISTING_IMAGE_THUMB_SUBPATH, normalizeRegistrationNumber } from '@motorx/shared-contracts';
 import { env } from '../config/env.js';
 import { workerStorageClient, workerStorageConfig } from '../config/storage.js';
 import { appendListingImages, findListingsByUploadJob, type WorkerListingImage } from '../repositories/listing.repository.js';
 import { claimPendingImageProcessing, completeImageProcessing, failImageProcessing, renewImageLease, retryImageProcessing } from '../repositories/uploadJob.repository.js';
 import { trackLease, untrackLease } from './activeLeases.js';
-import { reencodeListingPhoto } from './imageReencode.js';
+import { makeListingThumb, reencodeListingPhoto } from './imageReencode.js';
 import { holdLease, LeaseLostError } from './jobLease.js';
 import { notifyImageProcessingResult } from './notification.service.js';
 import { isTransientError } from './transientError.js';
@@ -26,7 +26,11 @@ async function downloadZipBuffer(storageKey: string): Promise<Buffer> {
 }
 
 // path is the entry's location inside the zip; contentHash identifies its original bytes.
-interface ZipImageEntry { fileName: string; path: string; contentHash: string; buffer: Buffer; mimeType: string }
+// thumb is the small copy for cards and phones (null if it could not be made).
+interface ZipImageEntry { fileName: string; path: string; contentHash: string; buffer: Buffer; thumb: Buffer | null; mimeType: string }
+
+const fullObjectKey = (key: string) => `${LISTING_IMAGE_OBJECT_PREFIX}${key}`;
+const thumbObjectKey = (key: string) => `${LISTING_IMAGE_OBJECT_PREFIX}${LISTING_IMAGE_THUMB_SUBPATH}${key}`;
 
 function imageMimeType(buffer: Buffer): string | undefined {
   if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'image/jpeg';
@@ -98,7 +102,7 @@ async function extractImageEntries(zipBuffer: Buffer): Promise<Map<string, ZipIm
     if (!webp) continue;
     const folder = normalizeRegistrationNumber(folderRaw);
     const list = grouped.get(folder) ?? [];
-    list.push({ fileName, path: segments.join('/'), contentHash: createHash('sha256').update(buffer).digest('hex'), buffer: webp, mimeType: 'image/webp' });
+    list.push({ fileName, path: segments.join('/'), contentHash: createHash('sha256').update(buffer).digest('hex'), buffer: webp, thumb: await makeListingThumb(webp), mimeType: 'image/webp' });
     grouped.set(folder, list);
   }
   return grouped;
@@ -112,10 +116,15 @@ export function deterministicImageKey(uploadJobId: string, listingId: string, en
   return `${listingId}-${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}.webp`;
 }
 
-// Uploads one re-encoded photo under its deterministic key and returns its ListingImage metadata.
+// Uploads one re-encoded photo (and its small copy) under its deterministic key and returns its ListingImage metadata.
 async function uploadImage(key: string, order: number, entry: ZipImageEntry): Promise<WorkerListingImage> {
-  await workerStorageClient.send(new PutObjectCommand({ Bucket: workerStorageConfig.bucket, Key: `${LISTING_IMAGE_OBJECT_PREFIX}${key}`, Body: entry.buffer, ContentType: entry.mimeType, CacheControl: 'public, max-age=31536000, immutable' }));
-  return { key, url: `${workerStorageConfig.publicUrl}/${encodeURIComponent(key)}`, alt: entry.fileName, order };
+  const put = (objectKey: string, body: Buffer) => workerStorageClient.send(new PutObjectCommand({ Bucket: workerStorageConfig.bucket, Key: objectKey, Body: body, ContentType: entry.mimeType, CacheControl: 'public, max-age=31536000, immutable' }));
+  await Promise.all([put(fullObjectKey(key), entry.buffer), ...(entry.thumb ? [put(thumbObjectKey(key), entry.thumb)] : [])]);
+  return {
+    key, url: `${workerStorageConfig.publicUrl}/${encodeURIComponent(key)}`,
+    ...(entry.thumb ? { thumbUrl: `${workerStorageConfig.publicUrl}/${LISTING_IMAGE_THUMB_SUBPATH}${encodeURIComponent(key)}` } : {}),
+    alt: entry.fileName, order,
+  };
 }
 
 // Downloads, extracts, matches, and attaches a vehicle-photos zip to the listings this exact
@@ -159,7 +168,7 @@ export async function processInventoryImages(uploadJobId: string) {
       const result = await appendListingImages((listing as any)._id, images, workerStorageConfig.maxListingImages);
       if (result?.modifiedCount === 1) { imagesAttached += images.length; continue; }
       // Not attached (the listing changed meanwhile): remove the objects so none are left untracked.
-      await Promise.allSettled(images.map(({ key }) => workerStorageClient.send(new DeleteObjectCommand({ Bucket: workerStorageConfig.bucket, Key: `${LISTING_IMAGE_OBJECT_PREFIX}${key}` }))));
+      await Promise.allSettled(images.flatMap(({ key }) => [fullObjectKey(key), thumbObjectKey(key)].map((objectKey) => workerStorageClient.send(new DeleteObjectCommand({ Bucket: workerStorageConfig.bucket, Key: objectKey })))));
     }
 
     lease.assertHeld();

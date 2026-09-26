@@ -9,6 +9,7 @@ import { processInventoryImagesJob } from './jobs/inventoryImages.job.js';
 import { processInventoryUploadJob } from './jobs/inventoryUpload.job.js';
 import { runLeaseReaper } from './jobs/reaper.job.js';
 import { runDocumentRetention } from './jobs/documentRetention.job.js';
+import { runStaleListingReminders } from './jobs/staleListingReminder.job.js';
 import { runEmailOutbox } from './jobs/emailOutbox.job.js';
 import { retryImageProcessing, retryUploadJob } from './repositories/uploadJob.repository.js';
 import { listActiveLeases } from './services/activeLeases.js';
@@ -47,6 +48,11 @@ async function startWorker() {
   runRetention();
   const retentionTimer = setInterval(runRetention, env.DOCUMENT_RETENTION_INTERVAL_MS);
 
+  // Reminds dealers about listings they have not confirmed for a while (runs once at startup too).
+  const runStaleReminders = () => void runStaleListingReminders().catch((error) => console.error('Stale listing reminder cycle failed.', error));
+  runStaleReminders();
+  const staleReminderTimer = setInterval(runStaleReminders, env.STALE_REMINDER_INTERVAL_MS);
+
   // Delivers queued notification emails (the outbox), one cycle at a time.
   let outboxRunning = false;
   const outboxTimer = setInterval(() => {
@@ -71,6 +77,7 @@ async function startWorker() {
     hardExit.unref();
     clearInterval(reaperTimer);
     clearInterval(retentionTimer);
+    clearInterval(staleReminderTimer);
     clearInterval(outboxTimer);
 
     let drainTimer: NodeJS.Timeout | undefined;

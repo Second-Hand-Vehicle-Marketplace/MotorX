@@ -7,6 +7,8 @@ import type { UploadJob } from '@/features/inventory/types/inventory.types';
 
 const inventoryApi = vi.hoisted(() => ({ getUpload: vi.fn(), getRejectedRecords: vi.fn(), retryUpload: vi.fn(), retryImages: vi.fn(), uploadImagesZip: vi.fn() }));
 vi.mock('@/features/inventory/services/inventoryApi', () => ({ inventoryApi }));
+const listingApi = vi.hoisted(() => ({ getMyListings: vi.fn(), bulkAction: vi.fn() }));
+vi.mock('@/features/listings/services/listingApi', () => ({ listingApi }));
 
 import { UploadDetails } from './UploadDetails';
 
@@ -33,6 +35,21 @@ describe('UploadDetails', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     inventoryApi.getRejectedRecords.mockResolvedValue({ data: [], pagination: {} });
+    listingApi.getMyListings.mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 1, totalPages: 0 });
+  });
+
+  it("publishes all of this upload's drafts in one step", async () => {
+    inventoryApi.getUpload.mockResolvedValue(job());
+    listingApi.getMyListings.mockResolvedValueOnce({ data: [], total: 9, page: 1, pageSize: 1, totalPages: 9 });
+    listingApi.bulkAction.mockResolvedValue({ action: 'publish', matched: 9, updated: 9, skipped: 0 });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Publish all 9' }));
+
+    expect(listingApi.getMyListings).toHaveBeenCalledWith(1, 1, { status: 'draft', uploadJobId: 'job-1' });
+    expect(listingApi.bulkAction).toHaveBeenCalledWith({ action: 'publish', uploadJobId: 'job-1' });
+    expect(await screen.findByText('9 listings published.')).toBeInTheDocument();
   });
 
   it('shows the failure reason and lets the dealer retry a failed CSV import', async () => {
