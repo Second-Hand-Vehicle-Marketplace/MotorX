@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - name: Check out full history
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Scan every commit: a secret deleted later still lives in history.
           fetch-depth: 0
@@ -62,7 +62,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Start MongoDB replica set
         run: |
@@ -80,7 +80,7 @@ jobs:
             "rs.initiate({_id:'rs0',members:[{_id:0,host:'127.0.0.1:27017'}]})"
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -137,7 +137,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Build Docker image
         run: >-
