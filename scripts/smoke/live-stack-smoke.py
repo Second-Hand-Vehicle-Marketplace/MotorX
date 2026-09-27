@@ -1,7 +1,9 @@
 """Read-only smoke test of a running MotorX stack (end-to-end through the real API, database,
 storage and frontend server; no browser). Sends GET requests only, so it never changes data.
 
-    python scripts/smoke/live-stack-smoke.py [API_BASE] [FRONTEND_BASE]
+    python scripts/smoke/live-stack-smoke.py [API_BASE] [FRONTEND_BASE] [JSON_OUT]
+
+JSON_OUT, if given, also saves the summary there (e.g. docs/test-evidence/live-smoke-results.json).
 
 Defaults: http://127.0.0.1:3000 and http://127.0.0.1:4173. Prints one line per check and a JSON
 summary; exits 1 if any check fails.
@@ -110,4 +112,7 @@ for path in ['/', '/marketplace', '/compare']:
 failed = [r for r in results if r['ok'] is False]
 summary = {'api': API, 'frontend': WEB, 'recordedAt': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), 'passed': sum(r['ok'] is True for r in results), 'failed': len(failed), 'skipped': sum(r['ok'] is None for r in results), 'checks': results}
 print(json.dumps(summary, indent=2))
+if len(sys.argv) > 3:
+    with open(sys.argv[3], 'w', encoding='utf-8') as out:
+        json.dump(summary, out, indent=2)
 sys.exit(1 if failed else 0)

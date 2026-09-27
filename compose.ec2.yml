@@ -1,0 +1,18 @@
+# Single-server (EC2) deployment override. compose.yml publishes every port on 127.0.0.1 only,
+# which is right on a laptop but makes the site unreachable on a server. This file opens only the
+# website (4173) and the API (3000) to the network; Redis and MinIO stay private to the machine.
+#
+#   docker compose -f compose.yml -f compose.ec2.yml up -d --build
+#
+# Needs Docker Compose v2.24 or newer (for !override). In the EC2 security group allow inbound
+# 4173 and 3000 from the people who should use the site, and 22 (SSH) from your own IP only.
+services:
+  backend:
+    ports: !override
+      - "3000:3000"
+  frontend:
+    ports: !override
+      - "4173:5173"
+    environment:
+      # Lets the site be opened by its EC2 public DNS name, not only by IP address.
+      VITE_ALLOWED_HOSTS: ${VITE_ALLOWED_HOSTS:-.compute.amazonaws.com}

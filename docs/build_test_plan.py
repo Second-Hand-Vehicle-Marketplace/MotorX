@@ -22,9 +22,26 @@ def table(headers, rows, widths=None): blocks.append(('table', headers, rows, wi
 def code(text): blocks.append(('code', text))
 
 
+# Results of manual runs (browser journeys, planned integration and non-functional cases), filled in
+# by the team in test-evidence/manual-results.csv. A row with a Result replaces the planned status.
+MANUAL = {}
+_manual_path = EVIDENCE / 'manual-results.csv'
+if _manual_path.exists():
+    with _manual_path.open(encoding='utf-8-sig', newline='') as f:
+        for row in csv.DictReader(f):
+            if (row.get('Result') or '').strip():
+                MANUAL[row['ID'].strip()] = {k: (v or '').strip() for k, v in row.items()}
+
+
 def case(id, title, refs, pre, steps, expected, status, evidence, priority='High', actual='Not recorded', tester='Unassigned', executed='Not executed'):
+    run = MANUAL.get(id)
+    if run:
+        status = f"Executed {run['Date']}: {run['Result']}" + (f" ({run['Environment']})" if run.get('Environment') else '')
+        actual, tester, executed = run.get('Actual') or run['Result'], run.get('Tester') or 'Not recorded', run['Date']
+        evidence = run.get('Evidence') or evidence
     cases.append(dict(ID=id, Title=title, Level=id.split('-')[0], Requirements=refs, Priority=priority, Preconditions=pre, Steps=steps,
-                      Expected=expected, Status=status, Evidence=evidence, Actual=actual, Tester=tester, ExecutedAt=executed, Defect='None recorded'))
+                      Expected=expected, Status=status, Evidence=evidence, Actual=actual, Tester=tester, ExecutedAt=executed,
+                      Defect=(run or {}).get('Defect') or 'None recorded'))
     h(f'{id} — {title}', 3)
     table(['Field', 'Test specification'], [
         ['Requirements / priority', f'{refs} / {priority}'], ['Preconditions and data', pre], ['Procedure', steps],
@@ -409,7 +426,7 @@ table(['Evaluation item', 'Observed result', 'Interpretation'], [
     ['Live smoke (system)', f"{smoke['passed']} passed; {smoke['failed']} failed; {smoke['skipped']} skipped.", 'Running application with real data works end to end; the failure is F-01.'],
     ['Total automated', f'{TOTAL} executed; {TOTAL} passed; 0 failed.', '100% pass rate for executed automated tests.'],
     ['Case register', f"UT {by_level['UT'][1]}/{by_level['UT'][0]} executed; IT {by_level['IT'][1]}/{by_level['IT'][0]}; E2E {by_level['E2E'][1]}/{by_level['E2E'][0]}; NF {by_level['NF'][1]}/{by_level['NF'][0]}.", 'Not-executed cases are listed separately and never counted as passed.'],
-    ['Browser end-to-end', '0 of 15 executed.', 'Required before the exit criteria are met.']])
+    ['Browser end-to-end', f"{sum(1 for c in cases if c['ID'][4:6].isdigit() and c['ID'].startswith('E2E-') and c['Status'].startswith('Executed'))} of 15 executed; {sum(1 for c in cases if c['ID'].startswith('E2E-') and c['ID'][4:6].isdigit() and 'Pass' in c['Status'])} passed.", 'Results recorded by the team in test-evidence/manual-results.csv.']])
 p('Assessment: the automated evidence is strong and fully green, and the running system passed a real-data smoke test apart from one configuration defect. The build is not yet fully accepted because the browser journeys (Section 3.4) have not been executed and F-01 is open. Both can be completed in the time planned in Section 3.8.')
 table(['ID', 'Finding', 'Severity / status', 'Action'], [
     ['F-01', 'Photos on 22 of the 31 active listings (78 photos) point to http://13.207.143.45:3000, an old server that no longer responds, and their files are not in the current storage, so they cannot load (found by E2E-A2). The 91 photos whose files were present were migrated on 26 Sep with small copies created, and load.', 'High (demo) / Partly fixed', 'Copy the 78 original files from the old server or bucket into storage and rerun the migration with --public-url, or re-upload photos for the 22 listings; then rerun E2E-A2.'],

@@ -1164,7 +1164,7 @@ Severity: Critical = unauthorized access or data loss; High = essential journey 
 | Live smoke (system) | 16 passed; 1 failed; 0 skipped. | Running application with real data works end to end; the failure is F-01. |
 | Total automated | 291 executed; 291 passed; 0 failed. | 100% pass rate for executed automated tests. |
 | Case register | UT 41/41 executed; IT 11/15; E2E 2/17; NF 3/6. | Not-executed cases are listed separately and never counted as passed. |
-| Browser end-to-end | 0 of 15 executed. | Required before the exit criteria are met. |
+| Browser end-to-end | 0 of 15 executed; 0 passed. | Results recorded by the team in test-evidence/manual-results.csv. |
 
 Assessment: the automated evidence is strong and fully green, and the running system passed a real-data smoke test apart from one configuration defect. The build is not yet fully accepted because the browser journeys (Section 3.4) have not been executed and F-01 is open. Both can be completed in the time planned in Section 3.8.
 
