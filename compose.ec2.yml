@@ -11,8 +11,19 @@ services:
     ports: !override
       - "3000:3000"
   frontend:
+    # The production image: the site is built once and served by nginx, compressed and cached,
+    # instead of the Vite development server used on laptops. The VITE_* values from .env are
+    # built into the files, so rebuild this image after changing them:
+    #   docker compose -f compose.yml -f compose.ec2.yml build frontend
+    build:
+      dockerfile: infrastructure/docker/frontend.production.Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:?VITE_API_BASE_URL is required}
+        VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY}
+        VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN}
+        VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID}
+        VITE_FIREBASE_STORAGE_BUCKET: ${VITE_FIREBASE_STORAGE_BUCKET}
+        VITE_FIREBASE_MESSAGING_SENDER_ID: ${VITE_FIREBASE_MESSAGING_SENDER_ID}
+        VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID}
     ports: !override
-      - "4173:5173"
-    environment:
-      # Lets the site be opened by its EC2 public DNS name, not only by IP address.
-      VITE_ALLOWED_HOSTS: ${VITE_ALLOWED_HOSTS:-.compute.amazonaws.com}
+      - "4173:80"

@@ -47,7 +47,7 @@ export const ListingMonitoring: React.FC = () => {
   return <div>
     <div className="page-header"><div><h1 className="page-title">Listings Oversight</h1><p className="page-subtitle">Monitor and moderate vehicle listings across all dealerships</p></div></div>
     {error && <div className="alert alert-error" role="alert" style={{ marginBottom: '1rem' }}>{error}</div>}
-    <form className="glass-card" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }} onSubmit={(event) => { event.preventDefault(); setSearch(searchInput.trim()); }}>
+    <form className="glass-card admin-filter-bar" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }} onSubmit={(event) => { event.preventDefault(); setSearch(searchInput.trim()); }}>
       <input type="search" className="form-input" placeholder="Search by title, make, or model..." style={{ maxWidth: 360 }} value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
       <select className="form-select" style={{ width: 160 }} value={status} onChange={(event) => setStatus(event.target.value as AdminListing['status'] | '')}>
         <option value="">All Statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="sold">Sold</option><option value="archived">Archived</option>

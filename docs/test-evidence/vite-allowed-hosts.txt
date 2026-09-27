@@ -1,0 +1,8 @@
+Check: does the frontend dev server accept requests addressed to the EC2 public host name?
+Recorded: 2026-09-27 (developer laptop, apps/frontend, Vite 6.4.3, `npx vite --port 5199`)
+Request: curl -H "Host: ec2-13-207-143-45.ap-south-1.compute.amazonaws.com:4173" http://127.0.0.1:5199/
+
+With VITE_ALLOWED_HOSTS=.compute.amazonaws.com : HTTP 200 (app shell served)
+Without the setting                            : HTTP 403 "Blocked request. This host is not allowed."
+
+Conclusion: the EC2 deployment needs the allow-list; compose.ec2.yml sets VITE_ALLOWED_HOSTS for the frontend service.

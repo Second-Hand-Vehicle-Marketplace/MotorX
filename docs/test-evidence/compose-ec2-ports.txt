@@ -1,0 +1,9 @@
+Command: docker compose -f compose.yml -f compose.ec2.yml config (resolved port bindings)
+
+backend  0.0.0.0 (all interfaces)   3000 -> 3000
+frontend 0.0.0.0 (all interfaces)   4173 -> 5173
+minio    127.0.0.1                  9000 -> 9000
+minio    127.0.0.1                  9001 -> 9001
+redis    127.0.0.1                  6379 -> 6379
+
+Expected: only backend (3000) and frontend (4173) on all interfaces; redis and minio on 127.0.0.1 only.

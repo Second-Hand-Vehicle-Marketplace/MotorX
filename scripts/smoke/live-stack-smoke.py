@@ -8,6 +8,7 @@ JSON_OUT, if given, also saves the summary there (e.g. docs/test-evidence/live-s
 Defaults: http://127.0.0.1:3000 and http://127.0.0.1:4173. Prints one line per check and a JSON
 summary; exits 1 if any check fails.
 """
+import http.client
 import json
 import sys
 import time
@@ -27,9 +28,10 @@ def get(url):
             return response.status, body, response.headers, (time.perf_counter() - started) * 1000
     except urllib.error.HTTPError as error:
         return error.code, error.read(), error.headers, (time.perf_counter() - started) * 1000
-    except (urllib.error.URLError, TimeoutError) as error:
-        # The host could not be reached at all (e.g. a stored photo URL pointing at an old server).
-        return None, str(getattr(error, 'reason', error)).encode(), {}, (time.perf_counter() - started) * 1000
+    except (urllib.error.URLError, OSError, http.client.HTTPException) as error:
+        # Unreachable host (e.g. a photo URL pointing at an old server) or a connection dropped
+        # mid-response: a failed check, never a crash of the whole smoke test.
+        return None, f'{type(error).__name__}: {getattr(error, "reason", error)}'.encode(), {}, (time.perf_counter() - started) * 1000
 
 
 def check(name, url, expect_status=200, verify=None):

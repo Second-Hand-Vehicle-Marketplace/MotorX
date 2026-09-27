@@ -29,6 +29,7 @@
     "@types/multer": "^1.4.12",
     "@types/node": "^24.13.6",
     "@types/supertest": "^7.2.1",
+    "@vitest/coverage-v8": "^4.1.10",
     "supertest": "^7.2.2",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
@@ -41,6 +42,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "search:backfill": "node scripts/backfill-search-embeddings.mjs",
-    "images:migrate": "node dist/scripts/migrateListingImages.js"
+    "images:migrate": "node dist/scripts/migrateListingImages.js",
+    "test:coverage": "vitest run --coverage.enabled --coverage.provider=v8 --coverage.include=src/** --coverage.reporter=text-summary --coverage.reporter=json-summary --coverage.reportsDirectory=coverage"
   }
 }

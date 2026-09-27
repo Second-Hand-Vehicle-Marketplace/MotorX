@@ -40,7 +40,7 @@ export const UserManagement: React.FC = () => {
   return <div>
     <div className="page-header"><div><h1 className="page-title">User Accounts</h1><p className="page-subtitle">Manage platform accounts and access suspensions</p></div></div>
     {error && <div className="alert alert-error" role="alert" style={{ marginBottom: '1rem' }}>{error}</div>}
-    <form className="glass-card" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }} onSubmit={(event) => { event.preventDefault(); setSearch(searchInput.trim()); }}>
+    <form className="glass-card admin-filter-bar" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }} onSubmit={(event) => { event.preventDefault(); setSearch(searchInput.trim()); }}>
       <input type="search" className="form-input" placeholder="Search by name or email..." style={{ width: 280 }} value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
       <select className="form-select" style={{ width: 160 }} value={role} onChange={(event) => setRole(event.target.value as UserRole | '')}>
         <option value="">All Roles</option><option value="buyer">Buyers</option><option value="dealer">Dealers</option><option value="admin">Admins</option>

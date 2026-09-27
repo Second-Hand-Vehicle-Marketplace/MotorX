@@ -449,37 +449,6 @@ body {
   .dealer-review-actions {
     flex-wrap: wrap;
   }
-
-  .admin-dashboard-hero {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .admin-metric-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .admin-dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 480px) {
-  .admin-metric-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .admin-metric {
-    min-height: 112px;
-  }
-
-  .admin-section {
-    padding: 1rem;
-  }
-
-  .admin-status-pill {
-    display: none;
-  }
 }
 
 :root[data-theme='light'],
@@ -3534,5 +3503,99 @@ fieldset.filter-section legend {
   /* Cards do not lift on tap (hover styles stick on touch screens). */
   .listing-card:hover {
     transform: none;
+  }
+}
+
+/* ---------- Phone layout (kept last so it overrides the desktop rules above) ---------- */
+/* A flex item may otherwise grow to its widest content and push the page sideways. */
+.portal-main {
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  /* Once filters and results stack, the results take the full width. */
+  .marketplace-search-layout {
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 768px) {
+  .auth-page {
+    padding: 1rem 0.75rem;
+  }
+
+  .auth-page > .auth-card,
+  .auth-page > .auth-registration-card {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* One form column that never grows wider than its card. */
+  .auth-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .auth-form-grid > *,
+  .document-upload input[type='file'] {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .admin-dashboard-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-dashboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Admin search and filter bars: one full-width control per line. */
+  .admin-filter-bar {
+    padding: var(--space-4) !important;
+  }
+
+  .admin-filter-bar > * {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-metric {
+    min-height: 104px;
+    padding: var(--space-4);
+  }
+
+  .admin-metric strong {
+    font-size: 1.6rem;
+  }
+
+  .admin-section {
+    padding: var(--space-4);
+  }
+
+  .admin-status-pill {
+    display: none;
+  }
+
+  /* Dashboard figures two per row rather than one tall card each. */
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+
+  .stat-card {
+    padding: var(--space-4);
+  }
+
+  .stat-card .stat-value {
+    font-size: var(--font-size-2xl);
   }
 }

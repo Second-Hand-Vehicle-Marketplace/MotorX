@@ -46,7 +46,7 @@ export const AuditLogs: React.FC = () => {
     <div>
       <div className="page-header"><div><h1 className="page-title">Audit Logs</h1><p className="page-subtitle">Persistent record of significant administrative operations</p></div></div>
       {error && <div className="alert alert-error" role="alert">Audit logs are unavailable right now: {error}</div>}
-      <div className="glass-card" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+      <div className="glass-card admin-filter-bar" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
         <label className="form-group" style={{ minWidth: 220 }}><span className="form-label">Event type</span>
           <select className="form-select" value={eventType} onChange={(event) => update({ eventType: event.target.value })}>
             <option value="">All event types</option>

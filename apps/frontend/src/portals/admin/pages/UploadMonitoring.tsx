@@ -49,12 +49,12 @@ export const UploadMonitoring: React.FC = () => {
       <div className="page-header"><div><h1 className="page-title">CSV Upload Monitoring</h1><p className="page-subtitle">Review inventory processing by dealer, status, and date.</p></div></div>
       {error && <div className="alert alert-error" role="alert">Upload jobs are unavailable right now: {error}</div>}
       {uploadId ? (
-        <div className="glass-card" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="glass-card admin-filter-bar" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'space-between' }}>
           <span>Showing one upload from the dashboard.</span>
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => update({ uploadId: '' })}>Show all uploads</button>
         </div>
       ) : (
-        <div className="glass-card" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+        <div className="glass-card admin-filter-bar" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <label className="form-group" style={{ flex: 1, minWidth: 200 }}><span className="form-label">Dealer</span><select className="form-select" value={dealerId} onChange={(event) => update({ dealerId: event.target.value })}><option value="">All dealers</option>{dealers.map((dealer) => <option key={dealer.id} value={dealer.id}>{dealer.displayName || dealer.email}</option>)}</select></label>
           <label className="form-group" style={{ flex: 1, minWidth: 180 }}><span className="form-label">Upload status</span><select className="form-select" value={status} onChange={(event) => update({ status: event.target.value })}><option value="">All statuses</option><option value="pending">Pending</option><option value="processing">Processing</option><option value="completed">Completed</option><option value="completedWithErrors">Completed with errors</option><option value="failed">Failed</option></select></label>
           <label className="form-group" style={{ minWidth: 150 }}><span className="form-label">From</span><input type="date" className="form-input" value={from} max={to || undefined} onChange={(event) => update({ from: event.target.value })} /></label>
