@@ -7,7 +7,7 @@
     "@aws-sdk/client-s3": "^3.699.0",
     "@motorx/shared-contracts": "*",
     "axios": "^1.7.9",
-    "bullmq": "^5.30.0",
+    "bullmq": "^6.3.8",
     "csv-parse": "^5.6.0",
     "dotenv": "^16.4.0",
     "ioredis": "^5.4.0",
