@@ -25,5 +25,8 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
+    // The dev server only answers to localhost and IP addresses unless a hostname is listed here
+    // (e.g. the EC2 public DNS name). Comma-separated; a leading dot allows all subdomains.
+    allowedHosts: (process.env.VITE_ALLOWED_HOSTS ?? '').split(',').map((host) => host.trim()).filter(Boolean),
   },
 });
