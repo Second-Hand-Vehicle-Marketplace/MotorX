@@ -23,7 +23,7 @@
     "@types/unzipper": "^0.10.11",
     "@vitest/coverage-v8": "^4.1.10",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   },
   "scripts": {
