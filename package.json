@@ -11,5 +11,9 @@
   ],
   "scripts": {
     "test": "npm run test --workspaces --if-present"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.14.5",
+    "@fastify/busboy": "^3.2.1"
   }
 }
