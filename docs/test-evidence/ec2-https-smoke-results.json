@@ -1,0 +1,146 @@
+{
+  "api": "https://motorx.duckdns.org",
+  "frontend": "https://motorx.duckdns.org",
+  "recordedAt": "2026-10-03T16:06:44Z",
+  "passed": 16,
+  "failed": 1,
+  "skipped": 0,
+  "checks": [
+    {
+      "check": "API liveness",
+      "url": "{API}/health/live",
+      "status": 200,
+      "ok": true,
+      "ms": 422,
+      "detail": ""
+    },
+    {
+      "check": "API readiness (database reachable)",
+      "url": "{API}/health/ready",
+      "status": 200,
+      "ok": true,
+      "ms": 277,
+      "detail": ""
+    },
+    {
+      "check": "Public browse returns only active listings",
+      "url": "{API}/api/v1/listings?limit=12",
+      "status": 200,
+      "ok": true,
+      "ms": 408,
+      "detail": "48 active listings"
+    },
+    {
+      "check": "Structured filter holds (price <= 8,000,000)",
+      "url": "{API}/api/v1/listings?priceMax=8000000&limit=20",
+      "status": 200,
+      "ok": true,
+      "ms": 372,
+      "detail": "19 results"
+    },
+    {
+      "check": "Natural-language search",
+      "url": "{API}/api/v1/search?q=automatic%20car%20under%2010%20million&limit=10",
+      "status": 200,
+      "ok": true,
+      "ms": 441,
+      "detail": "mode=structured, 14 results"
+    },
+    {
+      "check": "Invalid listing ID is rejected, not a server error",
+      "url": "{API}/api/v1/listings/not-an-id",
+      "status": 400,
+      "ok": true,
+      "ms": 320,
+      "detail": ""
+    },
+    {
+      "check": "Dealer-only route requires sign-in",
+      "url": "{API}/api/v1/listings/mine",
+      "status": 401,
+      "ok": true,
+      "ms": 323,
+      "detail": ""
+    },
+    {
+      "check": "Admin-only route requires sign-in",
+      "url": "{API}/api/v1/admin/stats",
+      "status": 401,
+      "ok": true,
+      "ms": 307,
+      "detail": ""
+    },
+    {
+      "check": "Recommendations reject a malformed list",
+      "url": "{API}/api/v1/listings/recommendations?viewed=bad",
+      "status": 400,
+      "ok": true,
+      "ms": 294,
+      "detail": ""
+    },
+    {
+      "check": "Vehicle details include the dealer profile",
+      "url": "{API}/api/v1/listings/6a81d9953c24f38bfa0899a4",
+      "status": 200,
+      "ok": true,
+      "ms": 313,
+      "detail": "dealer=yes"
+    },
+    {
+      "check": "Similar vehicles exclude the vehicle itself",
+      "url": "{API}/api/v1/listings/6a81d9953c24f38bfa0899a4/similar?limit=6",
+      "status": 200,
+      "ok": true,
+      "ms": 403,
+      "detail": "6 similar"
+    },
+    {
+      "check": "Recommendations leave out viewed vehicles",
+      "url": "{API}/api/v1/listings/recommendations?viewed=6a81d9953c24f38bfa0899a4,6a81d9953c24f38bfa0899a9&limit=6",
+      "status": 200,
+      "ok": true,
+      "ms": 349,
+      "detail": "basedOn=2, 6 recommended"
+    },
+    {
+      "check": "Every active listing photo loads",
+      "url": "{listing photo URLs}",
+      "status": null,
+      "ok": false,
+      "ms": 0,
+      "detail": "38/40 main photos load; not loading: 2 from motorx.duckdns.org"
+    },
+    {
+      "check": "Small photo copies load",
+      "url": "{thumb URLs}",
+      "status": null,
+      "ok": true,
+      "ms": 0,
+      "detail": "40/40 small copies load"
+    },
+    {
+      "check": "Frontend serves / (single-page app)",
+      "url": "{API}/",
+      "status": 200,
+      "ok": true,
+      "ms": 289,
+      "detail": "app shell"
+    },
+    {
+      "check": "Frontend serves /marketplace (single-page app)",
+      "url": "{API}/marketplace",
+      "status": 200,
+      "ok": true,
+      "ms": 265,
+      "detail": "app shell"
+    },
+    {
+      "check": "Frontend serves /compare (single-page app)",
+      "url": "{API}/compare",
+      "status": 200,
+      "ok": true,
+      "ms": 267,
+      "detail": "app shell"
+    }
+  ]
+}
