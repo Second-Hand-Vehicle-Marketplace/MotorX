@@ -1,5 +1,11 @@
 export const SEARCH_EMBEDDING_DIMENSIONS = 384;
 
+// Hugging Face's hosted feature-extraction endpoint. The old api-inference.huggingface.co address
+// was retired; each part of the model id is encoded separately so the "/" in it stays a path separator.
+export function huggingFaceFeatureExtractionUrl(model: string) {
+  return `https://router.huggingface.co/hf-inference/models/${model.split('/').map(encodeURIComponent).join('/')}/pipeline/feature-extraction`;
+}
+
 function hashToken(token: string) {
   let hash = 2166136261;
   for (const character of token) { hash ^= character.charCodeAt(0); hash = Math.imul(hash, 16777619); }

@@ -2,7 +2,7 @@ import { config as loadEnvironment } from 'dotenv';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import mongoose from 'mongoose';
-import { composeListingSearchText, createLocalSearchEmbedding, normalizeEmbeddingResponse, SEARCH_EMBEDDING_DIMENSIONS } from '@motorx/shared-contracts';
+import { composeListingSearchText, createLocalSearchEmbedding, huggingFaceFeatureExtractionUrl, normalizeEmbeddingResponse, SEARCH_EMBEDDING_DIMENSIONS } from '@motorx/shared-contracts';
 
 // npm workspace scripts run with apps/backend as their working directory, so load the repository
 // root environment relative to this file instead of relying on process.cwd().
@@ -15,7 +15,7 @@ const model = process.env.HF_EMBEDDING_MODEL || 'sentence-transformers/all-MiniL
 
 async function embed(text) {
   if (!process.env.HF_API_KEY) return createLocalSearchEmbedding(text);
-  const response = await fetch(`https://api-inference.huggingface.co/pipeline/feature-extraction/${encodeURIComponent(model)}`, {
+  const response = await fetch(huggingFaceFeatureExtractionUrl(model), {
     method: 'POST', headers: { Authorization: `Bearer ${process.env.HF_API_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ inputs: text.slice(0, 5_000), options: { wait_for_model: true } }), signal: AbortSignal.timeout(8_000),
   });

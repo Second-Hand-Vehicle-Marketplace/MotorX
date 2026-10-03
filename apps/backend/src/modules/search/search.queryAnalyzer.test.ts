@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { analyzeSearchQuery } from './search.queryAnalyzer.js';
 import { searchQuerySchema } from './search.validation.js';
-import { createLocalSearchEmbedding, normalizeEmbeddingResponse } from '@motorx/shared-contracts';
+import { createLocalSearchEmbedding, huggingFaceFeatureExtractionUrl, normalizeEmbeddingResponse } from '@motorx/shared-contracts';
 
 describe('natural-language search analyzer', () => {
   it('extracts the SRS-style structured query', () => {
@@ -36,5 +36,10 @@ describe('embedding contract', () => {
     expect(local).toHaveLength(384);
     expect(Math.sqrt(local.reduce((sum, value) => sum + value ** 2, 0))).toBeCloseTo(1);
     expect(normalizeEmbeddingResponse([[3, 0], [1, 0]])).toEqual([1, 0]);
+  });
+
+  it('calls the current Hugging Face router, keeping the model id as path segments', () => {
+    expect(huggingFaceFeatureExtractionUrl('sentence-transformers/all-MiniLM-L6-v2'))
+      .toBe('https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction');
   });
 });
