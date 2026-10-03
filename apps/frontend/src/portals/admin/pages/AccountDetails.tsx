@@ -11,7 +11,7 @@ export function AccountDetails({ userId, onClose }: { userId: string; onClose: (
     adminApi.getUserDetails(userId).then((value) => { if (active) setUser(value); }).catch((e: unknown) => { if (active) setError(e instanceof Error ? e.message : 'Unable to load account.'); });
     return () => { active = false; };
   }, [userId]);
-  const fields = user ? { Name: user.displayName, Email: user.email, Phone: user.phone, Role: user.role, 'Account status': user.status, Joined: formatDate(user.createdAt), 'Last login': formatDate(user.lastLoginAt), ...(user.dealer ? {
+  const fields: Record<string, React.ReactNode> = user ? { Name: user.displayName, Email: user.email, Phone: user.phone, Role: user.role, 'Account status': user.status, Joined: formatDate(user.createdAt), 'Last login': formatDate(user.lastLoginAt), ...(user.dealer ? {
     Business: user.dealer.businessName, Representative: user.dealer.representativeName, 'Business email': user.dealer.businessEmail, 'Business phone': user.dealer.businessPhone, 'Contact phone': user.dealer.phone, Address: user.dealer.address, City: user.dealer.city, Province: user.dealer.province, Website: user.dealer.website, 'Business registration': user.dealer.registrationNumber, 'Dealership type': user.dealer.dealershipType, Brands: user.dealer.brands.join(', '), Description: user.dealer.description, 'Declared inventory': user.dealer.inventoryCount, 'Dealer approval': user.dealer.status, 'Rejection reason': user.dealer.rejectionReason,
   } : {}) } : {};
   return <section className="glass-card" aria-label="Account details" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
