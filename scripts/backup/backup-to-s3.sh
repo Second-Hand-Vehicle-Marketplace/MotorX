@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-# Nightly backup set for the single-server (EC2) deployment. Writes are paused for a few minutes so
+# Nightly backup set for the single-server (EC2) deployment. The server clock is UTC, so
+# 21:00 UTC below is 02:30 in Sri Lanka, the quietest time. Writes are paused for a few minutes so
 # the MongoDB dump and the MinIO files (CSVs, photos, dealer documents) describe the same moment, then
 # both go to a private S3 bucket under one set ID. Run from the repository root on the EC2 host, e.g.
 # from cron at 02:30 (the site answers 502 for API calls while the backend is stopped):
 #
-#   30 2 * * * cd /home/ec2-user/MotorX && BACKUP_BUCKET=motorx-backups BACKUP_PING_URL=https://hc-ping.com/<uuid> bash scripts/backup/backup-to-s3.sh >> /var/log/motorx-backup.log 2>&1
+#   PATH=/usr/local/bin:/usr/bin:/bin:/snap/bin
+#   0 21 * * * cd /home/ubuntu/motorx && BACKUP_BUCKET=motorx-backups 
+#   BACKUP_PING_URL=https://hc-ping.com/<uuid> bash scripts/backup/backup-to-s3.sh >> /home/ubuntu/motorx-backup.log 2>&1
 #
 # Needs the AWS CLI on the host and an instance role allowed to s3:PutObject and s3:GetObject on the
 # bucket (no keys on the server). The bucket must block public access, use default encryption (the
@@ -15,7 +18,7 @@ set -euo pipefail
 
 : "${BACKUP_BUCKET:?Set BACKUP_BUCKET to the private S3 bucket name}"
 KEEP_LOCAL_DAYS="${KEEP_LOCAL_DAYS:-3}"
-BACKUP_DIR="${BACKUP_DIR:-/var/backups/motorx}"
+BACKUP_DIR="${BACKUP_DIR:-$HOME/motorx-backups}"
 COMPOSE=(docker compose -f compose.yml -f compose.ec2.yml -f compose.lb.yml)
 SET_ID="$(date -u +%Y-%m-%dT%H%M%SZ)"
 SET_DIR="$BACKUP_DIR/$SET_ID"
@@ -49,6 +52,8 @@ docker run --rm -e MONGODB_URI="$MONGODB_URI" -v "$SET_DIR:/backup" mongo:7 \
 echo "[$SET_ID] Archiving MinIO files"
 docker run --rm -v motorx_minio_data:/data:ro -v "$SET_DIR:/backup" alpine \
   tar czf /backup/minio.tar.gz -C /data .
+# The containers write as root; hand the files to this user so old sets can be cleaned up.
+docker run --rm -v "$SET_DIR:/backup" alpine chown -R "$(id -u):$(id -g)" /backup
 
 # 3. Resume service before the slower upload.
 echo "[$SET_ID] Resuming backend and workers"
