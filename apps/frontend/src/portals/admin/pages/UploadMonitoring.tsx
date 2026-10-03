@@ -6,6 +6,8 @@ import { PagerControls } from '@/shared/components/PagerControls';
 import { formatDate } from '@/shared/utils/formatters';
 import { ResponsiveTable } from '@/shared/components/ResponsiveTable';
 
+import { UploadCollection } from './UploadCollection';
+
 const statusBadge = (status: AdminUpload['status']) => status === 'completed' ? 'badge-success' : status === 'processing' ? 'badge-info' : status === 'failed' ? 'badge-error' : status === 'completedWithErrors' ? 'badge-warning' : 'badge-neutral';
 
 // Filters live in the URL, so dashboard links (?uploadId=…) open the exact record and a filtered
@@ -19,6 +21,7 @@ export const UploadMonitoring: React.FC = () => {
   const to = params.get('to') ?? '';
   const page = Number(params.get('page') ?? '1') || 1;
 
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [uploads, setUploads] = useState<AdminUpload[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [dealers, setDealers] = useState<AdminUser[]>([]);
@@ -46,7 +49,7 @@ export const UploadMonitoring: React.FC = () => {
 
   return (
     <div>
-      <div className="page-header"><div><h1 className="page-title">CSV Upload Monitoring</h1><p className="page-subtitle">Review inventory processing by dealer, status, and date.</p></div></div>
+      <div className="page-header"><div><h1 className="page-title">CSV Upload Monitoring</h1><p className="page-subtitle">Open a bulk collection to review imported listings and rejected rows.</p></div></div>
       {error && <div className="alert alert-error" role="alert">Upload jobs are unavailable right now: {error}</div>}
       {uploadId ? (
         <div className="glass-card admin-filter-bar" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -68,12 +71,12 @@ export const UploadMonitoring: React.FC = () => {
             {loading && <tr><td colSpan={7}>Loading upload jobs...</td></tr>}
             {!loading && !error && uploads.length === 0 && <tr><td colSpan={7}>{uploadId ? 'This upload was not found.' : dealerId || status || from || to ? 'No uploads match these filters.' : 'No inventory uploads have been submitted.'}</td></tr>}
             {!loading && uploads.map((job) => (
-              <tr key={job.id} aria-current={job.id === uploadId ? 'true' : undefined} style={job.id === uploadId ? { outline: '2px solid var(--color-accent)' } : undefined}>
+              <React.Fragment key={job.id}><tr aria-current={job.id === uploadId ? 'true' : undefined} style={job.id === uploadId ? { outline: '2px solid var(--color-accent)' } : undefined}>
                 <td style={{ fontFamily: 'monospace' }}>{job.id}</td><td>{job.dealerName}</td>
-                <td>{job.fileName}{job.status === 'failed' && job.failureReason && <small style={{ display: 'block', color: 'var(--color-error)' }}>{job.failureReason}</small>}</td>
+                <td><button className="btn btn-secondary btn-sm" aria-expanded={expandedId === job.id} onClick={() => setExpandedId(expandedId === job.id ? null : job.id)}>{job.fileName}</button>{job.status === 'failed' && job.failureReason && <small style={{ display: 'block', color: 'var(--color-error)' }}>{job.failureReason}</small>}</td>
                 <td>{job.totalRecords}</td><td>{job.validRecords} / {job.rejectedRecords}</td>
                 <td><span className={`badge ${statusBadge(job.status)}`}>{job.status}</span></td><td>{formatDate(job.createdAt)}</td>
-              </tr>
+              </tr>{expandedId === job.id && <tr><td colSpan={7}><UploadCollection job={job} /></td></tr>}</React.Fragment>
             ))}
           </tbody>
         </ResponsiveTable></div>

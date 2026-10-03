@@ -1,3 +1,4 @@
+import { RejectedRecordModel } from '../inventory/rejectedRecord.model.js';
 import type { FilterQuery } from 'mongoose';
 import { AuthUserModel, type AuthUser } from '../auth-users/authUser.model.js';
 import { DealerModel } from '../dealers/dealer.model.js';
@@ -121,4 +122,20 @@ export function updateDealerApplicationReview(dealerId: string, status: 'approve
 // Grants dealer access in the same transaction as application approval.
 export function promoteApplicantToDealer(userId: Types.ObjectId, session: ClientSession) {
   return AuthUserModel.findByIdAndUpdate(userId, { $set: { role: 'dealer' } }, { new: true, session });
+}
+
+export function findAdminUser(userId: string) { return AuthUserModel.findById(userId).lean(); }
+export function findAdminDealer(userId: string) {
+  return DealerModel.findOne({ userId }).select('businessName registrationNumber phone address representativeName city province businessPhone businessEmail website dealershipType brands description inventoryCount status rejectionReason').lean();
+}
+export function findAdminUpload(uploadId: string) { return UploadJobModel.findById(uploadId).lean(); }
+export async function listAdminUploadRecords(uploadId: string, options: import('./admin.validation.js').AdminUploadRecordsQuery) {
+  const rejected = options.outcome === 'rejected';
+  const model = rejected ? RejectedRecordModel : ListingModel;
+  const filter = rejected ? { uploadJobId: uploadId } : { sourceUploadJobId: uploadId };
+  const [documents, total] = await Promise.all([
+    model.find(filter).sort(rejected ? { rowNumber: 1, _id: 1 } : { sourceRowNumber: 1, _id: 1 }).skip((options.page - 1) * options.limit).limit(options.limit).lean(),
+    model.countDocuments(filter),
+  ]);
+  return { documents, total };
 }

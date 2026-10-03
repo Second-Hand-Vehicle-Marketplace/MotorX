@@ -7,7 +7,10 @@ import { ResponsiveTable } from '@/shared/components/ResponsiveTable';
 
 const filterableCategories = vehicleCategories.filter((category) => category !== 'other');
 
+import { AccountDetails } from './AccountDetails';
+
 export const ListingMonitoring: React.FC = () => {
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [listings, setListings] = useState<AdminListing[]>([]);
   const [status, setStatus] = useState<AdminListing['status'] | ''>('');
   const [category, setCategory] = useState<VehicleCategory | ''>('');
@@ -46,6 +49,7 @@ export const ListingMonitoring: React.FC = () => {
 
   return <div>
     <div className="page-header"><div><h1 className="page-title">Listings Oversight</h1><p className="page-subtitle">Monitor and moderate vehicle listings across all dealerships</p></div></div>
+    {selectedUserId && <AccountDetails userId={selectedUserId} onClose={() => setSelectedUserId(null)} />}
     {error && <div className="alert alert-error" role="alert" style={{ marginBottom: '1rem' }}>{error}</div>}
     <form className="glass-card admin-filter-bar" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }} onSubmit={(event) => { event.preventDefault(); setSearch(searchInput.trim()); }}>
       <input type="search" className="form-input" placeholder="Search by title, make, or model..." style={{ maxWidth: 360 }} value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
@@ -64,9 +68,9 @@ export const ListingMonitoring: React.FC = () => {
         {loading && <tr><td colSpan={7}>Loading listings...</td></tr>}
         {!loading && listings.length === 0 && <tr><td colSpan={7}>No listings match these filters.</td></tr>}
         {!loading && listings.map((listing) => <tr key={listing.id}>
-          <td style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{listing.title}<div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 400 }}>{listing.year} {listing.make} {listing.model}</div></td>
+          <td style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}><button className="btn btn-secondary btn-sm" onClick={() => setSelectedUserId(listing.dealerId)}>{listing.title}</button><div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', fontWeight: 400 }}>{listing.year} {listing.make} {listing.model}</div></td>
           <td><span className="badge badge-neutral">{formatEnumLabel(listing.category)}</span></td>
-          <td>{listing.dealerName}</td><td style={{ fontWeight: 600, color: 'var(--color-accent-light)' }}>{formatPrice(listing.price, listing.currency)}</td>
+          <td><button className="btn btn-secondary btn-sm" onClick={() => setSelectedUserId(listing.dealerId)}>{listing.dealerName}</button></td><td style={{ fontWeight: 600, color: 'var(--color-accent-light)' }}>{formatPrice(listing.price, listing.currency)}</td>
           <td><span className={`badge ${listing.status === 'active' ? 'badge-success' : listing.status === 'archived' ? 'badge-error' : 'badge-neutral'}`}>{listing.status}</span></td>
           <td>{formatDate(listing.createdAt)}</td>
           <td><button disabled={listing.status === 'archived' || removingId === listing.id} onClick={() => void removeListing(listing)} className="btn btn-danger btn-sm">{removingId === listing.id ? 'Archiving...' : listing.status === 'archived' ? 'Archived' : 'Remove Listing'}</button></td>

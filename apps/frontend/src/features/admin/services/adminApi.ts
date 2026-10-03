@@ -7,6 +7,10 @@ export interface AdminUser {
   status: 'active' | 'suspended'; phone?: string; createdAt: string; lastLoginAt: string;
 }
 
+export interface AdminUserDetails extends AdminUser {
+  dealer: null | { businessName: string; registrationNumber: string; phone: string; address: string; representativeName: string; city: string; province: string; businessPhone: string; businessEmail: string; website?: string; dealershipType: string; brands: string[]; description: string; inventoryCount?: number; status: string; rejectionReason?: string };
+}
+export type AdminUploadRecord = (AdminListing & { outcome: 'completed'; rowNumber?: number }) | { id: string; outcome: 'rejected'; rowNumber: number; originalData: Record<string, unknown>; errors: string[]; reason: string };
 export interface AdminListing {
   id: string; dealerId: string; dealerName: string; title: string; make: string; model: string;
   year: number; category: VehicleCategory; registrationNumber: string;
@@ -29,6 +33,13 @@ export interface AdminAuditFilters { eventType?: AdminAuditEvent; from?: string;
 
 // Provides one frontend entry point for every admin API operation.
 export const adminApi = {
+  async getUserDetails(userId: string) {
+    return (await apiClient.get<ApiSuccessResponse<AdminUserDetails>>(`/admin/users/${userId}`)).data.data;
+  },
+  async listUploadRecords(uploadId: string, outcome: 'completed' | 'rejected', page: number) {
+    const response = await apiClient.get<ApiSuccessResponse<AdminUploadRecord[], PaginationMeta>>(`/admin/uploads/${uploadId}/records`, { params: { outcome, page, limit: 20 } });
+    return { records: response.data.data, meta: response.data.meta };
+  },
   async listUsers(filters: AdminUserFilters = {}) {
     const response = await apiClient.get<ApiSuccessResponse<AdminUser[], PaginationMeta>>('/admin/users', { params: filters });
     return { users: response.data.data, meta: response.data.meta };

@@ -26,73 +26,46 @@ Version 3.1 • 28 September 2026
 | 21 Sep 2026 | 1.0 | First MotorX plan on the supplied template: target items, eight technique tables, 48 cases and an automated baseline of 77 passing tests. | Group 23 |
 | 26 Sep 2026 | 2.0 | All suites re-run on Node 24 against a real MongoDB replica set, Redis and MinIO. HTTP journeys, frontend component tests, the 5,000-row benchmark, the crash drill and a live smoke test added; new features covered; the merge with branch version4 retested. | Group 23 |
 | 27 Sep 2026 | 3.0 | Reorganised into test levels, test types and a level × type matrix, with a case inventory and sections on environments, criteria, schedule, defects and test data, plus appendices A–G. EC2 deployment tested (E2E-A3, CT-04, CT-05); deployment findings F-11 to F-14 added; contract and consistency checks CT-01 to CT-07 introduced. Code coverage measured; screenshot evidence from the EC2 deployment added (Appendix H) with findings F-15 to F-17. | Group 23 |
-| 28 Sep 2026 | 3.1 | Section 5.1.1 added with the output of the type-check and dependency audit; finding F-18 recorded; the 5.1 assessment now counts plain HTTP on EC2 (F-15) against acceptance; figures numbered automatically. | Group 23 |
+| 28 Sep 2026 | 3.1 | Tool outputs added to Section 5.1: test logs (5.1.1), user interface test details (5.1.2), type-check and dependency audit (5.1.3) browser performance (5.1.4) server monitoring (5.1.5) and database performance (5.1.6); finding F-18 recorded; the 5.1 assessment now counts plain HTTP on EC2 (F-15) against acceptance; figures numbered automatically; frontend component tests UT-42–UT-48 added (frontend coverage 38% → 69%). R-05 closed after the production build. | Group 23 |
 
 ## Table of Contents
 
 1. Evaluation Mission and Test Motivation
-
-      1.1 What this cycle must demonstrate
-
+  - 1.1 What this cycle must demonstrate
 2. Target Test Items
-
-      2.1 Items under test
-
-      2.2 Items outside this cycle
-
+  - 2.1 Items under test
+  - 2.2 Items outside this cycle
 3. Test Approach
-
-      3.1 How the approach is organised
-
-      3.2 Test Levels
-
-      3.3 Testing Techniques and Types
-
-      3.4 Level × Technique Matrix
-
+  - 3.1 How the approach is organised
+  - 3.2 Test Levels
+  - 3.3 Testing Techniques and Types
+  - 3.4 Level × Technique Matrix
 4. Test Case Inventory
-
 5. Deliverables
-
-      5.1 Test Evaluation Summaries
-
-            5.1.1 Code Inspection and Dependency Audit
-
-      5.2 Reporting on Test Coverage
-
+  - 5.1 Test Evaluation Summaries
+  - 5.1.1 Test Logs
+  - 5.1.2 User Interface Test Details
+  - 5.1.3 Code Inspection and Dependency Audit
+  - 5.1.4 Browser Performance (Lighthouse and Network)
+  - 5.1.5 Server Monitoring
+  - 5.1.6 Database Performance
+  - 5.2 Reporting on Test Coverage
 6. Risks, Dependencies, Assumptions, and Constraints
-
 7. References
-
 8. Responsibilities, Staffing and Training Needs
-
 9. Test Environment Specification
-
 10. Entry, Exit and Suspension Criteria
-
 11. Test Schedule and Phasing
-
 12. Defect Severity and Priority Definitions
-
 13. Test Data Policy
-
 Appendix A – Unit and Component Test Cases
-
 Appendix B – Integration and Contract Test Cases
-
 Appendix C – End-to-End Test Cases
-
 Appendix D – Non-functional Cases and Execution Results
-
 Appendix E – Evidence Index
-
 Appendix F – Defect Log
-
 Appendix G – Traceability Matrix
-
 Appendix H – Screenshot Evidence
-
-Headings appear in Word’s Navigation Pane; page numbers are left out so the list stays correct after editing.
 
 ## 1. Evaluation Mission and Test Motivation
 
@@ -102,7 +75,7 @@ Most of the catalogue never passes through a person’s hands. A dealer submits 
 
 This cycle therefore has three aims. First, to replace claims with evidence: every quality statement in this report points to an executed test, an evidence file or a numbered finding. Second, to find the defects that would do the most damage at submission and in a live demonstration — data leaking between dealers, lost or duplicated stock, jobs that do not recover after a crash, a deployment that exposes internal services, and pages that break on phones. Third, to keep “planned”, “executed” and “passed” clearly separate, so that the team, the mentor and the examiners can see exactly what has and has not been shown.
 
-Position at the time of writing: 291 automated tests executed and all passed (backend 147, worker 94, frontend 50); three system-level procedures executed, including a smoke run against the EC2 deployment; five of seven contract and consistency checks passed and one failed; 0 of the 15 browser journeys executed. Fourteen findings are recorded in Appendix F.
+Position at the time of writing: 348 automated tests executed and all passed (backend 147, worker 94, frontend 50); three system-level procedures executed, including a smoke run against the EC2 deployment; five of seven contract and consistency checks passed and one failed; 0 of the 15 browser journeys executed. Fourteen findings are recorded in Appendix F.
 
 ### 1.1 What this cycle must demonstrate
 
@@ -167,7 +140,7 @@ At this level one function, schema, service or React component is tested with ev
 | --- | --- |
 | Scope | Backend validation schemas, similarity scoring, image and document sanitisation, the token cache, queue publishing and the photo migration (with an in-memory bucket); worker pipeline stages, retry classification, lease renewal, the reaper, e-mail outbox, document retention, stale-stock reminders, and the import and photo services; frontend pages and components rendered in jsdom with the API replaced. |
 | Tools | Vitest 4 (backend, worker) and Vitest 5 with jsdom (frontend); Testing Library and user-event; vi.mock at process boundaries; sharp to generate test images. |
-| Evidence this cycle | 234 tests in 41 files; all passed (Appendix A). |
+| Evidence this cycle | 291 tests in 48 files; all passed (Appendix A). |
 | Left to other levels | Real queries and indexes; the order in which Express middleware runs; CSS layout; timing between real processes. |
 
 #### 3.2.2 Integration Testing
@@ -467,15 +440,15 @@ The cases below are grouped by the part of MotorX they exercise; a case can appe
 The artefacts below are produced by this test effort and are what its success is judged on. Paths are relative to the repository root.
 
 - This report: docs/MotorX_Test_Plan_Report.docx (Word, on the supplied template) and docs/MotorX_Test_Plan_Report.md.
-- Case register: docs/MotorX_Test_Case_Register.csv — all 87 cases with level, requirement, steps, expected and actual result, tester, date and finding.
-- Executed-test register: docs/test-evidence/automated-test-register.csv — every automated test (291) with its file, status and duration.
+- Case register: docs/MotorX_Test_Case_Register.csv — all 94 cases with level, requirement, steps, expected and actual result, tester, date and finding.
+- Executed-test register: docs/test-evidence/automated-test-register.csv — every automated test (348) with its file, status and duration.
 - Raw results: docs/test-evidence/backend-results.json, worker-results.json and frontend-results.json (Vitest JSON).
 - Performance and smoke evidence: benchmark-output.txt, live-smoke-output.txt, live-smoke-results.json and ec2-smoke-results.json.
 - Configuration evidence: compose-ec2-ports.txt and vite-allowed-hosts.txt.
 - Code coverage: coverage-backend.json, coverage-worker.json and coverage-frontend.json (v8 summaries per file).
 - Build and environment: build-output.txt and run-metadata.json.
 - Manual results sheet: docs/test-evidence/manual-results.csv, filled in during browser journeys, with screenshots under test-evidence/screenshots and Lighthouse reports under test-evidence/lighthouse.
-- Test tooling: scripts/drills/kill-worker-mid-import.sh, scripts/smoke/live-stack-smoke.py and this report’s generator, docs/build_test_plan.py.
+- Test tooling: scripts/drills/kill-worker-mid-import.sh, scripts/smoke/live-stack-smoke.py and the report generator, which is kept outside the repository.
 - Defect log and traceability matrix: Appendices F and G.
 
 ### 5.1 Test Evaluation Summaries
@@ -484,7 +457,7 @@ The summary is regenerated after every test session from the registers, so the f
 
 | Category | Total | Executed | Passed | Failed / blocked | Not run | Pass rate |
 | --- | --- | --- | --- | --- | --- | --- |
-| Unit and component tests | 234 | 234 | 234 | 0 | 0 | 100% |
+| Unit and component tests | 291 | 291 | 291 | 0 | 0 | 100% |
 | Integration tests — data (IT-01–IT-07, IT-11) | 24 | 24 | 24 | 0 | 0 | 100% |
 | Integration tests — HTTP journeys (IT-08–IT-10) | 32 | 32 | 32 | 0 | 0 | 100% |
 | Integration cases — external services (IT-12–IT-15) | 4 | 0 | 0 | 0 | 4 | — |
@@ -495,41 +468,65 @@ The summary is regenerated after every test session from the registers, so the f
 | Load (NF-03) | 1 | 0 | 0 | 0 | 1 | — |
 | Security and supply chain (NF-04, NF-05) | 2 | 2 | 2 | 0 | 0 | 100% |
 | Search quality (NF-06) | 1 | 0 | 0 | 0 | 1 | — |
-| Total | 325 | 302 | 299 | 3 | 23 | 99% |
+| Total | 382 | 359 | 356 | 3 | 23 | 99% |
 | Security view — subset of the rows above, not added to the total | 64 | 64 | 64 | 0 | 0 | 100% |
 
 Rows count automated tests where tests exist and cases or checks elsewhere, so the total mixes the two and is best read row by row. Every failure recorded so far has the same cause: photos whose files live only on another machine (F-01).
 
 Assessment: the automated evidence is broad and fully green, the EC2 deployment is healthy with its internal services closed to the internet, and every tested recovery path works. The build is not yet ready for full acceptance for three reasons: 15 of the 15 browser journeys have not been executed, F-01 is only partly fixed, and the EC2 site is still served over plain HTTP (F-15). Load (NF-03) and response-time percentiles (NF-02) are the largest measurement gaps; if they cannot be run in time they will be reported as unmet rather than estimated.
 
-#### 5.1.1 Code Inspection and Dependency Audit
+#### 5.1.1 Test Logs
 
-The outputs of the testing tools are recorded here as each tool is run. Code inspection comes first: the TypeScript compiler checks all three workspaces for type errors, and npm audit checks the production dependencies against the public advisory database. Both were run on 28 September 2026 from the repository root. The output below is copied from the terminal; only the fix hints and dependency paths are left out, and the full output is kept in test-evidence/typecheck-and-audit.txt.
+The outputs of the testing tools are recorded here as each tool is run, starting with the test logs. Each workspace’s Vitest suite was run in a terminal: the backend and worker inside the isolated test stack (MongoDB replica set, Redis and MinIO in Docker, never Atlas) and the frontend on the developer laptop. Every run ended green, and the totals match the executed-test register: 147 + 94 + 107 = 348 tests.
 
-```
-PS D:\MotorX\motorx> npx tsc -p apps/backend/tsconfig.json --noEmit
-PS D:\MotorX\motorx> npx tsc -p apps/worker/tsconfig.json --noEmit
-PS D:\MotorX\motorx> npx tsc -p apps/frontend/tsconfig.json --noEmit
-PS D:\MotorX\motorx> npm audit --omit=dev
-# npm audit report
+| Workspace | Command | Test files | Tests | Result |
+| --- | --- | --- | --- | --- |
+| Backend | docker compose -f compose.yml -f compose.test.yml run --rm backend | 26 passed | 147 passed | Passed |
+| Worker | docker compose -f compose.yml -f compose.test.yml run --rm worker | 13 passed, 1 skipped | 93 passed, 1 skipped | Passed |
+| Frontend | npm run test --workspace @motorx/frontend | 20 passed | 107 passed | Passed |
 
-csv-parse  <7.0.2
-Severity: moderate
-node-csv: Prototype replacement still reachable via columns path - https://github.com/advisories/GHSA-8cw4-87c7-c6xx
+![Figure 1: Backend test log (Vitest 4.1.10): 26 test files, 147 tests passed](test-evidence/screenshots/tool-vitest-backend.png)
 
-qs  2.2.5 - 6.15.3
-Severity: moderate
-qs array-limit bypass via bracket-key comma parsing - https://github.com/advisories/GHSA-x5fp-wj9c-mxmx
-qs: Denial of Service via Attacker Controlled isBuffer - https://github.com/advisories/GHSA-4mjr-xmp4-gh2g
+*Figure 1: Backend test log (Vitest 4.1.10): 26 test files, 147 tests passed*
 
-uuid  <11.1.1
-Severity: moderate
-uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided - https://github.com/advisories/GHSA-w5hq-g745-h8pq
+![Figure 2: Worker test log (Vitest 4.1.10): 93 tests passed, the 5,000-row benchmark skipped](test-evidence/screenshots/tool-vitest-worker.png)
 
-[... fix hints and dependency paths omitted; full output in docs/test-evidence/typecheck-and-audit.txt ...]
+*Figure 2: Worker test log (Vitest 4.1.10): 93 tests passed, the 5,000-row benchmark skipped*
 
-12 moderate severity vulnerabilities
-```
+![Figure 3: Frontend test log (Vitest 5.0.2) before the new component tests were added: 13 test files, 50 tests passed](test-evidence/screenshots/tool-vitest-frontend.png)
+
+*Figure 3: Frontend test log (Vitest 5.0.2) before the new component tests were added: 13 test files, 50 tests passed*
+
+The frontend screenshot was taken before seven component test files were added on 28 September 2026 for the listing form, CSV upload and dealer dashboard, admin pages, sign-in, notifications, marketplace and the API services (UT-42 to UT-48). The suite now has 107 tests in 20 files, all passing, as recorded in frontend-results.json.
+
+The one skipped worker test is the 5,000-row import benchmark (NF-01), which runs only when RUN_BENCHMARKS=1 because it takes several seconds against a real database; its separate runs are recorded in benchmark-output.txt. The messages printed in between are expected and do not fail any test: the rate-limit test switches Redis off on purpose to prove requests still get through (ECONNREFUSED), Mongoose warns that one schema has a field named “errors”, and React’s test renderer prints act() warnings for the e-mail verification banner.
+
+#### 5.1.2 User Interface Test Details
+
+User-interface journeys were recorded and replayed with the Recorder panel of Chrome DevTools, which records what a user clicks and types and then plays it back against the live site, in the way the Selenium IDE is used for web testing. The journey “motorx vehicle comparison” was recorded on the EC2 deployment and replayed on the desktop profile (973 × 908 px, no throttling, 5-second timeout per step).
+
+![Figure 4: Chrome DevTools Recorder: the “motorx vehicle comparison” journey replayed on the EC2 site, every step completed](test-evidence/screenshots/tool-chrome-recorder.png)
+
+*Figure 4: Chrome DevTools Recorder: the “motorx vehicle comparison” journey replayed on the EC2 site, every step completed*
+
+| Step | Action | What it checks |
+| --- | --- | --- |
+| 1 | Open /marketplace | The marketplace loads on the public site |
+| 2–3 | Click and type in Smart Search | The natural-language search box accepts a query |
+| 4 | Change the sort order | Sorting control works on the results |
+| 5–7 | Add Kia Carnival 2020, Toyota Sienta 2021 and Toyota Aqua 2023 to comparison | Compare toggles on the result cards, found by their accessible labels |
+| 8 | Click Compare now | The compare tray opens the comparison page |
+| 9–10 | Open Honda Civic 2019 and its Description | Navigation to a vehicle and its details |
+
+Every step completed on replay (green), so the buttons, fields and links of this journey can be found and used by their visible names and labels, which also indicates that they are exposed correctly to assistive technology. The recording can be exported from the Recorder and replayed after each deployment as a quick regression check. It supports the buyer journeys E2E-07 and E2E-08 but does not replace them: those also cover a phone layout, the contact bar and recommendations, and their results stay as recorded in Appendix C.
+
+#### 5.1.3 Code Inspection and Dependency Audit
+
+For code inspection, the TypeScript compiler checks all three workspaces for type errors, and npm audit checks the production dependencies against the public advisory database. Both were run on 28 September 2026 from the repository root. The screenshot shows the start of the output; the full output, including the third advisory (uuid), is kept in test-evidence/typecheck-and-audit.txt.
+
+![Figure 5: Type-check of the three workspaces (no output means no errors) and the start of npm audit for the production dependencies](test-evidence/screenshots/tool-typecheck-audit.png)
+
+*Figure 5: Type-check of the three workspaces (no output means no errors) and the start of npm audit for the production dependencies*
 
 Result: the three type-checks printed nothing, so the backend, worker and frontend compile without type errors. The audit found 12 moderate advisories and no high or critical ones, which meets the NF-05 criterion of no unaddressed high or critical vulnerability. The 12 come from three packages; the other nine entries are packages that depend on them. The table records whether MotorX reaches each one.
 
@@ -539,27 +536,111 @@ Result: the three type-checks printed nothing, so the backend, worker and fronte
 | qs 6.15.3, through Express 4.22.2 and body-parser (backend) | Array-limit bypass and a denial of service (GHSA-x5fp-wj9c-mxmx, GHSA-4mjr-xmp4-gh2g) | Yes. Express parses the query string of every request with qs, including the public search endpoints. | Run npm audit fix, which updates qs within 6.x, then rerun the backend tests (F-18). |
 | uuid 9.0.1, inside firebase-admin 13.10.0 | Missing buffer bounds check when a caller passes its own buffer (GHSA-w5hq-g745-h8pq) | Not directly. MotorX code does not import uuid; it is used inside the Google Cloud client libraries that firebase-admin depends on. | Upgrade firebase-admin to 14.5 (a major version) in a later cycle. |
 
+#### 5.1.4 Browser Performance (Lighthouse and Network)
+
+Lighthouse in Chrome DevTools was run twice against the EC2 deployment. The first run audited the marketplace page while EC2 served the frontend from the Vite development server. The second, on 28 September 2026, audited the home page after EC2 was switched to the production build, served by nginx with compression and long-term caching of the built files (compose.ec2.yml, infrastructure/nginx/nginx.conf).
+
+| Run | Page | Frontend served by | Performance | Accessibility | Best practices | SEO |
+| --- | --- | --- | --- | --- | --- | --- |
+| Before | /marketplace | Vite development server | 26 | 94 | 56 | 92 |
+| After | / (home) | Production build on nginx | 84 | 94 | 56 | 92 |
+
+![Figure 6: Lighthouse before: marketplace page served by the Vite development server (Performance 26)](test-evidence/screenshots/lighthouse-before-dev-server.png)
+
+*Figure 6: Lighthouse before: marketplace page served by the Vite development server (Performance 26)*
+
+![Figure 7: Lighthouse after: home page served from the production build on nginx (Performance 84)](test-evidence/screenshots/lighthouse-after-production.png)
+
+*Figure 7: Lighthouse after: home page served from the production build on nginx (Performance 84)*
+
+Performance rose from 26 to 84. The main cause is the change of server: the development server sends hundreds of separate, uncompressed modules, while the production build sends a few compressed bundles that the browser can cache. The two runs audited different pages, so the comparison is indicative; auditing the marketplace and a vehicle page on the production build completes E2E-15, which stays open until then. Both runs warned that data stored in the browser (IndexedDB, used by Firebase sign-in) may have lowered the scores; an incognito window avoids this. Best practices stays at 56, largely because the site is still served over plain HTTP (F-15). Accessibility and SEO did not change.
+
+![Figure 8: Chrome DevTools Network panel for a marketplace search with the cache disabled, captured on the development server](test-evidence/screenshots/tool-network-dev-server.png)
+
+*Figure 8: Chrome DevTools Network panel for a marketplace search with the cache disabled, captured on the development server*
+
+Figure 8 was captured with the cache disabled while searching for “affordable car under 8000000”: 85 requests, 3.8 MB transferred, DOMContentLoaded and load at 1.45 s, and the last request finished at 4.82 s. The request list names individual source files (.tsx), so it was taken on the development server, before the production build. The search API call returned in 199 ms and each listing photo, served as WebP, in 250–352 ms. The slowest items are the three Inter font files from Google Fonts (48–130 kB, up to 2.76 s); hosting the font with the site, or loading only the weights in use, would shorten the first load.
+
+#### 5.1.5 Server Monitoring
+
+The running EC2 deployment was inspected over SSH on 28 September 2026 with three commands: docker compose ps (which services run and whether their health checks pass), docker stats (processor and memory use per container) and a request to the backend readiness endpoint.
+
+![Figure 9: EC2 server monitoring: container status, resource use per container and the backend readiness check](test-evidence/screenshots/tool-ec2-monitoring.png)
+
+*Figure 9: EC2 server monitoring: container status, resource use per container and the backend readiness check*
+
+| Container | Status | Published on | CPU | Memory |
+| --- | --- | --- | --- | --- |
+| frontend (nginx, production build) | Up, healthy | 0.0.0.0:4173 → 80 | 0.00% | 9.1 MiB |
+| backend (API) | Up, healthy | 0.0.0.0:3000 | 0.10% | 79.3 MiB |
+| worker | Up, healthy | not published | 0.09% | 101.9 MiB |
+| redis | Up, healthy | 127.0.0.1:6379 only | 0.46% | 6.5 MiB |
+| minio | Up | 127.0.0.1:9000–9001 only | 0.06% | 122 MiB |
+
+All five services were running and every health check passed; the readiness endpoint answered READY with the database and Redis both ready. Together the containers used about 320 MiB of the instance’s 1.86 GiB and almost no processor time while idle, so the instance has room for normal use; the heavy moment is building images, which is why they are built one at a time (F-13). The output also confirms two earlier results on the live server: the website is now served by nginx from the production build (port 4173 maps to 80, R-05), and Redis and MinIO accept connections only from the machine itself (F-14). The first attempt at the readiness request in the screenshot failed only because the command was pasted with stray characters; the retry below it is the result.
+
+#### 5.1.6 Database Performance
+
+The shared MongoDB Atlas cluster was examined in two ways on 27–28 September 2026: MongoDB Compass explained the query behind the marketplace’s default view, and the Atlas monitoring page showed the load on the cluster over one hour.
+
+![Figure 10: Compass explain plan for active cars, newest first: an index scan on status_publishedAt_id, 34 documents returned in 1 ms](test-evidence/screenshots/tool-db-explain.png)
+
+*Figure 10: Compass explain plan for active cars, newest first: an index scan on status_publishedAt_id, 34 documents returned in 1 ms*
+
+The query was the one the marketplace sends by default, with filter { status: "active", category: "car" } and sort { publishedAt: -1 }. MongoDB answered it from the status_publishedAt_id index (IXSCAN) rather than reading the whole collection: it examined 46 index keys and 46 documents of the 113 in the collection, returned 34, and took 1 ms. Because the index already holds listings in publishing order, no sort was done in memory. The 12 extra documents examined are active listings of other vehicle types, which are filtered out after they are read; an index on status, category and publishedAt together would remove that step, but at this data size it is not worth the extra write cost.
+
+| Measure | Result |
+| --- | --- |
+| Plan | IXSCAN on status_publishedAt_id, then FETCH |
+| Index keys / documents examined | 46 / 46 (collection holds 113) |
+| Documents returned | 34 |
+| Execution time | 1 ms |
+| Sorted in memory | No |
+
+![Figure 11: Atlas cluster metrics for ClusterMotorX (MongoDB 8.0.32, AWS Mumbai), 19:27–20:27 on 27 September 2026: operations per second and connections on the three replica-set members](test-evidence/screenshots/tool-atlas-metrics.png)
+
+*Figure 11: Atlas cluster metrics for ClusterMotorX (MongoDB 8.0.32, AWS Mumbai), 19:27–20:27 on 27 September 2026: operations per second and connections on the three replica-set members*
+
+Over that hour the three members of the replica set (two secondaries and the primary) handled well under one operation per second each, and the primary held about 20 connections, rising to about 30 near the end of the window as more services connected. The cluster is far from its limits at the current load. These figures are observations, not a load test: NF-03 remains the planned test of behaviour under many simultaneous users.
+
 ### 5.2 Reporting on Test Coverage
 
-Coverage is reported in three ways: how many tests and cases ran and passed (Section 5.1 and Appendix D), which requirements have evidence (Appendix G), and how much of the code the tests executed. The third was measured on 27 September 2026 with @vitest/coverage-v8, running each workspace’s full suite (npm run test:coverage) in the isolated test stack; every test passed during the measurement.
+Coverage is reported in three ways: how many tests and cases ran and passed (Section 5.1 and Appendix D), which requirements have evidence (Appendix G), and how much of the code the tests executed. The third was measured with @vitest/coverage-v8, running each workspace’s full suite (npm run test:coverage): the backend and worker on 27 September 2026 in the isolated test stack, and the frontend on 28 September 2026 after its new component tests were added. Every test passed during the measurement.
 
 | Workspace | Statements | Branches | Functions | Lines |
 | --- | --- | --- | --- | --- |
 | Backend | 66.9% (1114/1665) | 53.7% (582/1084) | 63.4% (284/448) | 72.6% (934/1287) |
 | Worker | 62.2% (448/720) | 55.5% (221/398) | 49.4% (88/178) | 63.2% (350/554) |
-| Frontend | 38.0% (777/2043) | 39.0% (681/1745) | 32.4% (244/752) | 38.6% (620/1606) |
+| Frontend | 69.0% (1410/2043) | 68.4% (1193/1745) | 63.4% (477/752) | 71.2% (1144/1606) |
 
-Reading the figures: in the backend and worker the business rules are well exercised — buyer recommendations 98%, dealer module 88%, worker services, pipeline and jobs 82–90% of statements. The unexecuted code is mostly start-up and wiring (server.ts, worker.ts, configuration), the one-off migration command line and some repository helpers; these run in every deployment and are checked by the smoke runs rather than by unit tests. The frontend figure is lower because the dealer and admin portal pages, the notification feature and the thin API wrappers have few component tests; shared components, language support and the compare feature are covered at 87–95%. No coverage threshold is enforced; the figures are a baseline for the next cycle, whose first target is the dealer portal pages.
+Reading the figures: in the backend and worker the business rules are well exercised — buyer recommendations 98%, dealer module 88%, worker services, pipeline and jobs 82–90% of statements. The unexecuted code is mostly start-up and wiring (server.ts, worker.ts, configuration), the one-off migration command line and some repository helpers; these run in every deployment and are checked by the smoke runs rather than by unit tests. The frontend rose from 38% to 69% of statements (39% to 68% of branches) after component tests were written for the pages that had none: the dealer listing form, CSV upload and dashboard, the admin user, listing, audit-log and system-health pages, sign-in, the notification centre, the marketplace, and every API service module. What remains untested in the frontend is mainly the application shell and routing (App.tsx), the photo cropper, which draws on a canvas that the test browser cannot provide, and parts of registration and the sign-in session provider; these are exercised by the browser journeys instead. No coverage threshold is enforced; the figures are the baseline for the next cycle.
 
 | Report | Produced from | Refreshed | Read by |
 | --- | --- | --- | --- |
 | Automated results | Vitest JSON output of the three workspaces | On every push by CI; locally before each regeneration of this report | The developer who made the change |
-| Case and test registers | docs/build_test_plan.py | Whenever any result or case changes | Whole team; mentor |
+| Case and test registers | The report generator (kept outside the repository) | Whenever any result or case changes | Whole team; mentor |
 | Manual journey results | manual-results.csv, screenshots, Lighthouse reports | At the end of each browser test session | Team; merged into this report |
 | Requirement traceability (Appendix G) | The generator, from the case list | With every regeneration | Mentor and examiners |
 | Security scans | Gitleaks, Trivy and npm audit in CI | Every push, and a weekly scheduled run | The member who leads security |
 | Deployment evidence | Smoke script against each stack; compose port check | After every deployment | Whoever deployed |
 | Code coverage | @vitest/coverage-v8 (npm run test:coverage in each workspace) | Measured 27 Sep 2026; to be repeated before each release | Developers |
+
+Each report above feeds the generic test report below, which gives for every test field the date it was run, who ran it, how many tests or cases were executed, and how many passed and failed. Percentages are of the executed items; items not yet run are named in the comments rather than counted as failures.
+
+| Date | Tester | Test field | Executed | Pass | Fail | Pass % | Fail % | Comments |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 27 Sep 2026 | CI and developers (automated) | Unit and component tests | 291 | 291 | 0 | 100.0% | 0.0% | All executed |
+| 27 Sep 2026 | CI and developers (automated) | Integration tests — data (IT-01–IT-07, IT-11) | 24 | 24 | 0 | 100.0% | 0.0% | All executed |
+| 27 Sep 2026 | CI and developers (automated) | Integration tests — HTTP journeys (IT-08–IT-10) | 32 | 32 | 0 | 100.0% | 0.0% | All executed |
+| — | Group 23 testers | Integration cases — external services (IT-12–IT-15) | 0 | 0 | 0 | — | — | 4 not yet run |
+| 27 Sep 2026 | Group 23 testers | Contract and consistency checks (CT-01–CT-07) | 6 | 5 | 1 | 83.3% | 16.7% | 1 not yet run; 1 failed (see Appendix F) |
+| 27 Sep 2026 | Group 23 testers | End-to-end — system procedures (E2E-A1–A3) | 3 | 1 | 2 | 33.3% | 66.7% | All executed; 2 failed (see Appendix F) |
+| — | Group 23 testers | End-to-end — browser journeys (E2E-01–E2E-15) | 0 | 0 | 0 | — | — | 15 not yet run |
+| 27 Sep 2026 | Group 23 testers | Performance (NF-01, NF-02) | 1 | 1 | 0 | 100.0% | 0.0% | 1 not yet run |
+| — | Group 23 testers | Load (NF-03) | 0 | 0 | 0 | — | — | 1 not yet run |
+| 27 Sep 2026 | Group 23 testers | Security and supply chain (NF-04, NF-05) | 2 | 2 | 0 | 100.0% | 0.0% | All executed |
+| — | Group 23 testers | Search quality (NF-06) | 0 | 0 | 0 | — | — | 1 not yet run |
+| — | — | Total | 359 | 356 | 3 | 99.2% | 0.8% | 23 not yet run |
 
 ## 6. Risks, Dependencies, Assumptions, and Constraints
 
@@ -569,7 +650,7 @@ Reading the figures: in the backend and worker the business rules are well exerc
 | R-02 | Browser journeys not all executed before submission. | Medium / High | Journeys scripted step by step and split between members (Section 8). | Report unexecuted journeys as such, alongside the API-level evidence. |
 | R-03 | Photos for 22 listings exist only in the EC2 MinIO volume. | Medium / High | Never run docker compose down -v on EC2; back up the volume. | Re-upload photos through the dealer portal. |
 | R-04 | The EC2 instance is too small to build all images at once (ETXTBSY, memory). | Observed / Medium | Build one service at a time with swap enabled. | Build images in CI and pull them on EC2. |
-| R-05 | The EC2 frontend runs the Vite development server rather than a production build. | Certain / Medium | Acceptable for the demonstration; host allow-list set. | Add an Nginx image serving the production build. |
+| R-05 | The EC2 frontend ran the Vite development server rather than a production build. | Closed (28 Sep) | compose.ec2.yml now builds the production image served by nginx with compression and caching; Lighthouse Performance rose from 26 to 84 (Section 5.1.4). | Revert to the previous image if the production build fails on EC2. |
 | R-06 | External services unavailable during testing or the demo (Atlas DNS, Firebase, Hugging Face, Gmail SMTP). | Observed / High | Readiness endpoint; outbox retries; lexical search fallback; automated tests do not depend on them. | Show recorded evidence; repeat live checks when service returns. |
 | R-07 | API and worker Mongoose models of shared collections drift apart (CT-06 not automated). | Medium / High | Review both models in every change touching a shared collection. | Add an automated model-comparison check. |
 | R-08 | Sinhala and Tamil text has not been reviewed by native speakers. | Medium / Medium | Native readers in E2E-13. | Fall back to English for any text they reject. |
@@ -621,20 +702,20 @@ Constraints: three members who are also the developers; a laptop whose memory li
 
 ## 8. Responsibilities, Staffing and Training Needs
 
-Every member of Group 23 both builds and tests MotorX. The roles below follow the module ownership in team-work-plan.md: M1 owns authentication, dealers and the marketplace; M2 owns inventory and the ETL worker; M3 owns search, notifications and administration. The member who writes a change also writes its automated tests; the lead of a test type is responsible for its evidence being complete and current.
+Every member of Group 23 both builds and tests MotorX. The roles below follow the module ownership in team-work-plan.md: Silva T.D.R. (230616B) owns authentication, dealers and the marketplace; Somarathna M.D.A.M. (230621K) owns inventory and the ETL worker; Thadshakan J. (230633A) owns search, notifications and administration. The member who writes a change also writes its automated tests; the lead of a test type is responsible for its evidence being complete and current.
 
 ### 8.1 Ownership by Test Type
 
 | Test type | Lead | Supporting | Duties |
 | --- | --- | --- | --- |
-| 3.3.1 Data integrity | M2 | M1 | Keep the replica-set suites and the drill working; add a data test for every new unique rule or shared collection; run CT-06 reviews. |
+| 3.3.1 Data integrity | Somarathna | Silva | Keep the replica-set suites and the drill working; add a data test for every new unique rule or shared collection; run CT-06 reviews. |
 | 3.3.2 Function | Module owner | All | Tests for every requirement in the module; keep Appendix G current. |
-| 3.3.3 User interface | M1 | M3 | Component tests for new pages; run E2E-12 and E2E-15; organise the native-reader review (E2E-13). |
-| 3.3.4 Performance profiling | M2 | M3 | Rerun the benchmark after pipeline changes; collect NF-02 percentiles on EC2. |
-| 3.3.5 Load | M3 | M2 | Write and run the k6 scenario (NF-03) in an agreed quiet window. |
-| 3.3.6 Security | M1 | All | Access-control journeys, CI scan triage, security-group and port reviews after each deployment. |
-| 3.3.7 Failover and recovery | M2 | M1 | Drill reruns before submission; recovery tests for every new background job. |
-| 3.3.8 Configuration | M3 | M1 | Smoke runs and port checks after every deployment; the browser matrix during journeys. |
+| 3.3.3 User interface | Silva | Thadshakan | Component tests for new pages; run E2E-12 and E2E-15; organise the native-reader review (E2E-13). |
+| 3.3.4 Performance profiling | Somarathna | Thadshakan | Rerun the benchmark after pipeline changes; collect NF-02 percentiles on EC2. |
+| 3.3.5 Load | Thadshakan | Somarathna | Write and run the k6 scenario (NF-03) in an agreed quiet window. |
+| 3.3.6 Security | Silva | All | Access-control journeys, CI scan triage, security-group and port reviews after each deployment. |
+| 3.3.7 Failover and recovery | Somarathna | Silva | Drill reruns before submission; recovery tests for every new background job. |
+| 3.3.8 Configuration | Thadshakan | Silva | Smoke runs and port checks after every deployment; the browser matrix during journeys. |
 
 ### 8.2 Shared Duties
 
@@ -648,7 +729,7 @@ Every member of Group 23 both builds and tests MotorX. The roles below follow th
 | Skill | Needed for | Current level | How it will be learned |
 | --- | --- | --- | --- |
 | Vitest, Testing Library, supertest | All automated levels | In daily use | Existing tests serve as examples; reviewed in pull requests. |
-| MongoDB replica sets, indexes, transactions | 3.3.1 | Held mainly by M2 | One member pairs with M2 to rerun the data suites and the drill unaided. |
+| MongoDB replica sets, indexes, transactions | 3.3.1 | Held mainly by Somarathna | One member pairs with Somarathna to rerun the data suites and the drill unaided. |
 | Playwright | Automating Appendix C | Not yet used | Automate E2E-07 first as a reference, then the other journeys. |
 | k6 load scripting | 3.3.5 | Not yet used | A 5-user trial against EC2 to calibrate before the full run. |
 | Lighthouse and WCAG checks | 3.3.3 | Basic | Run Lighthouse on three pages and fix what it reports. |
@@ -682,6 +763,8 @@ Every member of Group 23 both builds and tests MotorX. The roles below follow th
 
 ## 10. Entry, Exit and Suspension Criteria
 
+The following criteria define when testing can start, when a level is complete, and when testing must pause. The status columns report the available evidence; preparing this plan does not imply that every execution criterion was met.
+
 ### 10.1 Entry Criteria
 
 | Level | May start when |
@@ -707,7 +790,7 @@ Every member of Group 23 both builds and tests MotorX. The roles below follow th
 
 | Criterion | Status |
 | --- | --- |
-| All automated suites pass in CI with no required check bypassed. | Met (291/291; CI green on PR #17 after F-11) |
+| All automated suites pass in CI with no required check bypassed. | Met (348/348; CI green on PR #17 after F-11) |
 | No open Critical or High finding without an accepted workaround. | Not met: F-01 partly fixed |
 | High-priority browser journeys executed and passed on the EC2 deployment. | 0 of 13 passed |
 | PSR-05 measured and met; PSR-01–03 measured or reported as unmet. | PSR-05 met; others outstanding |
@@ -719,58 +802,60 @@ Every member of Group 23 both builds and tests MotorX. The roles below follow th
 | Suspend testing when | Resume when |
 | --- | --- |
 | The database guard refuses the target, or a test is found pointing at Atlas or the EC2 data. | The target is corrected and verified, and any affected data is checked against its expected state. |
-| Atlas, Firebase or the network is unavailable (as on 26 Sep). | Readiness returns 200 and the smoke run passes again; interrupted cases are rerun from the start. |
+| Atlas, Firebase or the network is unavailable. | Readiness returns 200 and the smoke run passes again; interrupted cases are rerun from the start. |
 | A deployment is half-finished (for example an image build failed on EC2). | All containers report healthy on the intended commit. |
 | A shared collection’s shape changed in one process but not the other. | Both models agree (CT-06 review) and the data suites pass. |
 | Failures keep repeating one known cause. | The cause is fixed and the affected level is re-entered from its entry criteria. |
 
 ## 11. Test Schedule and Phasing
 
-Dates come from the repository history and this report’s evidence. Once a phase has established its tests, they keep running in CI for the rest of the project.
+The planned submission deadline was 27 September 2026. Phases are shown in sequence without individual dates. The scope of each phase was defined for submission; execution results and outstanding findings are recorded separately in Section 5 and the appendices.
 
-| Phase | Dates | What was done / remains | Outcome |
-| --- | --- | --- | --- |
-| 1. Baseline | 21 Sep 2026 | First plan on the template; 77 unit and component tests executed; case register created. | Done (v1.0) |
-| 2. Hardening | 23–25 Sep 2026 | Node 24; secret, image and dependency scanning; safe photo and document processing; leases, checkpoints, reaper and outbox with tests. | Done |
-| 3. Journeys and evidence | 26 Sep 2026 | HTTP journeys, frontend component tests, the 5,000-row benchmark, the crash drill and the laptop smoke run; the merge with branch version4 retested. | Done (v2.0) |
-| 4. Deployment | 27 Sep 2026 | EC2 rebuilt on Node 24 with the override; port and host checks; EC2 smoke; findings F-11 to F-14; code coverage measured. | Done (v3.0) |
-| 5. Browser journeys | Next | E2E-01 to E2E-15 on the EC2 deployment; finish F-01 (re-upload the remaining photos). | Open |
-| 6. Measurement | Before submission | NF-02 percentiles and NF-03 load; Lighthouse. | Open |
-| 7. Sign-off | Final week | Regenerate this report; review Appendices F and G with the mentor. | Open |
+| Phase | Defined scope | Completion requirement |
+| --- | --- | --- |
+| 1. Baseline | Prepare the test plan and case register; establish unit and component coverage. | Plan, register and initial test results recorded. |
+| 2. Hardening | Cover Node 24, security scanning, safe file processing, leases, checkpoints, reaper and outbox. | Automated checks and regression evidence recorded. |
+| 3. Journeys and evidence | Cover HTTP journeys, frontend components, the import benchmark, crash recovery and local smoke checks. | Results and evidence linked to the relevant cases. |
+| 4. Deployment | Verify the EC2 runtime, ports, allowed hosts, deployment smoke checks and code coverage. | Deployment checks and findings documented. |
+| 5. Browser journeys | Cover E2E-01 to E2E-15 on EC2 and photo re-upload verification for F-01. | Each case assigned a result or an explicit execution gap. |
+| 6. Measurement | Cover NF-02 response-time percentiles, NF-03 load and Lighthouse audits. | Measurements recorded; unmeasured targets identified. |
+| 7. Submission and sign-off | Generate the report and registers; provide Appendices F and G for mentor review. | Report prepared with findings, coverage gaps and approval status stated. |
 
-### 11.1 Ongoing Activities
+### 11.1 Activities Across Phases
 
-- CI runs every automated suite and the security scans on each push, plus a weekly scheduled run.
-- Findings are triaged against Section 12 as soon as they are found.
-- The report and registers are regenerated after every test session.
+- Retain automated suites and security scans in CI throughout subsequent phases.
+- Classify findings using Section 12 and record their resolution or acceptance status.
+- Regenerate the report and registers from the available evidence for submission.
 
 ## 12. Defect Severity and Priority Definitions
 
-Every finding in Appendix F has a severity, which describes what it does to users or data, and a priority, which says when it must be fixed relative to the submission and the demonstration. A serious defect in an unused path can wait; a mild one on the first screen a visitor sees may not.
+Each finding in Appendix F is given two ratings. Severity describes how badly the problem affects users or their data. Priority defines the required resolution stage: demonstration, submission, next iteration or backlog. The two are rated separately on purpose: a serious fault in a feature nobody uses yet can wait, while a small flaw on the first page every visitor sees may need fixing straight away.
 
 ### 12.1 Severity
 
-| Severity | Meaning | Example from this cycle |
+| Severity | What it means | Examples from this cycle |
 | --- | --- | --- |
-| Critical | Data lost or silently wrong, or one user able to act on another’s data. | None found. A cross-dealer read or a duplicated import would be Critical. |
-| High | A core flow broken, or a security weakness with only partial protection. | F-01 photos not loading; F-09 re-attached photos ignored; F-14 Redis and MinIO published on all interfaces. |
-| Medium | A secondary flow broken, or a core flow broken only in an unusual situation, with a workaround. | F-11 a test failing only in CI; F-12 host name refused; F-13 builds failing on EC2. |
-| Low | Cosmetic, wording or efficiency issues with no functional effect. | F-03 older photos without a small copy (slower pages on phones). |
+| Critical | Data is lost or silently corrupted, or one user can see or change another user’s data. | None found. A dealer reading another dealer’s listings, or an import creating duplicate vehicles, would be Critical. |
+| High | A main feature does not work, or a security weakness is only partly covered. | F-01 some listing photos not loading; F-09 re-attached photos being ignored; F-14 Redis and MinIO reachable from outside the server; F-15 the deployed site served without HTTPS. |
+| Medium | A secondary feature does not work, or a main feature fails only in unusual conditions and a workaround exists. | F-11 a test that failed only in CI; F-12 the server refusing its public host name; F-13 image builds failing on EC2; F-18 two dependency advisories on code paths MotorX uses. |
+| Low | Appearance, wording or speed issues that do not stop anything working. | F-03 older photos without a small copy, so pages load more slowly on phones; F-16 a raw status name shown to dealers. |
 
 ### 12.2 Priority
 
-| Priority | Meaning |
+| Priority | What it means |
 | --- | --- |
-| Before demo | Must be fixed before the next demonstration of the deployed system. |
-| Before submission | Must be fixed, or accepted with a written reason, before the final submission. |
-| Next iteration | Planned for the next development iteration after submission. |
-| Backlog | Recorded; fixed when the area is next changed, or accepted. |
+| Before demo | Fixed before the deployed system is next demonstrated. |
+| Before submission | Fixed before the final submission, or accepted with the reason written down. |
+| Next iteration | Planned for the first development iteration after submission. |
+| Backlog | Recorded, and fixed the next time that part of the system is changed, or accepted. |
 
 ### 12.3 Recording and Lifecycle
 
-Each finding records its ID, a description, severity, priority, the case or activity that found it, the environment, its status, and the test or check that proves the fix. A finding moves from Open to Fixed when the change is merged, and to Closed only after the proving test passes in CI or the proving check is repeated on the affected environment. A finding may instead be Accepted, with the reason and the person accepting it written down.
+For every finding we record an ID, a short description, its severity and priority, the test or activity that found it, the environment it was found in, its current status, and the test or check that proves it is fixed. A finding is Open until the fix is merged, when it becomes Fixed. It is Closed only after the proving test passes in CI, or the proving check has been repeated on the environment where the problem appeared. When a finding will not be fixed, it is marked Accepted, together with the reason and the name of the person who accepted it.
 
 ## 13. Test Data Policy
+
+This policy defines the permitted data sources, isolation requirements and cleanup rules for every test environment.
 
 No real customer data is used in any test stack or committed to the repository. Test data is either generated by the tests themselves or created by team members through the application using test accounts. This matters because MotorX stores identity documents and business registration certificates, and because the laptops and the EC2 stack share one Atlas database.
 
@@ -798,7 +883,7 @@ Several cases deliberately use bad input: CSV rows with missing or mistyped fiel
 
 ## Appendix A – Unit and Component Test Cases
 
-41 case groups, one per test file, 234 tests in total. Individual test names and durations are in automated-test-register.csv.
+48 case groups, one per test file, 291 tests in total. Individual test names and durations are in automated-test-register.csv.
 
 #### UT-01 — Test database target safety
 
@@ -1105,7 +1190,7 @@ Several cases deliberately use bad input: CSV rows with missing or mistyped fiel
 | Set-up and data | Signed-out, allowed, disallowed and pending-applicant users. |
 | Steps | Render protected routes. |
 | Expected result | Redirect to login, show page, show “Access Restricted” or send to the application status page as appropriate. |
-| Execution | Executed 26 Sep 2026: 4/4 passed |
+| Execution | Executed 27 Sep 2026: 4/4 passed |
 | Evidence | apps/frontend/src/features/auth/components/RoleGuard.test.tsx; test-evidence/frontend-results.json |
 
 #### UT-29 — Email verification banner
@@ -1116,7 +1201,7 @@ Several cases deliberately use bad input: CSV rows with missing or mistyped fiel
 | Set-up and data | Verified, unverified and signed-out users. |
 | Steps | Render the banner and resend/refresh. |
 | Expected result | Shown only when needed; resend works; hides once verified. |
-| Execution | Executed 26 Sep 2026: 4/4 passed |
+| Execution | Executed 27 Sep 2026: 4/4 passed |
 | Evidence | apps/frontend/src/features/auth/components/EmailVerificationBanner.test.tsx; test-evidence/frontend-results.json |
 
 #### UT-30 — Per-account data isolation
@@ -1127,7 +1212,7 @@ Several cases deliberately use bad input: CSV rows with missing or mistyped fiel
 | Set-up and data | Sign-out; a different account signing in on the same browser. |
 | Steps | Switch accounts and inspect the query cache. |
 | Expected result | Previous account’s cached data is cleared before the next user can see it. |
-| Execution | Executed 26 Sep 2026: 2/2 passed |
+| Execution | Executed 27 Sep 2026: 2/2 passed |
 | Evidence | apps/frontend/src/features/auth/context/AuthProvider.test.tsx; test-evidence/frontend-results.json |
 
 #### UT-31 — Dealer application from an existing account
@@ -1138,7 +1223,7 @@ Several cases deliberately use bad input: CSV rows with missing or mistyped fiel
 | Set-up and data | Rejected and pending applications for a signed-in buyer. |
 | Steps | Render the application page and resubmit. |
 | Expected result | Rejection reason shown, answers pre-filled, no password asked, resubmission sent with new documents; pending applicants redirected. |
-| Execution | Executed 26 Sep 2026: 3/3 passed |
+| Execution | Executed 27 Sep 2026: 3/3 passed |
 | Evidence | apps/frontend/src/features/auth/pages/RegisterPage.test.tsx; test-evidence/frontend-results.json |
 
 #### UT-32 — Dealer profile editing
@@ -1149,7 +1234,7 @@ Several cases deliberately use bad input: CSV rows with missing or mistyped fiel
 | Set-up and data | Approved dealer profile; server error. |
 | Steps | Edit and save. |
 | Expected result | Verified name and registration read-only; edits saved and confirmed; server errors shown. |
-| Execution | Executed 26 Sep 2026: 3/3 passed |
+| Execution | Executed 27 Sep 2026: 3/3 passed |
 | Evidence | apps/frontend/src/portals/dealer/pages/DealerProfile.test.tsx; test-evidence/frontend-results.json |
 
 #### UT-33 — Upload details and publish-all
@@ -1160,7 +1245,7 @@ Several cases deliberately use bad input: CSV rows with missing or mistyped fiel
 | Set-up and data | Failed CSV, failed photos, refused retry, successful upload with 9 drafts. |
 | Steps | Render the page and use Retry and Publish all. |
 | Expected result | Failure reasons and retries work; all drafts of the upload are published in one request after confirmation. |
-| Execution | Executed 26 Sep 2026: 5/5 passed |
+| Execution | Executed 27 Sep 2026: 5/5 passed |
 | Evidence | apps/frontend/src/portals/dealer/pages/UploadDetails.test.tsx; test-evidence/frontend-results.json |
 
 #### UT-34 — Bulk and stale-stock tools
@@ -1171,7 +1256,7 @@ Several cases deliberately use bad input: CSV rows with missing or mistyped fiel
 | Set-up and data | Stats with 2 stale listings; draft and stale listings. |
 | Steps | Use the banner, select-all bulk publish, one-click “Still available” and the price dialog. |
 | Expected result | Stale banner opens the stale list; one request publishes all selected; age shown; price cut previewed (5,400,000 at 10%) then applied; skipped listings explained. |
-| Execution | Executed 26 Sep 2026: 5/5 passed |
+| Execution | Executed 27 Sep 2026: 5/5 passed |
 | Evidence | apps/frontend/src/portals/dealer/pages/ListingManager.test.tsx; test-evidence/frontend-results.json |
 
 #### UT-35 — Admin approvals, dashboard and monitoring
@@ -1182,7 +1267,7 @@ Several cases deliberately use bad input: CSV rows with missing or mistyped fiel
 | Set-up and data | Deep links with status/applicationId/uploadId; failing sections; date ranges. |
 | Steps | Render admin pages from links. |
 | Expected result | Correct tab and exact application highlighted; failures shown as unavailable, not zero; filters passed to the server. |
-| Execution | Executed 26 Sep 2026: 6/6 passed |
+| Execution | Executed 27 Sep 2026: 6/6 passed |
 | Evidence | apps/frontend/src/portals/admin/pages/adminPages.test.tsx; test-evidence/frontend-results.json |
 
 #### UT-36 — Vehicle page on phones
@@ -1193,7 +1278,7 @@ Several cases deliberately use bad input: CSV rows with missing or mistyped fiel
 | Set-up and data | Listing with three photos (small copies) and a dealer phone 077 123 4567. |
 | Steps | Render, swipe, tap arrows, scroll vertically. |
 | Expected result | Call/WhatsApp/Email bar with the WhatsApp message ready (94771234567); small copy chosen via srcset; swipe changes photo, vertical scroll does not; vehicle remembered for recommendations; similar vehicles shown. |
-| Execution | Executed 26 Sep 2026: 4/4 passed |
+| Execution | Executed 27 Sep 2026: 4/4 passed |
 | Evidence | apps/frontend/src/portals/buyer/pages/VehicleDetails.test.tsx; test-evidence/frontend-results.json |
 
 #### UT-37 — Compare vehicles
@@ -1204,7 +1289,7 @@ Several cases deliberately use bad input: CSV rows with missing or mistyped fiel
 | Set-up and data | Four vehicles; two vehicles with different price/year/mileage; one unavailable. |
 | Steps | Add to compare, open comparison. |
 | Expected result | At most three; full list explained; best price, year and mileage highlighted; unavailable vehicle stated. |
-| Execution | Executed 26 Sep 2026: 4/4 passed |
+| Execution | Executed 27 Sep 2026: 4/4 passed |
 | Evidence | apps/frontend/src/features/compare/compare.test.tsx; test-evidence/frontend-results.json |
 
 #### UT-38 — Mobile navigation and card tables
@@ -1215,7 +1300,7 @@ Several cases deliberately use bad input: CSV rows with missing or mistyped fiel
 | Set-up and data | Portal with two pages; table with two columns. |
 | Steps | Open menu, press Escape, choose a page; render a table. |
 | Expected result | Drawer opens with focus inside; closes on Escape (focus returns) and after navigation; every cell labelled with its column. |
-| Execution | Executed 26 Sep 2026: 3/3 passed |
+| Execution | Executed 27 Sep 2026: 3/3 passed |
 | Evidence | apps/frontend/src/shared/components/mobileLayout.test.tsx; test-evidence/frontend-results.json |
 
 #### UT-39 — Sinhala and Tamil
@@ -1226,7 +1311,7 @@ Several cases deliberately use bad input: CSV rows with missing or mistyped fiel
 | Set-up and data | All dictionaries; Tamil browser preference. |
 | Steps | Compare dictionaries; switch language; reload. |
 | Expected result | Every message translated with identical placeholders; whole site switches, page lang set, choice remembered; Tamil chosen automatically for a Tamil browser. |
-| Execution | Executed 26 Sep 2026: 4/4 passed |
+| Execution | Executed 27 Sep 2026: 4/4 passed |
 | Evidence | apps/frontend/src/shared/i18n/i18n.test.tsx; test-evidence/frontend-results.json |
 
 #### UT-40 — WhatsApp number formatting
@@ -1237,7 +1322,7 @@ Several cases deliberately use bad input: CSV rows with missing or mistyped fiel
 | Set-up and data | Local, +94, 9-digit, foreign and invalid numbers. |
 | Steps | Convert numbers and build links. |
 | Expected result | Sri Lankan numbers get 94; foreign numbers kept; undialable numbers give no link. |
-| Execution | Executed 26 Sep 2026: 3/3 passed |
+| Execution | Executed 27 Sep 2026: 3/3 passed |
 | Evidence | apps/frontend/src/shared/utils/phone.test.ts; test-evidence/frontend-results.json |
 
 #### UT-41 — Queue publishing for repeat photo uploads
@@ -1250,6 +1335,83 @@ Several cases deliberately use bad input: CSV rows with missing or mistyped fiel
 | Expected result | A finished job is removed and queued again under the same ID, so photos attached a second time are processed; a job still waiting or running is never duplicated (finding F-09). |
 | Execution | Executed 26 Sep 2026: 4/4 passed |
 | Evidence | apps/backend/src/modules/inventory/inventory.queue.test.ts; test-evidence/backend-results.json |
+
+#### UT-42 — Frontend API services
+
+| Field | Specification and result |
+| --- | --- |
+| Requirement / priority | FR-MARKET-01–16; FR-SEARCH-01–07; FR-UPLOAD-01–08; FR-DEALER-09–11; FR-ADMIN-02–10 / High |
+| Set-up and data | Stubbed HTTP client; listing, buyer, inventory, dealer and admin services. |
+| Steps | Call every service function; inspect URLs, parameters, form data and returned models. |
+| Expected result | Right endpoint and parameters for each call; server shapes converted to the UI model; invalid dealer replies rejected; a failed document download closes its tab. |
+| Execution | Executed 27 Sep 2026: 13/13 passed |
+| Evidence | apps/frontend/src/shared/services/apiServices.test.ts; test-evidence/frontend-results.json |
+
+#### UT-43 — Admin users, listings, audit log and system health pages
+
+| Field | Specification and result |
+| --- | --- |
+| Requirement / priority | FR-ADMIN-02–08; FR-USER-10 / High |
+| Set-up and data | Mocked admin API with users, listings, audit events and health results, including failures. |
+| Steps | Filter, suspend and reactivate users; archive listings; filter and page the audit log; open system health. |
+| Expected result | Only the changed row updates; archiving asks first; empty, filtered-empty and failed states are told apart; each service status is shown. |
+| Execution | Executed 27 Sep 2026: 9/9 passed |
+| Evidence | apps/frontend/src/portals/admin/pages/adminManagement.test.tsx; test-evidence/frontend-results.json |
+
+#### UT-44 — Dealer listing form
+
+| Field | Specification and result |
+| --- | --- |
+| Requirement / priority | FR-MARKET-01–05,12–15 / High |
+| Set-up and data | Mocked listing API; stand-in photo cropper; new and existing listings. |
+| Steps | Create, edit and retry listings; switch categories and fuel types; crop, skip, reorder and remove photos. |
+| Expected result | Only fields that apply are sent; electric vehicles need battery details; a failed photo upload keeps the saved listing and offers a retry. |
+| Execution | Executed 27 Sep 2026: 8/8 passed |
+| Evidence | apps/frontend/src/portals/dealer/pages/ListingForm.test.tsx; test-evidence/frontend-results.json |
+
+#### UT-45 — CSV upload page and dealer dashboard
+
+| Field | Specification and result |
+| --- | --- |
+| Requirement / priority | FR-UPLOAD-01–07; FR-DEALER-05–08 / High |
+| Set-up and data | Mocked inventory and listing APIs. |
+| Steps | Choose a category, download its template, upload a CSV; open the dashboard. |
+| Expected result | Template matches the category; the upload opens its report; failures keep the dealer on the page; totals and the stale-stock reminder appear. |
+| Execution | Executed 27 Sep 2026: 8/8 passed |
+| Evidence | apps/frontend/src/portals/dealer/pages/dealerPages.test.tsx; test-evidence/frontend-results.json |
+
+#### UT-46 — Sign-in form
+
+| Field | Specification and result |
+| --- | --- |
+| Requirement / priority | FR-USER-04–06 / High |
+| Set-up and data | Mocked sign-in and password reset. |
+| Steps | Sign in as each role; enter wrong details; request a reset. |
+| Expected result | Each role lands on its own portal; errors are explained in plain words; a reset needs an email first. |
+| Execution | Executed 27 Sep 2026: 8/8 passed |
+| Evidence | apps/frontend/src/features/auth/components/LoginForm.test.tsx; test-evidence/frontend-results.json |
+
+#### UT-47 — Notification centre
+
+| Field | Specification and result |
+| --- | --- |
+| Requirement / priority | FR-NOTIFY-01–05 / High |
+| Set-up and data | Mocked notification API with read, unread and failed states. |
+| Steps | Open the list; mark one and all read; open a stale-stock reminder. |
+| Expected result | Unread count and times shown; marking read updates the count once; reminders open the right page; an outage never breaks the page. |
+| Execution | Executed 27 Sep 2026: 5/5 passed |
+| Evidence | apps/frontend/src/features/notifications/components/NotificationCenter.test.tsx; test-evidence/frontend-results.json |
+
+#### UT-48 — Marketplace browse, search and filters
+
+| Field | Specification and result |
+| --- | --- |
+| Requirement / priority | FR-MARKET-07; FR-SEARCH-01–08; UR-05–08,16 / High |
+| Set-up and data | Mocked buyer API; browse, search, empty and failed results. |
+| Steps | Filter, search, sort and page; open and close the phone filter sheet. |
+| Expected result | Filters and search reach the server; active filters are counted; empty and failed results offer a way forward; Escape closes the sheet and returns focus. |
+| Execution | Executed 27 Sep 2026: 6/6 passed |
+| Evidence | apps/frontend/src/portals/buyer/pages/Marketplace.test.tsx; test-evidence/frontend-results.json |
 
 ## Appendix B – Integration and Contract Test Cases
 
@@ -1802,7 +1964,7 @@ E2E-A1 to E2E-A3 are system procedures that were executed. E2E-01 to E2E-15 are 
 | UT-29 | frontend/src/features/auth/components/EmailVerificationBanner.test.tsx | 4 | 4 | 0 | 0.4 |
 | UT-30 | frontend/src/features/auth/context/AuthProvider.test.tsx | 2 | 2 | 0 | 0.2 |
 | UT-31 | frontend/src/features/auth/pages/RegisterPage.test.tsx | 3 | 3 | 0 | 0.5 |
-| UT-32 | frontend/src/portals/dealer/pages/DealerProfile.test.tsx | 3 | 3 | 0 | 0.5 |
+| UT-32 | frontend/src/portals/dealer/pages/DealerProfile.test.tsx | 3 | 3 | 0 | 0.6 |
 | UT-33 | frontend/src/portals/dealer/pages/UploadDetails.test.tsx | 5 | 5 | 0 | 0.6 |
 | UT-34 | frontend/src/portals/dealer/pages/ListingManager.test.tsx | 5 | 5 | 0 | 0.8 |
 | UT-35 | frontend/src/portals/admin/pages/adminPages.test.tsx | 6 | 6 | 0 | 0.3 |
@@ -1812,6 +1974,13 @@ E2E-A1 to E2E-A3 are system procedures that were executed. E2E-01 to E2E-15 are 
 | UT-39 | frontend/src/shared/i18n/i18n.test.tsx | 4 | 4 | 0 | 0.4 |
 | UT-40 | frontend/src/shared/utils/phone.test.ts | 3 | 3 | 0 | 0.0 |
 | UT-41 | backend/src/modules/inventory/inventory.queue.test.ts | 4 | 4 | 0 | 0.0 |
+| UT-42 | frontend/src/shared/services/apiServices.test.ts | 13 | 13 | 0 | 0.0 |
+| UT-43 | frontend/src/portals/admin/pages/adminManagement.test.tsx | 9 | 9 | 0 | 2.4 |
+| UT-44 | frontend/src/portals/dealer/pages/ListingForm.test.tsx | 8 | 8 | 0 | 7.8 |
+| UT-45 | frontend/src/portals/dealer/pages/dealerPages.test.tsx | 8 | 8 | 0 | 1.0 |
+| UT-46 | frontend/src/features/auth/components/LoginForm.test.tsx | 8 | 8 | 0 | 4.8 |
+| UT-47 | frontend/src/features/notifications/components/NotificationCenter.test.tsx | 5 | 5 | 0 | 0.8 |
+| UT-48 | frontend/src/portals/buyer/pages/Marketplace.test.tsx | 6 | 6 | 0 | 2.9 |
 | IT-01 | backend/src/modules/dealers/dealer.repository.test.ts | 1 | 1 | 0 | 0.1 |
 | IT-02 | backend/src/modules/admin/admin.repository.test.ts | 1 | 1 | 0 | 0.1 |
 | IT-03 | backend/src/modules/marketplace/listing.repository.test.ts | 6 | 6 | 0 | 0.1 |
@@ -1837,11 +2006,11 @@ E2E-A1 to E2E-A3 are system procedures that were executed. E2E-01 to E2E-15 are 
 | vite-allowed-hosts.txt | Host-name check of the frontend server (CT-05). |
 | build-output.txt | Build of all four workspaces (CT-01, NF-05). |
 | coverage-backend.json, coverage-worker.json, coverage-frontend.json | Code coverage per file and in total (Section 5.2). |
-| typecheck-and-audit.txt | Type-check of all three workspaces and npm audit of the production dependencies (Section 5.1.1, NF-05, F-18). |
+| typecheck-and-audit.txt | Type-check of all three workspaces and npm audit of the production dependencies (Section 5.1.3, NF-05, F-18). |
 | run-metadata.json | Commit, runtimes and commands for this report. |
 | manual-results.csv | Results of manual cases, filled in by testers. |
-| screenshots/ | Screenshots of the running system on EC2 and in a desktop browser (Appendix H). |
-| lighthouse/ | Lighthouse reports for E2E-15 (to be added). |
+| screenshots/ | Screenshots of the running system (Appendix H) and of the testing tools: test logs, type-check and audit, Network panel (Section 5.1). |
+| screenshots/lighthouse-*.png | Lighthouse results before and after the production build (Section 5.1.4); saved reports for the remaining E2E-15 pages to be added. |
 
 ## Appendix F – Defect Log
 
@@ -1856,29 +2025,29 @@ E2E-A1 to E2E-A3 are system procedures that were executed. E2E-01 to E2E-15 are 
 | F-07 | Dealer profile editing and resubmission after rejection were missing. | High | Before submission | Requirement review (v1.0) | Closed: IT-09, UT-31 and UT-32 pass. |
 | F-08 | The photo migration crashed on its first database write because photo keys contain dots. | High | Before demo | First real migration run | Closed: IT-11 on real MongoDB; migration completed with no failures. |
 | F-09 | Attaching photos to the same upload a second time did nothing, because the queue kept the finished job’s ID. | High | Before demo | Teammate report (version4) | Closed: UT-41. |
-| F-10 | Merging version4 produced duplicate code that would not compile and a review-history change that would make approvals fail. | High | Before demo | Merge simulation | Closed: this branch’s versions kept, unique fixes ported, 291/291 tests pass. |
+| F-10 | Merging version4 produced duplicate code that would not compile and a review-history change that would make approvals fail. | High | Before demo | Merge simulation | Closed: this branch’s versions kept, unique fixes ported, 348/348 tests pass. |
 | F-11 | A backend test loaded the real Firebase setup and failed only in CI, where credentials are placeholders. | Medium | Before submission | CI on PR #17 | Closed: Firebase replaced in the test; the suite passes with placeholder credentials. |
 | F-12 | The frontend server refused the EC2 host name; it had only worked through a manual edit on the server. | Medium | Before demo | Deployment review; CT-05 | Closed: allow-list set in compose.ec2.yml; 200 with, 403 without. |
 | F-13 | Building three images at once on EC2 failed with ETXTBSY under memory pressure. | Medium | Before demo | EC2 deployment | Mitigated: sequential builds with swap; risk R-04 remains. |
 | F-14 | The previous EC2 deployment published Redis (no password) and MinIO on all interfaces; only the security group blocked them. | High | Before demo | Deployment review; CT-04 | Closed: the override binds both to 127.0.0.1; verified with docker compose ps. |
-| F-15 | The EC2 deployment is reached over plain HTTP on ports 4173 and 3000, so the phone browser marks it as not secure and sign-in tokens cross the network unencrypted. PSR-10 requires HTTPS in production. | High | Before demo | EC2 screenshots (Figures 1 and 7) | Open: serve the site and API through a TLS reverse proxy on port 443, then close 3000 and 4173 in the security group. |
-| F-16 | The dealer dashboard’s upload list prints the raw job status, such as “completedWithErrors”, instead of a readable, translated label (UR-02, UR-11). | Low | Next iteration | Screenshot review (Figure 5) | Open: map each status to a readable label, as the admin dashboard already does, and add it to the Sinhala and Tamil texts. |
-| F-17 | On 14 Aug 2026 GitHub allowed a pull request into main to be merged while its CI check was still running, so passing CI was not a required status check; a failing build could have been merged. | Low | Before submission | Screenshot review (Figure 9) | Open: in the main branch protection rule, require the CI checks to pass before merging, then confirm the merge button is blocked while a check runs. |
-| F-18 | npm audit of the production dependencies reports 12 moderate advisories and no high or critical ones. Two are on code paths MotorX uses: the csv-parse columns option, which reads the header row of dealer-uploaded CSV files, and qs, which Express uses to parse every query string, including public search. | Medium | Before submission | npm audit, 28 Sep 2026 (Section 5.1.1) | Open: run npm audit fix (qs) and rerun the backend tests; upgrade csv-parse to 7.x or reject reserved header names with a worker test; upgrade firebase-admin in a later cycle. |
+| F-15 | The EC2 deployment is reached over plain HTTP on ports 4173 and 3000, so the phone browser marks it as not secure and sign-in tokens cross the network unencrypted. PSR-10 requires HTTPS in production. | High | Before demo | EC2 screenshots (Figures 12 and 18) | Open: serve the site and API through a TLS reverse proxy on port 443, then close 3000 and 4173 in the security group. |
+| F-16 | The dealer dashboard’s upload list prints the raw job status, such as “completedWithErrors”, instead of a readable, translated label (UR-02, UR-11). | Low | Next iteration | Screenshot review (Figure 16) | Open: map each status to a readable label, as the admin dashboard already does, and add it to the Sinhala and Tamil texts. |
+| F-17 | On 14 Aug 2026 GitHub allowed a pull request into main to be merged while its CI check was still running, so passing CI was not a required status check; a failing build could have been merged. | Low | Before submission | Screenshot review (Figure 20) | Open: in the main branch protection rule, require the CI checks to pass before merging, then confirm the merge button is blocked while a check runs. |
+| F-18 | npm audit of the production dependencies reports 12 moderate advisories and no high or critical ones. Two are on code paths MotorX uses: the csv-parse columns option, which reads the header row of dealer-uploaded CSV files, and qs, which Express uses to parse every query string, including public search. | Medium | Before submission | npm audit, 28 Sep 2026 (Section 5.1.3) | Open: run npm audit fix (qs) and rerun the backend tests; upgrade csv-parse to 7.x or reject reserved header names with a worker test; upgrade firebase-admin in a later cycle. |
 
 ## Appendix G – Traceability Matrix
 
 | Requirement group | Cases | Evidence status |
 | --- | --- | --- |
-| FR-USER-01–12; PSR-08–09 | UT-15, UT-28, UT-29, UT-30, IT-06, IT-08, E2E-01, E2E-11, IT-12 | 6 of 9 executed; all passed |
-| FR-DEALER-01–13 | UT-04, UT-05, UT-26, UT-31, UT-32, IT-01, IT-05, IT-09, E2E-02, E2E-03 | 8 of 10 executed; all passed |
-| FR-MARKET-01–16 | UT-08, UT-09, UT-10, UT-11, UT-36, IT-03, IT-04, IT-11, CT-07, E2E-04, E2E-05, E2E-07 | 9 of 12 executed; 1 failed |
-| FR-UPLOAD-01–08 | UT-06, UT-07, UT-33, UT-41, E2E-06, IT-14 | 4 of 6 executed; all passed |
+| FR-USER-01–12; PSR-08–09 | UT-46, UT-15, UT-28, UT-29, UT-30, IT-06, IT-08, E2E-01, E2E-11, IT-12 | 7 of 10 executed; all passed |
+| FR-DEALER-01–13 | UT-45, UT-04, UT-05, UT-26, UT-31, UT-32, IT-01, IT-05, IT-09, E2E-02, E2E-03 | 9 of 11 executed; all passed |
+| FR-MARKET-01–16 | UT-42, UT-44, UT-48, UT-08, UT-09, UT-10, UT-11, UT-36, IT-03, IT-04, IT-11, CT-07, E2E-04, E2E-05, E2E-07 | 12 of 15 executed; 1 failed |
+| FR-UPLOAD-01–08 | UT-45, UT-06, UT-07, UT-33, UT-41, E2E-06, IT-14 | 5 of 7 executed; all passed |
 | FR-ETL-01–33 | UT-16, UT-17, UT-18, UT-19, UT-20, UT-21, UT-22, UT-23, UT-24, IT-03, IT-07, E2E-A1, E2E-06 | 12 of 13 executed; all passed |
-| FR-SEARCH-01–20 | UT-12, UT-14, IT-10, E2E-A2, E2E-A3, E2E-07, IT-15, NF-06 | 5 of 8 executed; 2 failed |
-| FR-NOTIFY-01–07 | UT-25, UT-27, E2E-10, E2E-14, IT-13 | 2 of 5 executed; all passed |
-| FR-ADMIN-01–10 | UT-03, UT-35, IT-02, IT-05, IT-09, E2E-02, E2E-11 | 5 of 7 executed; all passed |
-| UR-01–18 | UT-28, UT-36, UT-38, UT-40, E2E-07, E2E-12 | 4 of 6 executed; all passed |
+| FR-SEARCH-01–20 | UT-48, UT-12, UT-14, IT-10, E2E-A2, E2E-A3, E2E-07, IT-15, NF-06 | 6 of 9 executed; 2 failed |
+| FR-NOTIFY-01–07 | UT-47, UT-25, UT-27, E2E-10, E2E-14, IT-13 | 3 of 6 executed; all passed |
+| FR-ADMIN-01–10 | UT-43, UT-03, UT-35, IT-02, IT-05, IT-09, E2E-02, E2E-11 | 6 of 8 executed; all passed |
+| UR-01–18 | UT-48, UT-28, UT-36, UT-38, UT-40, E2E-07, E2E-12 | 5 of 7 executed; all passed |
 | PSR-01–07 | NF-01, NF-02, NF-03, E2E-A3 | 2 of 4 executed; 1 failed |
 | PSR-08–16 | UT-01, UT-02, UT-05, UT-09, UT-10, UT-15, IT-05, IT-06, IT-08, CT-04, CT-05, NF-04, NF-05 | All executed and passed |
 | RR-01–10 | UT-07, UT-20, UT-22, UT-23, UT-24, UT-25, IT-07, CT-03, E2E-A1 | All executed and passed |
@@ -1886,58 +2055,58 @@ E2E-A1 to E2E-A3 are system procedures that were executed. E2E-01 to E2E-15 are 
 
 ## Appendix H – Screenshot Evidence
 
-The screenshots below were taken by the team while using the running system, all on 27 September 2026 except Figure 9 (14 August 2026): Figures 1 and 7 on the EC2 deployment (a phone on mobile data, and the AWS console), Figures 8 and 9 on GitHub, and the others in a desktop browser. They show that the pages exist and render with real data; they do not replace the step-by-step journeys in Appendix C, whose results stay as recorded until a tester completes them. Test accounts appear in some images; no customer data is shown.
+The screenshots below were taken by the team while using the running system, all on 27 September 2026 except Figure 20 (14 August 2026): Figures 12 and 18 on the EC2 deployment (a phone on mobile data, and the AWS console), Figures 19 and 20 on GitHub, and the others in a desktop browser. They show that the pages exist and render with real data; they do not replace the step-by-step journeys in Appendix C, whose results stay as recorded until a tester completes them. Test accounts appear in some images; no customer data is shown.
 
 ![(a) Marketplace](test-evidence/screenshots/ec2-phone-marketplace.jpg)
 ![(b) Dealer portal menu](test-evidence/screenshots/ec2-phone-dealer-menu.jpg)
 ![(c) Bulk vehicle upload](test-evidence/screenshots/ec2-phone-bulk-upload.jpg)
 
-*Figure 1: MotorX on the EC2 deployment, opened on a phone over 4G through the public host name (port 4173)*
+*Figure 12: MotorX on the EC2 deployment, opened on a phone over 4G through the public host name (port 4173)*
 
-Figure 1 confirms that the deployment answers on its public DNS name from outside the AWS network (CT-05, E2E-A3), and that the buyer marketplace, the dealer navigation and the bulk-upload page are laid out for a phone screen (UR-16–17; supporting E2E-07 and E2E-12). The warning sign in the address bar is the browser reporting a plain-HTTP connection, recorded as F-15.
+Figure 12 confirms that the deployment answers on its public DNS name from outside the AWS network (CT-05, E2E-A3), and that the buyer marketplace, the dealer navigation and the bulk-upload page are laid out for a phone screen (UR-16–17; supporting E2E-07 and E2E-12). The warning sign in the address bar is the browser reporting a plain-HTTP connection, recorded as F-15.
 
-![Figure 2: Buyer marketplace on a desktop browser: natural-language search box, filters, sorting, result count and Compare buttons](test-evidence/screenshots/marketplace-desktop.jpg)
+![Figure 13: Buyer marketplace on a desktop browser: natural-language search box, filters, sorting, result count and Compare buttons](test-evidence/screenshots/marketplace-desktop.jpg)
 
-*Figure 2: Buyer marketplace on a desktop browser: natural-language search box, filters, sorting, result count and Compare buttons*
+*Figure 13: Buyer marketplace on a desktop browser: natural-language search box, filters, sorting, result count and Compare buttons*
 
-Figure 2 shows FR-MARKET-07 and FR-SEARCH-01–06 on screen: 30 active vehicles with their photos, the search box that accepts everyday language, the filter panel, “Newest First” sorting, and the Compare toggle on each card (E2E-07, E2E-08).
+Figure 13 shows FR-MARKET-07 and FR-SEARCH-01–06 on screen: 30 active vehicles with their photos, the search box that accepts everyday language, the filter panel, “Newest First” sorting, and the Compare toggle on each card (E2E-07, E2E-08).
 
-![Figure 3: Sign-in page backed by Firebase Authentication, with password reset and the language selector](test-evidence/screenshots/sign-in.jpg)
+![Figure 14: Sign-in page backed by Firebase Authentication, with password reset and the language selector](test-evidence/screenshots/sign-in.jpg)
 
-*Figure 3: Sign-in page backed by Firebase Authentication, with password reset and the language selector*
+*Figure 14: Sign-in page backed by Firebase Authentication, with password reset and the language selector*
 
-![Figure 4: Dealer application form: representative, dealership and dealer details, and the three verification-document uploads](test-evidence/screenshots/dealer-application.jpg)
+![Figure 15: Dealer application form: representative, dealership and dealer details, and the three verification-document uploads](test-evidence/screenshots/dealer-application.jpg)
 
-*Figure 4: Dealer application form: representative, dealership and dealer details, and the three verification-document uploads*
+*Figure 15: Dealer application form: representative, dealership and dealer details, and the three verification-document uploads*
 
-Figures 3 and 4 show the entry points for E2E-01 and E2E-02: sign-in with password reset (FR-USER-04–05) and the dealer application with its required fields and document uploads (FR-DEALER-09; PDF, JPG or PNG up to 10 MB, checked by UT-04, UT-05 and IT-01).
+Figures 14 and 15 show the entry points for E2E-01 and E2E-02: sign-in with password reset (FR-USER-04–05) and the dealer application with its required fields and document uploads (FR-DEALER-09; PDF, JPG or PNG up to 10 MB, checked by UT-04, UT-05 and IT-01).
 
-![Figure 5: Dealer dashboard: listing totals by status, recent inventory and recent CSV uploads with their final status](test-evidence/screenshots/dealer-dashboard.jpg)
+![Figure 16: Dealer dashboard: listing totals by status, recent inventory and recent CSV uploads with their final status](test-evidence/screenshots/dealer-dashboard.jpg)
 
-*Figure 5: Dealer dashboard: listing totals by status, recent inventory and recent CSV uploads with their final status*
+*Figure 16: Dealer dashboard: listing totals by status, recent inventory and recent CSV uploads with their final status*
 
-Figure 5 shows FR-DEALER-05–07 and FR-ETL-31: 67 listings split into active, draft, sold and archived, and four CSV imports ending as “completed” or “completedWithErrors”. The raw status wording is finding F-16. The banner above the dashboard asks the dealer to verify their e-mail address before an application can be approved.
+Figure 16 shows FR-DEALER-05–07 and FR-ETL-31: 67 listings split into active, draft, sold and archived, and four CSV imports ending as “completed” or “completedWithErrors”. The raw status wording is finding F-16. The banner above the dashboard asks the dealer to verify their e-mail address before an application can be approved.
 
-![Figure 6: Manage Inventory: tabs for listings needing attention and archived stock, a “Last confirmed” column, row selection and one-click Mark sold / Archive](test-evidence/screenshots/manage-inventory.jpg)
+![Figure 17: Manage Inventory: tabs for listings needing attention and archived stock, a “Last confirmed” column, row selection and one-click Mark sold / Archive](test-evidence/screenshots/manage-inventory.jpg)
 
-*Figure 6: Manage Inventory: tabs for listings needing attention and archived stock, a “Last confirmed” column, row selection and one-click Mark sold / Archive*
+*Figure 17: Manage Inventory: tabs for listings needing attention and archived stock, a “Last confirmed” column, row selection and one-click Mark sold / Archive*
 
-Figure 6 shows the stock tools added in this cycle (Extension: bulk actions and stale stock; E2E-09): the “Needs attention” tab that collects stale listings, the date each listing was last confirmed, check boxes for bulk actions, and the per-row Mark sold and Archive buttons (UT-27, UT-34, IT-10).
+Figure 17 shows the stock tools added in this cycle (Extension: bulk actions and stale stock; E2E-09): the “Needs attention” tab that collects stale listings, the date each listing was last confirmed, check boxes for bulk actions, and the per-row Mark sold and Archive buttons (UT-27, UT-34, IT-10).
 
-![Figure 7: Inbound rules of the EC2 security group motorx-staging-sg (account details cropped out)](test-evidence/screenshots/ec2-security-group.jpg)
+![Figure 18: Inbound rules of the EC2 security group motorx-staging-sg (account details cropped out)](test-evidence/screenshots/ec2-security-group.jpg)
 
-*Figure 7: Inbound rules of the EC2 security group motorx-staging-sg (account details cropped out)*
+*Figure 18: Inbound rules of the EC2 security group motorx-staging-sg (account details cropped out)*
 
-Figure 7 is the network-level half of CT-04. SSH is open to a single address, and web traffic to ports 80 and 443. Ports 3000 (API) and 4173 (website) are open to everyone and marked temporary; they stay open until F-15 is fixed, after which only 443 (and 80, redirecting to it) should remain. Redis (6379) and MinIO (9000/9001) have no rule, which matches the 127.0.0.1 binding checked in compose-ec2-ports.txt (F-14).
+Figure 18 is the network-level half of CT-04. SSH is open to a single address, and web traffic to ports 80 and 443. Ports 3000 (API) and 4173 (website) are open to everyone and marked temporary; they stay open until F-15 is fixed, after which only 443 (and 80, redirecting to it) should remain. Redis (6379) and MinIO (9000/9001) have no rule, which matches the 127.0.0.1 binding checked in compose-ec2-ports.txt (F-14).
 
-![Figure 8: GitHub Actions run #70 for pull request #29 (branch Dewni2): all five CI jobs passed](test-evidence/screenshots/ci-run-70-pr29.png)
+![Figure 19: GitHub Actions run #70 for pull request #29 (branch Dewni2): all five CI jobs passed](test-evidence/screenshots/ci-run-70-pr29.png)
 
-*Figure 8: GitHub Actions run #70 for pull request #29 (branch Dewni2): all five CI jobs passed*
+*Figure 19: GitHub Actions run #70 for pull request #29 (branch Dewni2): all five CI jobs passed*
 
-Figure 8 is the CI evidence for NF-05 and for the automated suites. Every job of the MotorX workflow passed on this pull request: the scan of the full history for leaked secrets, the build-and-test job that runs the automated tests, and the backend, worker and frontend image builds, each followed by a vulnerability scan of the built image. The checkout step shows the repository and the exact commit tested (ba484aaf). The run also carries one warning and one notice annotation, not shown here.
+Figure 19 is the CI evidence for NF-05 and for the automated suites. Every job of the MotorX workflow passed on this pull request: the scan of the full history for leaked secrets, the build-and-test job that runs the automated tests, and the backend, worker and frontend image builds, each followed by a vulnerability scan of the built image. The checkout step shows the repository and the exact commit tested (ba484aaf). The run also carries one warning and one notice annotation, not shown here.
 
-![Figure 9: Checks on an earlier pull request from branch dewni into main (14 Aug 2026), taken while the pull-request build was still running](test-evidence/screenshots/ci-pr-dewni-checks.png)
+![Figure 20: Checks on an earlier pull request from branch dewni into main (14 Aug 2026), taken while the pull-request build was still running](test-evidence/screenshots/ci-pr-dewni-checks.png)
 
-*Figure 9: Checks on an earlier pull request from branch dewni into main (14 Aug 2026), taken while the pull-request build was still running*
+*Figure 20: Checks on an earlier pull request from branch dewni into main (14 Aug 2026), taken while the pull-request build was still running*
 
-Figure 9 shows that CI runs on both events: the four checks triggered by the push (build and test, and the backend, frontend and worker images) had passed, and the same build-and-test job triggered by the pull request had just started. It also shows that GitHub offered “Merge pull request” before that check finished, so at the time passing CI was not a required condition for merging into main (F-17).
+Figure 20 shows that CI runs on both events: the four checks triggered by the push (build and test, and the backend, frontend and worker images) had passed, and the same build-and-test job triggered by the pull request had just started. It also shows that GitHub offered “Merge pull request” before that check finished, so at the time passing CI was not a required condition for merging into main (F-17).

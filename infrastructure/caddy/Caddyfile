@@ -1,0 +1,34 @@
+# Single-server (EC2) entry point: HTTPS, compression and load balancing across the backend copies.
+# Used by compose.lb.yml. SITE_DOMAIN must point at the instance's Elastic IP (e.g. a free DuckDNS
+# name); Caddy then gets and renews a Let's Encrypt certificate and redirects HTTP to HTTPS itself.
+{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+
+	@api path /api/* /health/*
+	handle @api {
+		reverse_proxy {
+			# Every backend copy, looked up from Docker's DNS, so restarted copies are found again.
+			dynamic a {
+				name backend
+				port 3000
+				refresh 5s
+			}
+			# The least busy copy gets the request: uploads and searches take longer than list calls.
+			lb_policy least_conn
+			# A copy that fails is skipped for 30 s and the request is retried on another one.
+			lb_try_duration 5s
+			fail_duration 30s
+			# Shows which copy answered, to demonstrate the load balancing.
+			header_down X-Served-By {upstream_hostport}
+		}
+	}
+
+	handle {
+		reverse_proxy frontend:80
+	}
+}

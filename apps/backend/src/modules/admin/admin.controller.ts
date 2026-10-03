@@ -2,7 +2,7 @@ import type { Response } from 'express';
 import { sendSuccess } from '../../shared/responses/apiResponse.js';
 import type { AuthenticatedRequest } from '../../shared/types/authenticatedRequest.js';
 import { readDealerDocument } from '../dealers/dealerDocument.storage.js';
-import { changeUserStatusAsAdmin, getAuditLogsForAdmin, getDashboardStatsForAdmin, getDealerApplicationsForAdmin, getDealerDocumentForAdmin, getListingsForAdmin, getSystemHealthForAdmin, getUploadsForAdmin, getUsersForAdmin, removeListingAsAdmin, reviewDealerApplicationAsAdmin } from './admin.service.js';
+import { getUserDetailsForAdmin, getUploadRecordsForAdmin, changeUserStatusAsAdmin, getAuditLogsForAdmin, getDashboardStatsForAdmin, getDealerApplicationsForAdmin, getDealerDocumentForAdmin, getListingsForAdmin, getSystemHealthForAdmin, getUploadsForAdmin, getUsersForAdmin, removeListingAsAdmin, reviewDealerApplicationAsAdmin } from './admin.service.js';
 import type { ListAdminAuditQuery, ListAdminDealerApplicationsQuery, ListAdminListingsQuery, ListAdminUploadsQuery, ListAdminUsersQuery } from './admin.validation.js';
 
 // Sends the filtered user-management collection.
@@ -51,3 +51,12 @@ export async function approveAdminDealerApplication(request: AuthenticatedReques
 
 // Rejects one pending dealer application with a reason.
 export async function rejectAdminDealerApplication(request: AuthenticatedRequest, response: Response) { sendSuccess(response, await reviewDealerApplicationAsAdmin(String(request.params.dealerId), request.localUser!._id, 'rejected', request.body.reason)); }
+
+export async function getAdminUserDetails(request: AuthenticatedRequest, response: Response) {
+  response.setHeader('Cache-Control', 'no-store, private');
+  sendSuccess(response, await getUserDetailsForAdmin(String(request.params.userId)));
+}
+export async function getAdminUploadRecords(request: AuthenticatedRequest, response: Response) {
+  const result = await getUploadRecordsForAdmin(String(request.params.uploadId), request.query as unknown as import('./admin.validation.js').AdminUploadRecordsQuery);
+  sendSuccess(response, result.data, { meta: result.meta });
+}

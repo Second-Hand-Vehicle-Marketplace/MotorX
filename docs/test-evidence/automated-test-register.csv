@@ -179,60 +179,117 @@ UT-26.03,UT-26,UT,apps/worker/src/jobs/documentRetention.job.test.ts,"dealer doc
 UT-27.01,UT-27,UT,apps/worker/src/jobs/staleListingReminder.job.test.ts,"stale listing reminders counts listings not confirmed for 60 days, and reminds at most once a week",passed,5.7,worker-results.json
 UT-27.02,UT-27,UT,apps/worker/src/jobs/staleListingReminder.job.test.ts,"stale listing reminders reminds each dealer with their own count, only when this worker wins the claim",passed,2.5,worker-results.json
 UT-27.03,UT-27,UT,apps/worker/src/jobs/staleListingReminder.job.test.ts,"stale listing reminders keeps going when one dealer fails, so the others are still reminded",passed,1.1,worker-results.json
-UT-28.01,UT-28,UT,apps/frontend/src/features/auth/components/RoleGuard.test.tsx,RoleGuard sends signed-out visitors to the login page,passed,35.1,frontend-results.json
-UT-28.02,UT-28,UT,apps/frontend/src/features/auth/components/RoleGuard.test.tsx,RoleGuard shows the page to a user with an allowed role,passed,3.6,frontend-results.json
-UT-28.03,UT-28,UT,apps/frontend/src/features/auth/components/RoleGuard.test.tsx,"RoleGuard shows ""Access Restricted"" to a signed-in user without the role",passed,13.4,frontend-results.json
+UT-28.01,UT-28,UT,apps/frontend/src/features/auth/components/RoleGuard.test.tsx,RoleGuard sends signed-out visitors to the login page,passed,35.9,frontend-results.json
+UT-28.02,UT-28,UT,apps/frontend/src/features/auth/components/RoleGuard.test.tsx,RoleGuard shows the page to a user with an allowed role,passed,3.8,frontend-results.json
+UT-28.03,UT-28,UT,apps/frontend/src/features/auth/components/RoleGuard.test.tsx,"RoleGuard shows ""Access Restricted"" to a signed-in user without the role",passed,13.3,frontend-results.json
 UT-28.04,UT-28,UT,apps/frontend/src/features/auth/components/RoleGuard.test.tsx,RoleGuard sends an applicant whose dealer application is still pending to the status page,passed,3.3,frontend-results.json
-UT-29.01,UT-29,UT,apps/frontend/src/features/auth/components/EmailVerificationBanner.test.tsx,EmailVerificationBanner is hidden when nobody is signed in or the email is verified,passed,23.4,frontend-results.json
-UT-29.02,UT-29,UT,apps/frontend/src/features/auth/components/EmailVerificationBanner.test.tsx,"EmailVerificationBanner asks an unverified user to verify, and can resend the email",passed,199.3,frontend-results.json
-UT-29.03,UT-29,UT,apps/frontend/src/features/auth/components/EmailVerificationBanner.test.tsx,EmailVerificationBanner disappears once the user has verified,passed,46.8,frontend-results.json
-UT-29.04,UT-29,UT,apps/frontend/src/features/auth/components/EmailVerificationBanner.test.tsx,EmailVerificationBanner explains when the link has not been opened yet,passed,92.5,frontend-results.json
-UT-30.01,UT-30,UT,apps/frontend/src/features/auth/context/AuthProvider.test.tsx,"AuthProvider cached data clears the previous account's cached data on sign-out, so the next user never sees it",passed,147.2,frontend-results.json
-UT-30.02,UT-30,UT,apps/frontend/src/features/auth/context/AuthProvider.test.tsx,AuthProvider cached data clears cached data when a different account signs in on the same browser,passed,13.6,frontend-results.json
-UT-31.01,UT-31,UT,apps/frontend/src/features/auth/pages/RegisterPage.test.tsx,"RegisterPage for a signed-in buyer shows the rejection reason, pre-fills the previous answers, and asks for no password",passed,225.6,frontend-results.json
-UT-31.02,UT-31,UT,apps/frontend/src/features/auth/pages/RegisterPage.test.tsx,RegisterPage for a signed-in buyer resubmits from the existing account with the new documents,passed,210.5,frontend-results.json
-UT-31.03,UT-31,UT,apps/frontend/src/features/auth/pages/RegisterPage.test.tsx,RegisterPage for a signed-in buyer sends an applicant whose application is still pending to the status page,passed,29.5,frontend-results.json
-UT-32.01,UT-32,UT,apps/frontend/src/portals/dealer/pages/DealerProfile.test.tsx,DealerProfile shows the verified business name and registration number as read-only,passed,83.7,frontend-results.json
-UT-32.02,UT-32,UT,apps/frontend/src/portals/dealer/pages/DealerProfile.test.tsx,DealerProfile saves edited details and confirms,passed,361.7,frontend-results.json
-UT-32.03,UT-32,UT,apps/frontend/src/portals/dealer/pages/DealerProfile.test.tsx,DealerProfile shows the server message when saving fails,passed,95.8,frontend-results.json
-UT-33.01,UT-33,UT,apps/frontend/src/portals/dealer/pages/UploadDetails.test.tsx,UploadDetails publishes all of this upload's drafts in one step,passed,281.4,frontend-results.json
-UT-33.02,UT-33,UT,apps/frontend/src/portals/dealer/pages/UploadDetails.test.tsx,UploadDetails shows the failure reason and lets the dealer retry a failed CSV import,passed,92.5,frontend-results.json
-UT-33.03,UT-33,UT,apps/frontend/src/portals/dealer/pages/UploadDetails.test.tsx,UploadDetails lets the dealer retry failed photo processing,passed,95.0,frontend-results.json
-UT-33.04,UT-33,UT,apps/frontend/src/portals/dealer/pages/UploadDetails.test.tsx,UploadDetails shows an error message when the retry is refused,passed,109.2,frontend-results.json
-UT-33.05,UT-33,UT,apps/frontend/src/portals/dealer/pages/UploadDetails.test.tsx,UploadDetails does not offer Retry for an upload that succeeded,passed,35.5,frontend-results.json
-UT-34.01,UT-34,UT,apps/frontend/src/portals/dealer/pages/ListingManager.test.tsx,dealer listing manager reminds the dealer about stale stock and opens the stale list,passed,273.5,frontend-results.json
-UT-34.02,UT-34,UT,apps/frontend/src/portals/dealer/pages/ListingManager.test.tsx,dealer listing manager publishes every selected draft in one request,passed,210.7,frontend-results.json
-UT-34.03,UT-34,UT,apps/frontend/src/portals/dealer/pages/ListingManager.test.tsx,dealer listing manager offers one-click fixes on stale listings and shows how long ago each was confirmed,passed,106.0,frontend-results.json
-UT-34.04,UT-34,UT,apps/frontend/src/portals/dealer/pages/ListingManager.test.tsx,dealer listing manager previews a price cut before applying it,passed,171.8,frontend-results.json
+UT-29.01,UT-29,UT,apps/frontend/src/features/auth/components/EmailVerificationBanner.test.tsx,EmailVerificationBanner is hidden when nobody is signed in or the email is verified,passed,25.1,frontend-results.json
+UT-29.02,UT-29,UT,apps/frontend/src/features/auth/components/EmailVerificationBanner.test.tsx,"EmailVerificationBanner asks an unverified user to verify, and can resend the email",passed,210.7,frontend-results.json
+UT-29.03,UT-29,UT,apps/frontend/src/features/auth/components/EmailVerificationBanner.test.tsx,EmailVerificationBanner disappears once the user has verified,passed,44.7,frontend-results.json
+UT-29.04,UT-29,UT,apps/frontend/src/features/auth/components/EmailVerificationBanner.test.tsx,EmailVerificationBanner explains when the link has not been opened yet,passed,77.0,frontend-results.json
+UT-30.01,UT-30,UT,apps/frontend/src/features/auth/context/AuthProvider.test.tsx,"AuthProvider cached data clears the previous account's cached data on sign-out, so the next user never sees it",passed,155.3,frontend-results.json
+UT-30.02,UT-30,UT,apps/frontend/src/features/auth/context/AuthProvider.test.tsx,AuthProvider cached data clears cached data when a different account signs in on the same browser,passed,14.2,frontend-results.json
+UT-31.01,UT-31,UT,apps/frontend/src/features/auth/pages/RegisterPage.test.tsx,"RegisterPage for a signed-in buyer shows the rejection reason, pre-fills the previous answers, and asks for no password",passed,250.5,frontend-results.json
+UT-31.02,UT-31,UT,apps/frontend/src/features/auth/pages/RegisterPage.test.tsx,RegisterPage for a signed-in buyer resubmits from the existing account with the new documents,passed,228.5,frontend-results.json
+UT-31.03,UT-31,UT,apps/frontend/src/features/auth/pages/RegisterPage.test.tsx,RegisterPage for a signed-in buyer sends an applicant whose application is still pending to the status page,passed,40.4,frontend-results.json
+UT-32.01,UT-32,UT,apps/frontend/src/portals/dealer/pages/DealerProfile.test.tsx,DealerProfile shows the verified business name and registration number as read-only,passed,95.7,frontend-results.json
+UT-32.02,UT-32,UT,apps/frontend/src/portals/dealer/pages/DealerProfile.test.tsx,DealerProfile saves edited details and confirms,passed,410.0,frontend-results.json
+UT-32.03,UT-32,UT,apps/frontend/src/portals/dealer/pages/DealerProfile.test.tsx,DealerProfile shows the server message when saving fails,passed,104.0,frontend-results.json
+UT-33.01,UT-33,UT,apps/frontend/src/portals/dealer/pages/UploadDetails.test.tsx,UploadDetails publishes all of this upload's drafts in one step,passed,315.0,frontend-results.json
+UT-33.02,UT-33,UT,apps/frontend/src/portals/dealer/pages/UploadDetails.test.tsx,UploadDetails shows the failure reason and lets the dealer retry a failed CSV import,passed,75.8,frontend-results.json
+UT-33.03,UT-33,UT,apps/frontend/src/portals/dealer/pages/UploadDetails.test.tsx,UploadDetails lets the dealer retry failed photo processing,passed,92.7,frontend-results.json
+UT-33.04,UT-33,UT,apps/frontend/src/portals/dealer/pages/UploadDetails.test.tsx,UploadDetails shows an error message when the retry is refused,passed,92.7,frontend-results.json
+UT-33.05,UT-33,UT,apps/frontend/src/portals/dealer/pages/UploadDetails.test.tsx,UploadDetails does not offer Retry for an upload that succeeded,passed,36.4,frontend-results.json
+UT-34.01,UT-34,UT,apps/frontend/src/portals/dealer/pages/ListingManager.test.tsx,dealer listing manager reminds the dealer about stale stock and opens the stale list,passed,267.4,frontend-results.json
+UT-34.02,UT-34,UT,apps/frontend/src/portals/dealer/pages/ListingManager.test.tsx,dealer listing manager publishes every selected draft in one request,passed,230.0,frontend-results.json
+UT-34.03,UT-34,UT,apps/frontend/src/portals/dealer/pages/ListingManager.test.tsx,dealer listing manager offers one-click fixes on stale listings and shows how long ago each was confirmed,passed,91.8,frontend-results.json
+UT-34.04,UT-34,UT,apps/frontend/src/portals/dealer/pages/ListingManager.test.tsx,dealer listing manager previews a price cut before applying it,passed,220.2,frontend-results.json
 UT-34.05,UT-34,UT,apps/frontend/src/portals/dealer/pages/ListingManager.test.tsx,dealer listing manager explains skipped listings in plain words,passed,0.5,frontend-results.json
-UT-35.01,UT-35,UT,apps/frontend/src/portals/admin/pages/adminPages.test.tsx,Dealer Approvals opens the tab from the link (?status=approved) instead of always showing pending,passed,59.0,frontend-results.json
-UT-35.02,UT-35,UT,apps/frontend/src/portals/admin/pages/adminPages.test.tsx,"Dealer Approvals highlights and scrolls to the exact application from a dashboard link, and shows earlier rejections",passed,50.5,frontend-results.json
-UT-35.03,UT-35,UT,apps/frontend/src/portals/admin/pages/adminPages.test.tsx,"Admin dashboard says a section is unavailable instead of showing zero or ""none yet"" when it fails to load",passed,23.7,frontend-results.json
-UT-35.04,UT-35,UT,apps/frontend/src/portals/admin/pages/adminPages.test.tsx,Admin dashboard links a waiting application to that exact application,passed,23.3,frontend-results.json
-UT-35.05,UT-35,UT,apps/frontend/src/portals/admin/pages/adminPages.test.tsx,Upload monitoring loads only the linked upload when opened with ?uploadId,passed,122.7,frontend-results.json
-UT-35.06,UT-35,UT,apps/frontend/src/portals/admin/pages/adminPages.test.tsx,Upload monitoring passes the date range and page to the server,passed,34.7,frontend-results.json
-UT-36.01,UT-36,UT,apps/frontend/src/portals/buyer/pages/VehicleDetails.test.tsx,"vehicle page keeps Call, WhatsApp and Email one tap away, with the WhatsApp message ready",passed,230.8,frontend-results.json
-UT-36.02,UT-36,UT,apps/frontend/src/portals/buyer/pages/VehicleDetails.test.tsx,"vehicle page loads the small photo copy on phones, and lets the buyer swipe or tap through photos",passed,157.3,frontend-results.json
-UT-36.03,UT-36,UT,apps/frontend/src/portals/buyer/pages/VehicleDetails.test.tsx,vehicle page ignores a mostly vertical finger movement (the page scrolling),passed,28.9,frontend-results.json
-UT-36.04,UT-36,UT,apps/frontend/src/portals/buyer/pages/VehicleDetails.test.tsx,"vehicle page remembers the vehicle on this device for recommendations, and shows similar vehicles",passed,68.8,frontend-results.json
-UT-37.01,UT-37,UT,apps/frontend/src/features/compare/compare.test.tsx,"compare vehicles collects up to three vehicles, says when the list is full, and opens the comparison",passed,534.4,frontend-results.json
-UT-37.02,UT-37,UT,apps/frontend/src/features/compare/compare.test.tsx,"compare vehicles shows vehicles side by side and highlights the best price, year and mileage",passed,101.3,frontend-results.json
-UT-37.03,UT-37,UT,apps/frontend/src/features/compare/compare.test.tsx,compare vehicles says so when a vehicle is no longer available,passed,24.3,frontend-results.json
-UT-37.04,UT-37,UT,apps/frontend/src/features/compare/compare.test.tsx,compare vehicles picks the best value only when the vehicles differ,passed,0.5,frontend-results.json
-UT-38.01,UT-38,UT,apps/frontend/src/shared/components/mobileLayout.test.tsx,portal navigation on phones and tablets opens the menu as a drawer and moves focus into it,passed,235.0,frontend-results.json
-UT-38.02,UT-38,UT,apps/frontend/src/shared/components/mobileLayout.test.tsx,portal navigation on phones and tablets closes on Escape (focus back on the button) and after choosing a page,passed,230.9,frontend-results.json
-UT-38.03,UT-38,UT,apps/frontend/src/shared/components/mobileLayout.test.tsx,"tables on phones labels every cell with its column heading, so each row can be shown as a card",passed,5.2,frontend-results.json
-UT-39.01,UT-39,UT,apps/frontend/src/shared/i18n/i18n.test.tsx,Sinhala and Tamil support translates every English message (none left empty or with a lost placeholder),passed,17.9,frontend-results.json
-UT-39.02,UT-39,UT,apps/frontend/src/shared/i18n/i18n.test.tsx,Sinhala and Tamil support fills in placeholders and translates vehicle values,passed,1.4,frontend-results.json
-UT-39.03,UT-39,UT,apps/frontend/src/shared/i18n/i18n.test.tsx,"Sinhala and Tamil support switches the whole site language, sets the page lang, and remembers the choice",passed,331.2,frontend-results.json
-UT-39.04,UT-39,UT,apps/frontend/src/shared/i18n/i18n.test.tsx,Sinhala and Tamil support starts in Tamil for a browser that prefers Tamil,passed,19.9,frontend-results.json
-UT-40.01,UT-40,UT,apps/frontend/src/shared/utils/phone.test.ts,"WhatsApp numbers adds the Sri Lankan country code to local numbers, however they are written",passed,2.2,frontend-results.json
-UT-40.02,UT-40,UT,apps/frontend/src/shared/utils/phone.test.ts,WhatsApp numbers keeps foreign numbers and rejects ones that cannot be dialled,passed,0.5,frontend-results.json
-UT-40.03,UT-40,UT,apps/frontend/src/shared/utils/phone.test.ts,WhatsApp numbers builds a link with the message ready to send,passed,0.6,frontend-results.json
+UT-35.01,UT-35,UT,apps/frontend/src/portals/admin/pages/adminPages.test.tsx,Dealer Approvals opens the tab from the link (?status=approved) instead of always showing pending,passed,59.3,frontend-results.json
+UT-35.02,UT-35,UT,apps/frontend/src/portals/admin/pages/adminPages.test.tsx,"Dealer Approvals highlights and scrolls to the exact application from a dashboard link, and shows earlier rejections",passed,42.2,frontend-results.json
+UT-35.03,UT-35,UT,apps/frontend/src/portals/admin/pages/adminPages.test.tsx,"Admin dashboard says a section is unavailable instead of showing zero or ""none yet"" when it fails to load",passed,39.3,frontend-results.json
+UT-35.04,UT-35,UT,apps/frontend/src/portals/admin/pages/adminPages.test.tsx,Admin dashboard links a waiting application to that exact application,passed,24.0,frontend-results.json
+UT-35.05,UT-35,UT,apps/frontend/src/portals/admin/pages/adminPages.test.tsx,Upload monitoring loads only the linked upload when opened with ?uploadId,passed,115.2,frontend-results.json
+UT-35.06,UT-35,UT,apps/frontend/src/portals/admin/pages/adminPages.test.tsx,Upload monitoring passes the date range and page to the server,passed,25.4,frontend-results.json
+UT-36.01,UT-36,UT,apps/frontend/src/portals/buyer/pages/VehicleDetails.test.tsx,"vehicle page keeps Call, WhatsApp and Email one tap away, with the WhatsApp message ready",passed,246.5,frontend-results.json
+UT-36.02,UT-36,UT,apps/frontend/src/portals/buyer/pages/VehicleDetails.test.tsx,"vehicle page loads the small photo copy on phones, and lets the buyer swipe or tap through photos",passed,172.9,frontend-results.json
+UT-36.03,UT-36,UT,apps/frontend/src/portals/buyer/pages/VehicleDetails.test.tsx,vehicle page ignores a mostly vertical finger movement (the page scrolling),passed,45.5,frontend-results.json
+UT-36.04,UT-36,UT,apps/frontend/src/portals/buyer/pages/VehicleDetails.test.tsx,"vehicle page remembers the vehicle on this device for recommendations, and shows similar vehicles",passed,82.5,frontend-results.json
+UT-37.01,UT-37,UT,apps/frontend/src/features/compare/compare.test.tsx,"compare vehicles collects up to three vehicles, says when the list is full, and opens the comparison",passed,490.1,frontend-results.json
+UT-37.02,UT-37,UT,apps/frontend/src/features/compare/compare.test.tsx,"compare vehicles shows vehicles side by side and highlights the best price, year and mileage",passed,134.5,frontend-results.json
+UT-37.03,UT-37,UT,apps/frontend/src/features/compare/compare.test.tsx,compare vehicles says so when a vehicle is no longer available,passed,33.4,frontend-results.json
+UT-37.04,UT-37,UT,apps/frontend/src/features/compare/compare.test.tsx,compare vehicles picks the best value only when the vehicles differ,passed,0.6,frontend-results.json
+UT-38.01,UT-38,UT,apps/frontend/src/shared/components/mobileLayout.test.tsx,portal navigation on phones and tablets opens the menu as a drawer and moves focus into it,passed,222.0,frontend-results.json
+UT-38.02,UT-38,UT,apps/frontend/src/shared/components/mobileLayout.test.tsx,portal navigation on phones and tablets closes on Escape (focus back on the button) and after choosing a page,passed,265.8,frontend-results.json
+UT-38.03,UT-38,UT,apps/frontend/src/shared/components/mobileLayout.test.tsx,"tables on phones labels every cell with its column heading, so each row can be shown as a card",passed,6.0,frontend-results.json
+UT-39.01,UT-39,UT,apps/frontend/src/shared/i18n/i18n.test.tsx,Sinhala and Tamil support translates every English message (none left empty or with a lost placeholder),passed,16.8,frontend-results.json
+UT-39.02,UT-39,UT,apps/frontend/src/shared/i18n/i18n.test.tsx,Sinhala and Tamil support fills in placeholders and translates vehicle values,passed,1.0,frontend-results.json
+UT-39.03,UT-39,UT,apps/frontend/src/shared/i18n/i18n.test.tsx,"Sinhala and Tamil support switches the whole site language, sets the page lang, and remembers the choice",passed,346.4,frontend-results.json
+UT-39.04,UT-39,UT,apps/frontend/src/shared/i18n/i18n.test.tsx,Sinhala and Tamil support starts in Tamil for a browser that prefers Tamil,passed,15.1,frontend-results.json
+UT-40.01,UT-40,UT,apps/frontend/src/shared/utils/phone.test.ts,"WhatsApp numbers adds the Sri Lankan country code to local numbers, however they are written",passed,4.1,frontend-results.json
+UT-40.02,UT-40,UT,apps/frontend/src/shared/utils/phone.test.ts,WhatsApp numbers keeps foreign numbers and rejects ones that cannot be dialled,passed,0.9,frontend-results.json
+UT-40.03,UT-40,UT,apps/frontend/src/shared/utils/phone.test.ts,WhatsApp numbers builds a link with the message ready to send,passed,0.7,frontend-results.json
 UT-41.01,UT-41,UT,apps/backend/src/modules/inventory/inventory.queue.test.ts,inventory queue publishing queues a new upload under its fixed job ID,passed,6.6,backend-results.json
 UT-41.02,UT-41,UT,apps/backend/src/modules/inventory/inventory.queue.test.ts,"inventory queue publishing processes photos attached a second time: the finished run is removed, then queued again",passed,1.5,backend-results.json
 UT-41.03,UT-41,UT,apps/backend/src/modules/inventory/inventory.queue.test.ts,inventory queue publishing does the same after a failed run,passed,0.6,backend-results.json
 UT-41.04,UT-41,UT,apps/backend/src/modules/inventory/inventory.queue.test.ts,"inventory queue publishing leaves a job that is still waiting or running alone, so it is never processed twice at once",passed,1.1,backend-results.json
+UT-42.01,UT-42,UT,apps/frontend/src/shared/services/apiServices.test.ts,"listing API (dealer) turns listing records into the UI model: first photo primary, missing text filled in",passed,4.4,frontend-results.json
+UT-42.02,UT-42,UT,apps/frontend/src/shared/services/apiServices.test.ts,listing API (dealer) uses the right endpoint for each listing operation,passed,2.3,frontend-results.json
+UT-42.03,UT-42,UT,apps/frontend/src/shared/services/apiServices.test.ts,listing API (dealer) reads stats and sends bulk actions,passed,0.8,frontend-results.json
+UT-42.04,UT-42,UT,apps/frontend/src/shared/services/apiServices.test.ts,buyer API browses and searches with filters and paging,passed,0.9,frontend-results.json
+UT-42.05,UT-42,UT,apps/frontend/src/shared/services/apiServices.test.ts,"buyer API loads similar vehicles, recommendations and one vehicle with its dealer",passed,1.1,frontend-results.json
+UT-42.06,UT-42,UT,apps/frontend/src/shared/services/apiServices.test.ts,inventory API uploads a CSV with its category and reports progress,passed,0.8,frontend-results.json
+UT-42.07,UT-42,UT,apps/frontend/src/shared/services/apiServices.test.ts,"inventory API lists uploads and rejected rows, and retries",passed,0.9,frontend-results.json
+UT-42.08,UT-42,UT,apps/frontend/src/shared/services/apiServices.test.ts,dealer API submits an application with its documents and checks the reply,passed,2.4,frontend-results.json
+UT-42.09,UT-42,UT,apps/frontend/src/shared/services/apiServices.test.ts,dealer API rejects a reply that does not match the expected shape,passed,3.0,frontend-results.json
+UT-42.10,UT-42,UT,apps/frontend/src/shared/services/apiServices.test.ts,dealer API reviews applications and updates the profile,passed,1.2,frontend-results.json
+UT-42.11,UT-42,UT,apps/frontend/src/shared/services/apiServices.test.ts,"dealer API opens a verification document in a new tab, and closes the tab if loading fails",passed,1.5,frontend-results.json
+UT-42.12,UT-42,UT,apps/frontend/src/shared/services/apiServices.test.ts,admin API reads every admin collection with its filters and default page size,passed,1.5,frontend-results.json
+UT-42.13,UT-42,UT,apps/frontend/src/shared/services/apiServices.test.ts,admin API suspends users and removes listings,passed,1.0,frontend-results.json
+UT-43.01,UT-43,UT,apps/frontend/src/portals/admin/pages/adminManagement.test.tsx,"User management lists users, filters by role and search, and suspends one without reloading the rest",passed,666.3,frontend-results.json
+UT-43.02,UT-43,UT,apps/frontend/src/portals/admin/pages/adminManagement.test.tsx,User management shows an empty result and load or update errors,passed,140.8,frontend-results.json
+UT-43.03,UT-43,UT,apps/frontend/src/portals/admin/pages/adminManagement.test.tsx,User management reports a failed status change,passed,93.5,frontend-results.json
+UT-43.04,UT-43,UT,apps/frontend/src/portals/admin/pages/adminManagement.test.tsx,Listing monitoring filters listings and archives one after confirmation,passed,464.2,frontend-results.json
+UT-43.05,UT-43,UT,apps/frontend/src/portals/admin/pages/adminManagement.test.tsx,"Listing monitoring drops an archived listing from an ""active"" view and keeps it when the dealer cancels",passed,327.1,frontend-results.json
+UT-43.06,UT-43,UT,apps/frontend/src/portals/admin/pages/adminManagement.test.tsx,Listing monitoring shows load and archive errors,passed,262.4,frontend-results.json
+UT-43.07,UT-43,UT,apps/frontend/src/portals/admin/pages/adminManagement.test.tsx,"Audit logs reads filters from the address, shows events and pages through them",passed,202.3,frontend-results.json
+UT-43.08,UT-43,UT,apps/frontend/src/portals/admin/pages/adminManagement.test.tsx,"Audit logs distinguishes ""nothing recorded"" from ""nothing matches"" and from an outage",passed,157.4,frontend-results.json
+UT-43.09,UT-43,UT,apps/frontend/src/portals/admin/pages/adminManagement.test.tsx,"System health shows each service status, or the error when the check fails",passed,47.6,frontend-results.json
+UT-44.01,UT-44,UT,apps/frontend/src/portals/dealer/pages/ListingForm.test.tsx,"dealer listing form creates a car listing with only the fields that apply, then returns to the listings",passed,2484.9,frontend-results.json
+UT-44.02,UT-44,UT,apps/frontend/src/portals/dealer/pages/ListingForm.test.tsx,dealer listing form asks for battery details for electric vehicles and the extra field of each vehicle type,passed,593.1,frontend-results.json
+UT-44.03,UT-44,UT,apps/frontend/src/portals/dealer/pages/ListingForm.test.tsx,dealer listing form sends the extras of each vehicle type,passed,1878.2,frontend-results.json
+UT-44.04,UT-44,UT,apps/frontend/src/portals/dealer/pages/ListingForm.test.tsx,"dealer listing form crops each chosen photo, uploads it after saving, and offers a retry when an upload fails",passed,1974.4,frontend-results.json
+UT-44.05,UT-44,UT,apps/frontend/src/portals/dealer/pages/ListingForm.test.tsx,dealer listing form keeps no photos when every crop is skipped,passed,163.1,frontend-results.json
+UT-44.06,UT-44,UT,apps/frontend/src/portals/dealer/pages/ListingForm.test.tsx,"dealer listing form edits an existing listing: loads it, reorders and removes photos, and saves",passed,327.8,frontend-results.json
+UT-44.07,UT-44,UT,apps/frontend/src/portals/dealer/pages/ListingForm.test.tsx,dealer listing form reports load and photo-order errors,passed,37.3,frontend-results.json
+UT-44.08,UT-44,UT,apps/frontend/src/portals/dealer/pages/ListingForm.test.tsx,dealer listing form reports a failed reorder and a failed save,passed,292.1,frontend-results.json
+UT-45.01,UT-45,UT,apps/frontend/src/portals/dealer/pages/dealerPages.test.tsx,bulk vehicle upload shows the template fields for the chosen category and the upload history,passed,400.1,frontend-results.json
+UT-45.02,UT-45,UT,apps/frontend/src/portals/dealer/pages/dealerPages.test.tsx,"bulk vehicle upload uploads the chosen CSV, then opens its processing report",passed,176.2,frontend-results.json
+UT-45.03,UT-45,UT,apps/frontend/src/portals/dealer/pages/dealerPages.test.tsx,bulk vehicle upload keeps the dealer on the page with a message when the upload or template download fails,passed,221.1,frontend-results.json
+UT-45.04,UT-45,UT,apps/frontend/src/portals/dealer/pages/dealerPages.test.tsx,bulk vehicle upload downloads the category template as a file,passed,63.4,frontend-results.json
+UT-45.05,UT-45,UT,apps/frontend/src/portals/dealer/pages/dealerPages.test.tsx,bulk vehicle upload shows an empty history and a history that failed to load,passed,47.9,frontend-results.json
+UT-45.06,UT-45,UT,apps/frontend/src/portals/dealer/pages/dealerPages.test.tsx,bulk vehicle upload says when the upload history cannot be loaded,passed,30.7,frontend-results.json
+UT-45.07,UT-45,UT,apps/frontend/src/portals/dealer/pages/dealerPages.test.tsx,"dealer dashboard shows totals by status, recent vehicles, recent uploads and the stale-stock reminder",passed,78.1,frontend-results.json
+UT-45.08,UT-45,UT,apps/frontend/src/portals/dealer/pages/dealerPages.test.tsx,"dealer dashboard says when the inventory cannot be loaded, and hides the reminder when nothing is stale",passed,20.5,frontend-results.json
+UT-46.01,UT-46,UT,apps/frontend/src/features/auth/components/LoginForm.test.tsx,sign-in form sends { role: 'dealer' } to the right place after signing in,passed,800.0,frontend-results.json
+UT-46.02,UT-46,UT,apps/frontend/src/features/auth/components/LoginForm.test.tsx,sign-in form sends { role: 'admin' } to the right place after signing in,passed,626.1,frontend-results.json
+UT-46.03,UT-46,UT,apps/frontend/src/features/auth/components/LoginForm.test.tsx,sign-in form sends { role: 'buyer' } to the right place after signing in,passed,663.0,frontend-results.json
+UT-46.04,UT-46,UT,apps/frontend/src/features/auth/components/LoginForm.test.tsx,"sign-in form sends { role: 'buyer', …(1) } to the right place after signing in",passed,642.3,frontend-results.json
+UT-46.05,UT-46,UT,apps/frontend/src/features/auth/components/LoginForm.test.tsx,"sign-in form sends { role: 'buyer', …(1) } to the right place after signing in",passed,639.4,frontend-results.json
+UT-46.06,UT-46,UT,apps/frontend/src/features/auth/components/LoginForm.test.tsx,sign-in form explains a wrong password and a lockout in plain words,passed,804.1,frontend-results.json
+UT-46.07,UT-46,UT,apps/frontend/src/features/auth/components/LoginForm.test.tsx,sign-in form shows and hides the password,passed,127.1,frontend-results.json
+UT-46.08,UT-46,UT,apps/frontend/src/features/auth/components/LoginForm.test.tsx,"sign-in form asks for the email before sending a reset link, then confirms it was sent",passed,520.2,frontend-results.json
+UT-47.01,UT-47,UT,apps/frontend/src/features/notifications/components/NotificationCenter.test.tsx,"notification centre shows the unread count and the list, with details, times and e-mail status",passed,275.1,frontend-results.json
+UT-47.02,UT-47,UT,apps/frontend/src/features/notifications/components/NotificationCenter.test.tsx,"notification centre marks one notification read, then all of them",passed,275.5,frontend-results.json
+UT-47.03,UT-47,UT,apps/frontend/src/features/notifications/components/NotificationCenter.test.tsx,notification centre opens the stale listings from a stale-stock reminder,passed,107.6,frontend-results.json
+UT-47.04,UT-47,UT,apps/frontend/src/features/notifications/components/NotificationCenter.test.tsx,"notification centre says when there is nothing new, caps a large count, and stays quiet if loading fails",passed,126.0,frontend-results.json
+UT-47.05,UT-47,UT,apps/frontend/src/features/notifications/components/NotificationCenter.test.tsx,notification centre does not break the page when the notification service is down,passed,16.7,frontend-results.json
+UT-48.01,UT-48,UT,apps/frontend/src/portals/buyer/pages/Marketplace.test.tsx,"buyer marketplace lists vehicles and filters them, counting the active filters",passed,851.8,frontend-results.json
+UT-48.02,UT-48,UT,apps/frontend/src/portals/buyer/pages/Marketplace.test.tsx,"buyer marketplace searches in everyday language after the buyer stops typing, sorted by relevance",passed,945.1,frontend-results.json
+UT-48.03,UT-48,UT,apps/frontend/src/portals/buyer/pages/Marketplace.test.tsx,"buyer marketplace starts from a search in the address, e.g. from the home page",passed,106.9,frontend-results.json
+UT-48.04,UT-48,UT,apps/frontend/src/portals/buyer/pages/Marketplace.test.tsx,buyer marketplace pages through long result lists,passed,348.6,frontend-results.json
+UT-48.05,UT-48,UT,apps/frontend/src/portals/buyer/pages/Marketplace.test.tsx,"buyer marketplace shows an empty result with a way out, and an error with a retry",passed,345.4,frontend-results.json
+UT-48.06,UT-48,UT,apps/frontend/src/portals/buyer/pages/Marketplace.test.tsx,"buyer marketplace opens the filter sheet on small screens and closes it with Escape, returning focus",passed,342.7,frontend-results.json
 IT-01.01,IT-01,IT,apps/backend/src/modules/dealers/dealer.repository.test.ts,dealer repository creates a pending dealer application and finds it by user id,passed,57.0,backend-results.json
 IT-02.01,IT-02,IT,apps/backend/src/modules/admin/admin.repository.test.ts,admin repository lists pending dealer applications oldest first,passed,99.0,backend-results.json
 IT-03.01,IT-03,IT,apps/backend/src/modules/marketplace/listing.repository.test.ts,listing repository — registration duplicate detection finds an active listing sharing a normalized registration number,passed,37.6,backend-results.json

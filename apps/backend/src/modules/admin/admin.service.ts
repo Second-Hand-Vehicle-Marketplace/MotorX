@@ -10,7 +10,7 @@ import { errorCodes } from '../../shared/errors/errorCodes.js';
 import { buildPaginationMeta } from '../../shared/utils/pagination.js';
 import type { Dealer } from '../dealers/dealer.model.js';
 import { notifyAccountSuspended, notifyDealerApplicationDecision, notifyListingRemoved } from '../notifications/notification.service.js';
-import { archiveListingByAdmin, createAdminAuditLog, findDealerApplicationById, getAdminStats, listAdminAuditLogs, listAdminListings, listAdminUploads, listAdminUsers, listDealerApplications, promoteApplicantToDealer, updateAdminUserStatus, updateDealerApplicationReview } from './admin.repository.js';
+import { findAdminUser, findAdminDealer, findAdminUpload, listAdminUploadRecords, archiveListingByAdmin, createAdminAuditLog, findDealerApplicationById, getAdminStats, listAdminAuditLogs, listAdminListings, listAdminUploads, listAdminUsers, listDealerApplications, promoteApplicantToDealer, updateAdminUserStatus, updateDealerApplicationReview } from './admin.repository.js';
 import type { ListAdminAuditQuery, ListAdminDealerApplicationsQuery, ListAdminListingsQuery, ListAdminUploadsQuery, ListAdminUsersQuery } from './admin.validation.js';
 
 // Converts user persistence fields into the admin API representation.
@@ -189,4 +189,19 @@ export async function reviewDealerApplicationAsAdmin(dealerId: string, adminId: 
   // Sent after the transaction commits — a delivery hiccup must never roll back the review itself.
   await notifyDealerApplicationDecision(new mongoose.Types.ObjectId(result.userId), decision, reason);
   return result;
+}
+
+export async function getUserDetailsForAdmin(userId: string) {
+  const user = await findAdminUser(userId);
+  if (!user) throw new AppError(404, errorCodes.notFound, 'The user was not found.');
+  const dealer = await findAdminDealer(userId);
+  return { ...serializeUser(user), dealer: dealer ? { businessName: dealer.businessName, registrationNumber: dealer.registrationNumber, phone: dealer.phone, address: dealer.address, representativeName: dealer.representativeName, city: dealer.city, province: dealer.province, businessPhone: dealer.businessPhone, businessEmail: dealer.businessEmail, website: dealer.website, dealershipType: dealer.dealershipType, brands: dealer.brands, description: dealer.description, inventoryCount: dealer.inventoryCount, status: dealer.status, rejectionReason: dealer.rejectionReason } : null };
+}
+export async function getUploadRecordsForAdmin(uploadId: string, query: import('./admin.validation.js').AdminUploadRecordsQuery) {
+  if (!await findAdminUpload(uploadId)) throw new AppError(404, errorCodes.notFound, 'The upload was not found.');
+  const result = await listAdminUploadRecords(uploadId, query);
+  const data = result.documents.map((record: Record<string, any>) => query.outcome === 'rejected'
+    ? { id: String(record._id), rowNumber: record.rowNumber, outcome: 'rejected', originalData: record.originalData, errors: record.errors, reason: record.reason }
+    : { ...serializeListing(record), rowNumber: record.sourceRowNumber, outcome: 'completed' });
+  return { data, meta: buildPaginationMeta(query.page, query.limit, result.total) };
 }

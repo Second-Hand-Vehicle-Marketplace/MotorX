@@ -59,3 +59,7 @@ export type ListAdminListingsQuery = z.infer<typeof listAdminListingsQuerySchema
 export type ListAdminAuditQuery = z.infer<typeof listAdminAuditQuerySchema>;
 export type ListAdminUploadsQuery = z.infer<typeof listAdminUploadsQuerySchema>;
 export type ListAdminDealerApplicationsQuery = z.infer<typeof listAdminDealerApplicationsQuerySchema>;
+
+export const adminUploadIdParamsSchema = z.object({ uploadId: z.string().regex(/^[a-f\d]{24}$/i) });
+export const adminUploadRecordsQuerySchema = z.object({ ...adminPaginationSchema, outcome: z.enum(['completed', 'rejected']).default('completed') });
+export type AdminUploadRecordsQuery = z.infer<typeof adminUploadRecordsQuerySchema>;

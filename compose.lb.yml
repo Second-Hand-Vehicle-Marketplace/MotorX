@@ -1,0 +1,66 @@
+# Free-tier load balancing on the single EC2 instance, layered on compose.ec2.yml:
+#
+#   docker compose -f compose.yml -f compose.ec2.yml -f compose.lb.yml up -d --build
+#
+# Caddy becomes the only public entry point (80 and 443) and spreads API requests across two
+# backend copies; two workers share uploads safely through the job leases. Set SITE_DOMAIN in .env
+# to a domain that points at the Elastic IP, and VITE_API_BASE_URL to https://<SITE_DOMAIN>/api/v1.
+# In the EC2 security group allow inbound 80 and 443 only, plus 22 from your own IP.
+#
+# Every release is a named image (RELEASE_TAG = the commit SHA, set in .env). To roll back, set
+# RELEASE_TAG to the previous SHA, restore that release's .env, and recreate without building:
+#   docker compose -f compose.yml -f compose.ec2.yml -f compose.lb.yml up -d --no-build --force-recreate backend worker frontend
+#
+# Memory limits are deliberately absent: measure peaks under load first (docker stats during the
+# load and large-ZIP tests), then add mem_limit at about the peak plus 30%.
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?SITE_DOMAIN is required, e.g. motorx.duckdns.org}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./infrastructure/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # The certificate lives here; keeping it avoids Let's Encrypt rate limits on restarts.
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+    networks:
+      - motorx-network
+
+  backend:
+    image: motorx-backend:${RELEASE_TAG:?RELEASE_TAG is required, e.g. the commit SHA}
+    deploy:
+      replicas: 2
+    # Reached only through Caddy.
+    ports: !reset []
+    environment:
+      # One proxy (Caddy) in front, so rate limits see the real visitor's address.
+      TRUST_PROXY_HOPS: 1
+      CORS_ORIGIN: https://${SITE_DOMAIN}
+      S3_PUBLIC_URL: https://${SITE_DOMAIN}/api/v1/listing-images
+
+  worker:
+    image: motorx-worker:${RELEASE_TAG:?RELEASE_TAG is required, e.g. the commit SHA}
+    deploy:
+      replicas: 2
+    environment:
+      # 2 workers x 1 job each: the same parallel work as before, but one worker can stop
+      # without uploads stopping.
+      WORKER_CONCURRENCY: 1
+
+  frontend:
+    image: motorx-frontend:${RELEASE_TAG:?RELEASE_TAG is required, e.g. the commit SHA}
+    ports: !reset []
+
+volumes:
+  caddy_data:
+  caddy_config:

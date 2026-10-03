@@ -5,8 +5,8 @@ import { requireRole } from '../../shared/middleware/requireRole.js';
 import { validateRequest } from '../../shared/middleware/validateRequest.js';
 import { verifyFirebaseToken } from '../../shared/middleware/verifyFirebaseToken.js';
 import { asyncHandler } from '../../shared/utils/asyncHandler.js';
-import { adminDealerDocumentParamsSchema, adminDealerIdParamsSchema, adminListingIdParamsSchema, adminUserIdParamsSchema, listAdminAuditQuerySchema, listAdminDealerApplicationsQuerySchema, listAdminListingsQuerySchema, listAdminUploadsQuerySchema, listAdminUsersQuerySchema, rejectDealerApplicationBodySchema, updateAdminUserBodySchema } from './admin.validation.js';
-import { approveAdminDealerApplication, getAdminAuditLogs, getAdminDashboardStats, getAdminDealerApplications, getAdminDealerDocument, getAdminListings, getAdminSystemHealth, getAdminUploads, getAdminUsers, patchAdminUser, rejectAdminDealerApplication, removeAdminListing } from './admin.controller.js';
+import { adminUploadIdParamsSchema, adminUploadRecordsQuerySchema, adminDealerDocumentParamsSchema, adminDealerIdParamsSchema, adminListingIdParamsSchema, adminUserIdParamsSchema, listAdminAuditQuerySchema, listAdminDealerApplicationsQuerySchema, listAdminListingsQuerySchema, listAdminUploadsQuerySchema, listAdminUsersQuerySchema, rejectDealerApplicationBodySchema, updateAdminUserBodySchema } from './admin.validation.js';
+import { getAdminUserDetails, getAdminUploadRecords, approveAdminDealerApplication, getAdminAuditLogs, getAdminDashboardStats, getAdminDealerApplications, getAdminDealerDocument, getAdminListings, getAdminSystemHealth, getAdminUploads, getAdminUsers, patchAdminUser, rejectAdminDealerApplication, removeAdminListing } from './admin.controller.js';
 
 export const adminRouter = Router();
 
@@ -24,3 +24,6 @@ adminRouter.get('/dealer-applications', validateRequest({ query: listAdminDealer
 adminRouter.get('/dealer-applications/:dealerId/documents/:documentIndex', validateRequest({ params: adminDealerDocumentParamsSchema }), asyncHandler(getAdminDealerDocument));
 adminRouter.patch('/dealer-applications/:dealerId/approve', validateRequest({ params: adminDealerIdParamsSchema }), asyncHandler(approveAdminDealerApplication));
 adminRouter.patch('/dealer-applications/:dealerId/reject', validateRequest({ params: adminDealerIdParamsSchema, body: rejectDealerApplicationBodySchema }), asyncHandler(rejectAdminDealerApplication));
+
+adminRouter.get('/users/:userId', validateRequest({ params: adminUserIdParamsSchema }), asyncHandler(getAdminUserDetails));
+adminRouter.get('/uploads/:uploadId/records', validateRequest({ params: adminUploadIdParamsSchema, query: adminUploadRecordsQuerySchema }), asyncHandler(getAdminUploadRecords));
