@@ -21,11 +21,14 @@ permissions:
 jobs:
   deploy:
     name: Publish and deploy
-    # Weekly scheduled CI runs only rebuild and rescan; they never deploy.
+    # Weekly scheduled CI runs only rebuild and rescan; they never deploy. The live system runs on
+    # EC2 (README, "Production Deployment"), so this ECS pipeline stays off until the repository
+    # variable ECS_DEPLOY_ENABLED is set to "true" after the one-time AWS setup.
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event != 'schedule')
+      vars.ECS_DEPLOY_ENABLED == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event != 'schedule'))
     runs-on: ubuntu-latest
     timeout-minutes: 40
     environment:

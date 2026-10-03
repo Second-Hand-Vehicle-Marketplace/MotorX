@@ -24,6 +24,6 @@ npm run build --workspaces --if-present
 python scripts/smoke/live-stack-smoke.py
 ```
 
-JSON files were produced by adding `--reporter=json --outputFile=<path>` to the Vitest commands. The worker crash drill (`scripts/drills/kill-worker-mid-import.sh`) result is recorded in `docs/RESILIENCE.md`.
+JSON files were produced by adding `--reporter=json --outputFile=<path>` to the Vitest commands. The worker crash drill (`scripts/drills/kill-worker-mid-import.sh`) result is recorded in the test case register (`docs/MotorX_Test_Case_Register.csv`, E2E-A1).
 
 Not covered by this evidence: browser end-to-end journeys (report Section 3.4, to be executed manually by the team), real Firebase/SMTP integration, load testing, and code coverage (no coverage tool installed). HTTP journey tests replace the Firebase Admin SDK and the S3 client; they are not evidence about those external services.

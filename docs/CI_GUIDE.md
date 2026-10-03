@@ -196,4 +196,4 @@ CI: verify code and images
 CD: publish images and deploy an approved version to AWS
 ```
 
-The CD workflow and its AWS prerequisites are documented in the [Continuous Deployment Guide](CD_GUIDE.md). It becomes operational after the one-time ECR, ECS, IAM/OIDC, networking, and secret-management setup is complete.
+The CD workflow (`.github/workflows/deploy.yml`) targets Amazon ECR and ECS and is not in use yet: it becomes operational after a one-time ECR, ECS, IAM/OIDC, networking and secret-management setup, and runs only once the repository variable `ECS_DEPLOY_ENABLED` is set to `true` (until then it is skipped). The live system runs on a single EC2 instance, deployed as described in the README's [Production Deployment (EC2)](../README.md#production-deployment-ec2) section.

@@ -11,7 +11,7 @@
 | Repo state | Core marketplace, inventory, search, notification, and admin workflows are implemented; use `docs/improvement-roadmap.md` for current gaps |
 | Sprint 0 (setup) | Done |
 | Conflicting docs found | `team-work-plan.md` and `sprints.md` disagree on sprint order — this plan replaces both |
-| Architecture decisions already in `docs/architecture.md` | Worker owns its own repos · `loadLocalUser` middleware exists · health routes named · image upload is backend-mediated multipart · Zod selected for validation |
+| Architecture decisions already agreed | Worker owns its own repos · `loadLocalUser` middleware exists · health routes named · image upload is backend-mediated multipart · Zod selected for validation |
 
 **Action:** delete or merge the old planning docs so the team works from one source.
 

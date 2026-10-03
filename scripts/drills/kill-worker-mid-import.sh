@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Recovery drill 1 (docs/RESILIENCE.md): kill a worker in the middle of a large CSV import and
+# Recovery drill 1 (test case E2E-A1): kill a worker in the middle of a large CSV import and
 # check that a new worker resumes it and every row becomes exactly one listing.
 # Runs entirely in the isolated test stack (project "motorx-test"); the dev stack is untouched.
 #   bash scripts/drills/kill-worker-mid-import.sh [records]

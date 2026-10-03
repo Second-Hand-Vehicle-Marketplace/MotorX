@@ -1,6 +1,6 @@
 # MotorX
 
-For the team's branch, pull-request, automated-check, and AWS release processes, see the [Continuous Integration Guide](docs/CI_GUIDE.md) and [Continuous Deployment Guide](docs/CD_GUIDE.md).
+For the team's branch, pull-request and automated-check processes, see the [Continuous Integration Guide](docs/CI_GUIDE.md). For the live system, see [Production Deployment (EC2)](#production-deployment-ec2).
 
 MotorX is a second-hand vehicle marketplace with a React and TypeScript frontend, an Express modular-monolith backend, a separate ETL worker, MongoDB Atlas, Redis/BullMQ, MinIO object storage, and Firebase Authentication.
 
@@ -30,7 +30,7 @@ MongoDB Atlas is the primary persistent database required by the SRS. Docker Com
 - **Marketplace** — buyer browsing with structured filters (category, make, model, year, price, fuel type, transmission, body type, condition), vehicle detail pages showing the real dealer's profile, and dealer-managed listing images.
 - **Admin** — user, dealer, and listing moderation; upload monitoring; audit logs; system health; category-aware filtering.
 - **Notifications** — in-app notification center for dealers and admins with unread counts, polling, read state, and email delivery status. Email notifications use responsive MotorX HTML with a plain-text fallback and vehicle details where relevant.
-- **Search** — indexed structured filters, natural-language parsing, typo correction, bounded hybrid semantic/lexical ranking, and graceful lexical fallback. See [search operations](docs/search-operations.md).
+- **Search** — indexed structured filters, natural-language parsing, typo correction, bounded hybrid semantic/lexical ranking, and graceful lexical fallback. Semantic ranking uses a Hugging Face model (`HF_API_KEY`, `HF_EMBEDDING_MODEL`); see [Search embedding backfill](#search-embedding-backfill).
 
 ### Notification delivery matrix
 
@@ -226,6 +226,64 @@ Or target one workspace while iterating:
 npm test --workspace @motorx/backend
 npm test --workspace @motorx/worker
 ```
+
+## Production Deployment (EC2)
+
+The live system (<https://motorx.duckdns.org>) runs on one EC2 instance with Docker Compose: a cost-conscious single-server deployment with container-level failover and disaster recovery.
+
+| Part | How it runs |
+| --- | --- |
+| Caddy (`infrastructure/caddy/Caddyfile`) | The only public entry point (ports 80 and 443). Gets and renews a Let's Encrypt certificate, redirects HTTP to HTTPS, compresses responses and load-balances the API |
+| Backend | 2 copies behind Caddy (least-busy routing; a failed request is retried on the other copy) |
+| Worker | 2 copies, one job each; job leases stop both taking the same upload |
+| Frontend | Production build served by nginx |
+| Redis, MinIO | Containers on the instance, reachable only inside it |
+| Database | MongoDB Atlas |
+
+### First-time setup
+
+1. Point a domain (e.g. a free DuckDNS name) at the instance's Elastic IP. In the security group allow 80 and 443 from anywhere and 22 from your own IP only.
+2. Create `.env` from `.env.example` and set `SITE_DOMAIN`, `VITE_API_BASE_URL=https://<SITE_DOMAIN>/api/v1` and `RELEASE_TAG` (the commit SHA). `compose.lb.yml` sets `TRUST_PROXY_HOPS`, `CORS_ORIGIN` and `S3_PUBLIC_URL` from `SITE_DOMAIN`.
+3. Build one image at a time (the instance is small), then start everything:
+
+```bash
+C="docker compose --env-file .env -f compose.yml -f compose.ec2.yml -f compose.lb.yml"
+$C build backend && $C build worker && $C build frontend
+$C up -d --no-build
+$C ps
+```
+
+### Releasing and rolling back
+
+Every release is a set of images tagged with its commit SHA, so the previous release stays available for rollback:
+
+```bash
+git pull
+sed -i "s/^RELEASE_TAG=.*/RELEASE_TAG=$(git rev-parse HEAD)/" .env
+$C build backend && $C build worker && $C build frontend
+$C up -d --no-build --force-recreate backend worker frontend
+```
+
+To roll back, set `RELEASE_TAG` to the previous SHA, restore that release's `.env`, and run the last command again. Code is never edited on the server: fix it locally, push, then pull.
+
+### Checking the deployment
+
+```bash
+D=$(grep '^SITE_DOMAIN=' .env | cut -d= -f2)
+curl -s "https://$D/health/ready"
+for i in $(seq 1 10); do curl -s -o /dev/null -D - "https://$D/health/ready" | grep -i x-served-by; done | sort | uniq -c
+python3 scripts/smoke/live-stack-smoke.py "https://$D" "https://$D"
+```
+
+The second command should show both backend copies answering. The smoke test sends read-only requests.
+
+### Backups
+
+`scripts/backup/backup-to-s3.sh` takes a nightly backup set from cron: it pauses the backend and workers for 2–3 minutes, dumps MongoDB and archives the MinIO files, then uploads both to a private S3 bucket with a `COMPLETE` marker and pings healthchecks.io. The usage and cron line are at the top of the script. A set is only trusted once a restore of it has been tested.
+
+### Load testing
+
+`scripts/load/marketplace-load.js` is a k6 test (5, 20 and 50 users browsing and searching) with pass thresholds per request type. Run it from a laptop, never from the server, and raise `RATE_LIMIT_API_PER_MINUTE` and `RATE_LIMIT_SEARCH_PER_MINUTE` for the run, because all requests come from one address.
 
 ## Maintenance Scripts
 

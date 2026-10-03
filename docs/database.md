@@ -4,7 +4,7 @@ MongoDB Atlas is the primary persistent store. Collections are named in plural l
 indexed with readable compound names. The backend and the ETL worker each define their own
 Mongoose models against the same collections (the worker intentionally owns lightweight copies of
 `listings` and `uploadJobs` rather than importing the backend's models — see
-[architecture.md](./architecture.md)), so a schema change to a shared collection must be applied in
+`apps/worker/src/repositories`), so a schema change to a shared collection must be applied in
 both places.
 
 ## `users`
