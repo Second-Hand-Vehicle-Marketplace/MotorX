@@ -10,10 +10,15 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "e2e": "playwright test"
   },
   "overrides": {
     "@grpc/grpc-js": "^1.14.5",
     "@fastify/busboy": "^3.2.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^24.19.2"
   }
 }

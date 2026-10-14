@@ -45,7 +45,7 @@ export const AdminDashboard: React.FC = () => {
   }, []);
 
   return <div className="admin-dashboard">
-    <div className="admin-dashboard-hero"><div><span className="admin-dashboard-kicker">Marketplace operations</span><h1 className="page-title">Good evening, {stats.activeDealers ? 'team' : 'administrator'}</h1><p className="page-subtitle">A focused view of the work that needs a decision today.</p></div><Link to="/admin/dealers" className="admin-primary-action">Review applications</Link></div>
+    <div className="admin-dashboard-hero"><div><span className="admin-dashboard-kicker">Marketplace operations</span><h1 className="page-title">Admin Dashboard</h1><p className="page-subtitle">A focused view of the work that needs a decision today.</p></div><Link to="/admin/dealers" className="admin-primary-action">Review applications</Link></div>
     {error && <div className="alert alert-error" role="alert" style={{ marginBottom: '1rem' }}>{error}</div>}
     <div className="admin-metric-grid">
       <Link to="/admin/dealers?status=pending" className="admin-metric admin-metric-amber"><span>Needs review</span><strong>{loading || unavailable.has('stats') ? '—' : stats.pendingDealerApplications}</strong><small>Pending applications</small></Link>

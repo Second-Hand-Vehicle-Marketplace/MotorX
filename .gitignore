@@ -35,3 +35,8 @@ Thumbs.db
 
 # Python
 __pycache__/
+
+# Playwright (saved sign-in sessions contain tokens)
+e2e/.auth/
+playwright-report/
+test-results/
