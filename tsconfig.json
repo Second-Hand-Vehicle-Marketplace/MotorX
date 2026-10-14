@@ -1,0 +1,14 @@
+{
+  // Type checking for the Playwright browser tests at the repository root only. Each app and
+  // package under apps/ and packages/ has its own tsconfig.json, which takes precedence there.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["playwright.config.ts", "e2e/**/*.ts"]
+}
