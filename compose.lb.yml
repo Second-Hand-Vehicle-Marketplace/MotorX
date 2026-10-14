@@ -56,6 +56,9 @@ services:
       # 2 workers x 1 job each: the same parallel work as before, but one worker can stop
       # without uploads stopping.
       WORKER_CONCURRENCY: 1
+      # The worker writes the addresses of photos attached from a ZIP, so it needs the same
+      # public HTTPS address as the backend.
+      S3_PUBLIC_URL: https://${SITE_DOMAIN}/api/v1/listing-images
 
   frontend:
     image: motorx-frontend:${RELEASE_TAG:?RELEASE_TAG is required, e.g. the commit SHA}
